@@ -20,6 +20,9 @@ node_modules/
 dist/
 .DS_Store
 
+# Local media / screenshots
+screenshots/
+
 # Agent Workspace & internal teamwork artifacts
 .agents/teamwork/
 .agents/skills/
