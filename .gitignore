@@ -27,3 +27,14 @@ screenshots/
 .agents/teamwork/
 .agents/skills/
 .hallmark/
+
+# Local WhyLine runtime state (live audio recordings, fence cache, checkpoints)
+# Generated at runtime — do NOT commit. The demo-repos/ copies are fixtures
+# and are intentionally tracked via the negation rules below.
+/.whyline/
+
+# Temporary test scratch files
+/tmp_test/
+
+# OS artifacts
+Thumbs.db

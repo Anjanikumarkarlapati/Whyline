@@ -13,6 +13,7 @@ import {
 import { useI18n } from '../i18n';
 import StatusBadge from '../components/StatusBadge';
 import { CodeBlock, FormattedText } from '../components/CodeText';
+import RepoFlowchartExplorer from '../components/RepoFlowchartExplorer';
 import { HybridRagDiagramIllustration } from '../components/illustrations/FieldIllustrations';
 
 function getStrategyRiskMeta(tone, rank) {
@@ -216,6 +217,9 @@ export default function VoiceCoPilotPage() {
           </span>
         </div>
       </section>
+
+      {/* GitHub Repository Deep Scanner + Part-Wise Flowchart & Multilingual Voice Agent */}
+      <RepoFlowchartExplorer />
 
       {/* 1. Question Input at Top + Preset Questions + Output Mode */}
       <section className="card card-padded" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

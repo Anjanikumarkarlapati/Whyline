@@ -22,20 +22,19 @@ class WhyLineMcpEngine:
 
     def check_fences(self, file_path: str, proposed_diff: str = "") -> dict:
         """Deterministic pre-edit / pre-commit check against Spoken Fences."""
-        norm_target = os.path.normpath(file_path).replace("\\", "/").strip("/") if file_path else ""
-        if not norm_target:
+        norm_target = os.path.normpath(file_path).replace("\\", "/").strip("/").lower() if file_path else ""
+        if not norm_target or norm_target == ".":
             return {
                 "decision": "ALLOW_EDIT",
                 "reason": "Empty target path specified.",
                 "fence": None,
             }
         fences = self.store.get_fences()
-        matched = [
-            f
-            for f in fences
-            if f["file_path"].lower().endswith(norm_target.lower())
-            or norm_target.lower().endswith(f["file_path"].lower())
-        ]
+        matched = []
+        for f in fences:
+            f_norm = os.path.normpath(f["file_path"]).replace("\\", "/").strip("/").lower()
+            if f_norm.endswith(norm_target) or norm_target.endswith(f_norm) or Path(norm_target).name == Path(f_norm).name:
+                matched.append(f)
         if not matched:
             return {
                 "decision": "ALLOW_EDIT",

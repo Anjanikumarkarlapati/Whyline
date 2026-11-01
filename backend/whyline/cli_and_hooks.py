@@ -133,14 +133,14 @@ def execute_check_staged(repo_dir: Path, fallback_file: str | None = None) -> tu
 
     for file_path in staged_files:
         norm_target = os.path.normpath(file_path).replace("\\", "/").strip("/") if file_path else ""
-        if not norm_target:
+        if not norm_target or norm_target == ".":
             continue
-        matched_fences = [
-            f
-            for f in fences
-            if f["file_path"].lower().endswith(norm_target.lower())
-            or norm_target.lower().endswith(f["file_path"].lower())
-        ]
+        norm_target_lower = norm_target.lower()
+        matched_fences = []
+        for f in fences:
+            f_norm = os.path.normpath(f["file_path"]).replace("\\", "/").strip("/").lower()
+            if f_norm.endswith(norm_target_lower) or norm_target_lower.endswith(f_norm) or Path(norm_target_lower).name == Path(f_norm).name:
+                matched_fences.append(f)
         if not matched_fences:
             continue
 
@@ -183,7 +183,7 @@ def execute_check_staged(repo_dir: Path, fallback_file: str | None = None) -> tu
 
             # Evaluate fence decision
             chk = mcp.check_fences(norm_target, staged_diff)
-            if chk["decision"] == "REJECT_EDIT":
+            if status in ("VERIFIED_ACTIVE", "PENDING_CONFIRMATION") or chk["decision"] == "REJECT_EDIT":
                 violations.append((fence, norm_target, chk))
             elif chk["decision"] == "WARN_AND_REQUIRE_CONFIRMATION":
                 warnings.append((fence, norm_target, chk))

@@ -71,6 +71,7 @@ export default function Layout({ theme, onToggleTheme }) {
     { to: '/studio', label: t('navStudio'), icon: Code },
     { to: '/incidents', label: t('navIncidents'), icon: WarningDiamond },
     { to: '/copilot', label: t('navCopilot'), icon: ChatCircleText },
+    { to: '/git', label: 'Git Flowchart', icon: Code },
   ];
 
   return (

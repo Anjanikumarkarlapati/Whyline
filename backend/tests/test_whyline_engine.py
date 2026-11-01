@@ -111,3 +111,68 @@ def test_end_to_end_90s_demo_lifecycle_via_api() -> None:
         assert reset_resp["updated_fence"]["status"] == "VERIFIED_ACTIVE"
 
     asyncio.run(_run())
+
+
+def test_github_repo_flowchart_scanner_multilingual_and_cached_speed() -> None:
+    from backend.app import RepoFlowchartRequest, scan_repo_flowchart_post
+
+    async def _run_flowchart() -> None:
+        for lang_code, expected_gnani in [("te-IN", "telugu"), ("hi-IN", "hindi"), ("en-IN", "english")]:
+            res = await scan_repo_flowchart_post(
+                RepoFlowchartRequest(
+                    github_url="https://github.com/healthconnect-india/payment-gateway-service",
+                    language=lang_code,
+                    force_refresh=True,
+                )
+            )
+            assert res["gnani_language"] == expected_gnani
+            assert len(res["steps"]) == 5
+            assert len(res["edges"]) == 4
+            assert res["voice_agent"]["model"] == "timbre-v2.5"
+            assert res["voice_agent"]["llm_model"] == "gemini-3.8-flash"
+            for idx, step in enumerate(res["steps"], start=1):
+                assert step["step_number"] == idx
+                assert step["audio_url"].startswith("/api/audio/flow_")
+                assert step["spoken_narration"].startswith(f"Step {idx}:")
+                assert step["code_snippet"] != ""
+
+            # Second call hits in-memory cache and must return in < 10ms
+            cached_res = await scan_repo_flowchart_post(
+                RepoFlowchartRequest(
+                    github_url="https://github.com/healthconnect-india/payment-gateway-service",
+                    language=lang_code,
+                    force_refresh=False,
+                )
+            )
+            assert cached_res["cached"] is True
+            assert cached_res["scan_latency_ms"] < 10.0
+
+    asyncio.run(_run_flowchart())
+
+
+def test_live_gnani_vachana_tts_telugu_hindi_english(tmp_path) -> None:
+    import wave
+    from backend.services.gnani_client import GnaniSpeechClient
+
+    client = GnaniSpeechClient()
+    for lang_code, sample_text, expected_lang in [
+        ("te-IN", "నమస్కారం, గేట్‌వే రౌటర్ లో రీట్రై కౌంట్ ఐదు అలాగే ఉంచండి.", "telugu"),
+        ("hi-IN", "नमस्ते, गेटवे राउटर में रीट्राई काउंट पांच मत हटाना।", "hindi"),
+        ("en-IN", "Confirmed Spoken Fence in GatewayRouter.", "english"),
+    ]:
+        meta = client.synthesize(
+            text=sample_text,
+            output_dir=tmp_path,
+            file_stem=f"live_{expected_lang}",
+            language=lang_code,
+            force_live=True,
+        )
+        assert meta["gnani_language"] == expected_lang
+        wav_file = tmp_path / f"live_{expected_lang}.wav"
+        assert wav_file.exists()
+        with wave.open(str(wav_file), "rb") as wf:
+            assert wf.getnchannels() == 1
+            assert wf.getsampwidth() == 2
+            assert wf.getframerate() == 16000
+            assert wf.getnframes() > 100
+

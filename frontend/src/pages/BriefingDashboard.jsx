@@ -23,6 +23,7 @@ import { useI18n } from '../i18n';
 import StatusBadge from '../components/StatusBadge';
 import { FormattedText } from '../components/CodeText';
 import AskRepoDrawer from '../components/AskRepoDrawer';
+import RepoFlowchartExplorer from '../components/RepoFlowchartExplorer';
 
 export default function BriefingDashboard({ theme = 'light' }) {
   const { lang, t } = useI18n();
@@ -233,6 +234,9 @@ export default function BriefingDashboard({ theme = 'light' }) {
           <span className="stat-caption">Waiting on config cutover triggers</span>
         </div>
       </section>
+
+      {/* GitHub Repository Flowchart Scanner & Step-by-Step Multilingual Voice Agent */}
+      <RepoFlowchartExplorer />
 
       {/* Primary Operational Split: Needs Attention List (Left) + Compact 90s Demo Stepper (Right) */}
       <section className="operational-split">

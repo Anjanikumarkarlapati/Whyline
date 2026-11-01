@@ -6,8 +6,8 @@ def _load_config() -> dict:
     cfg_path = REPO_ROOT / "config" / "application.yml"
     return yaml.safe_load(cfg_path.read_text(encoding="utf-8")) if cfg_path.exists() else {}
 def test_fence_001_invariant():
-    """Guardrail for FENCE-001 (GatewayRouter.dispatchSettlement(String orderId, long amountPaise)) — Status: PENDING_CONFIRMATION"""
-    if "PENDING_CONFIRMATION" == "EXPIRED_SAFE_TO_REMOVE":
+    """Guardrail for FENCE-001 (GatewayRouter.dispatchSettlement(String orderId, long amountPaise)) — Status: VERIFIED_ACTIVE"""
+    if "VERIFIED_ACTIVE" == "EXPIRED_SAFE_TO_REMOVE":
         return
     cfg = _load_config()
     if cfg.get("healthconnect", {}).get("payment", {}).get("gateway", {}).get("version") == 'v2':

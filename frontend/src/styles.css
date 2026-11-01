@@ -6,28 +6,28 @@
 :root {
   color-scheme: light;
 
-  /* Core Architecture-Studio Palette (Light) */
-  --canvas: #F7F4EC;
-  --surface: #FCFAF5;
-  --surface-raised: #F1EDE2;
-  --ink: #1B1A16;
-  --ink-muted: #6B675C;
-  --hairline: #E3DECF;
-  --hairline-strong: #B8B2A1;
-  --accent: #4A4A2A;
-  --accent-hover: #36361D;
-  --accent-contrast: #FCFAF5;
-  --accent-wash: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  /* Core Cream-and-Olive Field-Report Palette (Light - DESIGN.md) */
+  --canvas: #FDFBD4;
+  --surface: #FFFEF0;
+  --surface-raised: #F2F0CA;
+  --ink: #2A2919;
+  --ink-muted: #545333;
+  --hairline: #D9D7B6;
+  --hairline-strong: #878672;
+  --accent: #545333;
+  --accent-hover: #3E3D25;
+  --accent-contrast: #FDFBD4;
+  --accent-wash: #ECEAD0;
 
-  /* Semantic State Tokens + 10% Tints */
-  --danger: #A4392B;
-  --danger-tint: color-mix(in srgb, var(--danger) 10%, var(--surface));
-  --success: #3F6B4A;
-  --success-tint: color-mix(in srgb, var(--success) 10%, var(--surface));
-  --warning: #9A6B1F;
-  --warning-tint: color-mix(in srgb, var(--warning) 10%, var(--surface));
-  --info: #3B5F7A;
-  --info-tint: color-mix(in srgb, var(--info) 10%, var(--surface));
+  /* Semantic State Tokens + 13% Tints */
+  --danger: #B3261E;
+  --danger-tint: color-mix(in srgb, var(--danger) 13%, var(--surface));
+  --success: #545333;
+  --success-tint: color-mix(in srgb, var(--success) 13%, var(--surface));
+  --warning: #8F5A08;
+  --warning-tint: color-mix(in srgb, var(--warning) 13%, var(--surface));
+  --info: #3B6E91;
+  --info-tint: color-mix(in srgb, var(--info) 13%, var(--surface));
 
   /* Backward-compatible aliases (zero undefined CSS variables) */
   --bg-base: var(--canvas);
@@ -51,8 +51,8 @@
 
   /* Typography */
   --font-display: 'Crimson Text', 'Newsreader', Georgia, serif;
-  --font-sans: 'Inter', 'DM Sans', 'Noto Sans Telugu', 'Noto Sans Devanagari', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'DM Mono', ui-monospace, monospace;
+  --font-sans: 'DM Sans', 'Inter', 'Noto Sans Telugu', 'Noto Sans Devanagari', system-ui, -apple-system, sans-serif;
+  --font-mono: 'DM Mono', 'JetBrains Mono', ui-monospace, monospace;
 
   /* Spacing Scale (4px base: 8/16/24/32/48/64/96) */
   --space-1: 4px;
@@ -66,41 +66,41 @@
 
   /* Shape & Layout */
   --radius-sm: 4px;
-  --radius-control: 8px;
-  --radius-md: 8px;
-  --radius-card: 12px;
-  --radius-lg: 12px;
-  --radius-slab: 16px;
-  --radius-chip: 999px;
-  --radius-pill: 999px;
-  --container-max: 1200px;
+  --radius-control: 12px;
+  --radius-md: 12px;
+  --radius-card: 24px;
+  --radius-lg: 24px;
+  --radius-slab: 32px;
+  --radius-chip: 9999px;
+  --radius-pill: 9999px;
+  --container-max: 1320px;
 }
 
 [data-theme="dark"],
 [data-mode="dark"] {
   color-scheme: dark;
 
-  /* Core Architecture-Studio Palette (Dark) */
-  --canvas: #151510;
-  --surface: #1D1D16;
-  --surface-raised: #25251C;
-  --ink: #ECE8DA;
-  --ink-muted: #A39F90;
-  --hairline: #2E2D22;
-  --hairline-strong: #5E5B49;
-  --accent: #C8C49C;
-  --accent-hover: #ECE8DA;
-  --accent-contrast: #151510;
-  --accent-wash: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  /* Core Cream-and-Olive Field-Report Palette (Dark - DESIGN.md) */
+  --canvas: #1C1C12;
+  --surface: #25251A;
+  --surface-raised: #2F2F22;
+  --ink: #FDFBD4;
+  --ink-muted: #D9D7B6;
+  --hairline: #3A3A2A;
+  --hairline-strong: #878672;
+  --accent: #D9D7B6;
+  --accent-hover: #FDFBD4;
+  --accent-contrast: #2A2919;
+  --accent-wash: #343324;
 
-  --danger: #E87A6D;
-  --danger-tint: color-mix(in srgb, var(--danger) 12%, var(--surface));
-  --success: #6DB37D;
-  --success-tint: color-mix(in srgb, var(--success) 12%, var(--surface));
-  --warning: #DFA94B;
-  --warning-tint: color-mix(in srgb, var(--warning) 12%, var(--surface));
-  --info: #78AED3;
-  --info-tint: color-mix(in srgb, var(--info) 12%, var(--surface));
+  --danger: #E86A62;
+  --danger-tint: color-mix(in srgb, var(--danger) 13%, var(--surface));
+  --success: #D9D7B6;
+  --success-tint: color-mix(in srgb, var(--success) 13%, var(--surface));
+  --warning: #D9A520;
+  --warning-tint: color-mix(in srgb, var(--warning) 13%, var(--surface));
+  --info: #6BA3C9;
+  --info-tint: color-mix(in srgb, var(--info) 13%, var(--surface));
 
   --bg-base: var(--canvas);
   --bg-surface: var(--surface);
@@ -111,13 +111,13 @@
   --border-default: var(--hairline);
   --border-strong: var(--hairline-strong);
   --on-accent: var(--accent-contrast);
-  --block: var(--hairline-strong);
-  --hero-ink: var(--ink);
+  --block: #545333;
+  --hero-ink: #141409;
   --status-good: var(--success);
   --status-warning: var(--warning);
   --status-critical: var(--danger);
   --status-info: var(--info);
-  --status-muted: var(--ink-muted);
+  --status-muted: #A9A890;
   --line: var(--hairline);
   --muted: var(--ink-muted);
 }
@@ -125,20 +125,20 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]):not([data-mode]) {
     color-scheme: dark;
-    --canvas: #151510;
-    --surface: #1D1D16;
-    --surface-raised: #25251C;
-    --ink: #ECE8DA;
-    --ink-muted: #A39F90;
-    --hairline: #2E2D22;
-    --hairline-strong: #5E5B49;
-    --accent: #C8C49C;
-    --accent-hover: #ECE8DA;
-    --accent-contrast: #151510;
-    --danger: #E87A6D;
-    --success: #6DB37D;
-    --warning: #DFA94B;
-    --info: #78AED3;
+    --canvas: #1C1C12;
+    --surface: #25251A;
+    --surface-raised: #2F2F22;
+    --ink: #FDFBD4;
+    --ink-muted: #D9D7B6;
+    --hairline: #3A3A2A;
+    --hairline-strong: #878672;
+    --accent: #D9D7B6;
+    --accent-hover: #FDFBD4;
+    --accent-contrast: #2A2919;
+    --danger: #E86A62;
+    --success: #D9D7B6;
+    --warning: #D9A520;
+    --info: #6BA3C9;
   }
 }
 
@@ -373,11 +373,9 @@ pre {
   z-index: 40;
   width: 100%;
   min-height: 64px;
-  background-color: color-mix(in srgb, var(--surface) 88%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background-color: var(--surface);
   border-bottom: 1px solid var(--hairline);
-  box-shadow: 0 4px 16px 0 color-mix(in srgb, var(--ink) 4%, transparent);
+  box-shadow: none;
 }
 
 .topbar-inner {
@@ -474,7 +472,7 @@ pre {
   background-color: var(--surface);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-card);
-  box-shadow: 0 12px 32px 0 color-mix(in srgb, var(--ink) 12%, transparent);
+  box-shadow: none;
   padding: 16px;
   z-index: 60;
   display: flex;
@@ -1236,7 +1234,7 @@ pre {
   background-color: var(--surface);
   color: var(--ink);
   border-left: 1px solid var(--hairline);
-  box-shadow: -8px 0 32px 0 color-mix(in srgb, var(--ink) 12%, transparent);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -1318,7 +1316,27 @@ pre {
   padding: 48px 0;
 }
 
+.auth-card-container {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+}
+
+.auth-offset-slab {
+  position: absolute;
+  top: 12px;
+  left: -24px;
+  right: 24px;
+  bottom: -24px;
+  background-color: var(--block);
+  border-radius: var(--radius-slab);
+  z-index: 0;
+  pointer-events: none;
+}
+
 .auth-card {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 460px;
   background-color: var(--surface);

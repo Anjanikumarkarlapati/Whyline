@@ -37,7 +37,9 @@ export default function LoginPage({ theme = 'light', onToggleTheme }) {
   return (
     <main className="container">
       <div className="auth-centered">
-        <article className="card auth-card">
+        <div className="auth-card-container">
+          <div className="auth-offset-slab" aria-hidden="true" />
+          <article className="card auth-card">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Top Brand & Theme Switcher */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -138,6 +140,7 @@ export default function LoginPage({ theme = 'light', onToggleTheme }) {
             </form>
           </div>
         </article>
+        </div>
       </div>
     </main>
   );

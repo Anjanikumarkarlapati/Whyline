@@ -9,9 +9,12 @@ import os
 import shutil
 import stat
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 REPO_DIR = ROOT_DIR / "demo-repos" / "HealthConnect"
 
 
@@ -43,9 +46,16 @@ def write_repo_file(rel_path: str, content: str) -> Path:
 
 
 def seed_healthconnect(force: bool = True) -> Path:
+    fences_file = REPO_DIR / ".whyline" / "fences.json"
     if REPO_DIR.exists():
-        if not force and (REPO_DIR / ".whyline" / "pr_fixtures.json").exists():
-            return REPO_DIR
+        if not force and (REPO_DIR / ".whyline" / "pr_fixtures.json").exists() and fences_file.exists():
+            try:
+                fences_data = json.loads(fences_file.read_text(encoding="utf-8"))
+                f001 = next((f for f in fences_data if f.get("id") == "FENCE-001"), None)
+                if f001 and f001.get("status") == "PENDING_CONFIRMATION" and f001.get("author_handle") == "@anjani":
+                    return REPO_DIR
+            except Exception:
+                pass
         shutil.rmtree(REPO_DIR, onexc=_remove_readonly)
     REPO_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -522,6 +532,10 @@ def persist_triage_draft(session_key: str, payload: dict, shadow_cache: dict) ->
     whyline_dir = REPO_DIR / ".whyline"
     whyline_dir.mkdir(parents=True, exist_ok=True)
     (whyline_dir / "pr_fixtures.json").write_text(json.dumps(pr_fixtures, indent=2), encoding="utf-8")
+
+    from backend.whyline.store import WhyLineStore
+    store = WhyLineStore(REPO_DIR)
+    store.ensure_initialized(force_rescan=True)
 
     print(f"Seeded HealthConnect repository at {REPO_DIR}")
     return REPO_DIR

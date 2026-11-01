@@ -7,6 +7,7 @@ import BriefingDashboard from './pages/BriefingDashboard';
 import SpokenFencesPage from './pages/SpokenFencesPage';
 import IncidentsAndMemoryPage from './pages/IncidentsAndMemoryPage';
 import VoiceCoPilotPage from './pages/VoiceCoPilotPage';
+import GitFlowchartPage from './pages/GitFlowchartPage';
 import SettingsPage from './pages/SettingsPage';
 import MonacoCodeStudio from './components/MonacoCodeStudio';
 
@@ -66,6 +67,7 @@ export default function App() {
             />
             <Route path="/incidents" element={<IncidentsAndMemoryPage />} />
             <Route path="/copilot" element={<VoiceCoPilotPage />} />
+            <Route path="/git" element={<GitFlowchartPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Routes>

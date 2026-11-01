@@ -274,6 +274,7 @@ def scan_file_for_anomalies(repo_dir: Path, file_path: Path) -> list[AstAnomaly]
         stack.extend(curr.children)
 
     # 5. Check git log for Revert commits touching this file
+    revert_matched = False
     if (repo_dir / ".git").exists():
         try:
             proc = subprocess.run(
@@ -284,7 +285,7 @@ def scan_file_for_anomalies(repo_dir: Path, file_path: Path) -> list[AstAnomaly]
                 check=False,
             )
             for subject in proc.stdout.splitlines():
-                if subject.startswith('Revert "') and not found:
+                if subject.startswith('Revert "') and not any(a.anomaly_type == ANOMALY_REVERT_COMMIT for a in found):
                     # Anchor to first method or function definition in the file
                     target_node = tree.root_node
                     for child in tree.root_node.children:
@@ -310,8 +311,42 @@ def scan_file_for_anomalies(repo_dir: Path, file_path: Path) -> list[AstAnomaly]
                             code_snippet=snippet,
                         )
                     )
+                    revert_matched = True
+                    break
         except Exception:
             pass
+
+    # Fallback: check in-source comment regex matching for '# Reverted ...' and '// Reverted ...'
+    if not revert_matched and not any(a.anomaly_type == ANOMALY_REVERT_COMMIT for a in found):
+        for idx, line in enumerate(lines):
+            m = re.search(r"^\s*(?:#|//)\s*(Reverted\b[^\r\n]*)", line, re.IGNORECASE)
+            if m:
+                matched_comment = m.group(1).strip()
+                target_node = tree.root_node
+                for child in tree.root_node.children:
+                    if child.type in ("function_definition", "method_declaration"):
+                        target_node = child
+                        break
+                cls_name, fn_name, params, s_line, e_line = _extract_enclosing_symbol_tree_sitter(
+                    target_node, code_bytes, lines, is_java
+                )
+                ast_hash = compute_ast_signature_hash(rel_path, cls_name, fn_name, params)
+                snippet = "\n".join(lines[max(0, s_line - 1) : min(len(lines), e_line)])
+                found.append(
+                    AstAnomaly(
+                        file_path=rel_path,
+                        class_name=cls_name,
+                        method_name=fn_name,
+                        params_sig=params,
+                        ast_signature_hash=ast_hash,
+                        start_line=s_line if s_line else idx + 1,
+                        end_line=e_line if e_line else idx + 1,
+                        anomaly_type=ANOMALY_REVERT_COMMIT,
+                        matched_token=matched_comment,
+                        code_snippet=snippet if snippet else line.strip(),
+                    )
+                )
+                break
 
     return found
 

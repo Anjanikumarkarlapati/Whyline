@@ -146,8 +146,8 @@
       "confirmations": 7
     }
   ],
-  "live_intercept_events": 43,
+  "live_intercept_events": 55,
   "last_intercepted_fence_id": "FENCE-001",
   "last_intercept_decision": "REJECT_EDIT",
-  "last_intercept_at": "2026-10-31T22:47:07.769559+00:00"
+  "last_intercept_at": "2026-11-01T14:35:14.260725+00:00"
 }

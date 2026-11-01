@@ -10,16 +10,23 @@ import os
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import yaml
 
+from backend.services.gnani_client import _load_dotenv_once
 from backend.whyline.ast_scanner import extract_repository_vocabulary
 from backend.whyline.cli_and_hooks import install_git_hooks
 from backend.whyline.fence_compiler import generate_junit_and_pytest_artifacts
 from backend.whyline.gnani_speech import synthesize_timbre_audio, transcribe_voice_confirmation
+from backend.whyline.git_narration import narrate_flowchart, speak as git_speak
+from backend.whyline.git_scanner import scan_repository
 from backend.whyline.mcp_server import WhyLineMcpEngine
+from backend.whyline.repo_flowchart import scan_github_repo_flowchart
 from backend.whyline.store import WhyLineStore
+
+_load_dotenv_once()
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 REPO_DIR = ROOT_DIR / "demo-repos" / "HealthConnect"
@@ -91,6 +98,8 @@ class CoPilotAskRequest(BaseModel):
         "How do we fix the double-charge bug in GatewayRouter.java without breaking the PR #212 midnight retry fence?"
     )
     language: str = "te-IN"
+    fence_id: str | None = None
+    audio_base64: str | None = None
 
 
 def _read_gateway_version() -> str:
@@ -292,9 +301,96 @@ async def create_or_resume_checkpoint(req: CheckpointRequest) -> dict:
     )
 
 
+class GitScanRequest(BaseModel):
+    repo_path_or_url: str
+    branch: str = "main"
+    max_depth: int = 5
+    include_anomalies: bool = True
+
+
+class RepoFlowchartRequest(BaseModel):
+    github_url: str = "https://github.com/healthconnect-india/payment-gateway-service"
+    language: str = "te-IN"
+    force_refresh: bool = False
+
+
 @app.post("/api/copilot/ask")
 async def ask_copilot(req: CoPilotAskRequest) -> dict:
-    return store.ask_repo_copilot(question=req.question, language=req.language)
+    q_text = req.question
+    if req.audio_base64:
+        import base64
+
+        try:
+            raw_b64 = req.audio_base64.split(",", 1)[-1].strip()
+            audio_bytes = base64.b64decode(raw_b64)
+            vocab = extract_repository_vocabulary(REPO_DIR)
+            stt = transcribe_voice_confirmation(
+                audio_bytes=audio_bytes,
+                fallback_text=req.question,
+                language=req.language,
+                repo_vocab=vocab,
+            )
+            if stt.get("rescored_transcript"):
+                q_text = stt["rescored_transcript"]
+        except Exception:
+            pass
+    return store.ask_repo_copilot(question=q_text, language=req.language)
+
+
+@app.post("/api/repo/scan-flowchart")
+async def scan_repo_flowchart_post(req: RepoFlowchartRequest) -> dict:
+    return scan_github_repo_flowchart(
+        store=store,
+        github_url=req.github_url,
+        language=req.language,
+        force_refresh=req.force_refresh,
+    )
+
+
+@app.get("/api/repo/scan-flowchart")
+async def scan_repo_flowchart_get(
+    github_url: str = "https://github.com/healthconnect-india/payment-gateway-service",
+    language: str = "te-IN",
+) -> dict:
+    return scan_github_repo_flowchart(
+        store=store,
+        github_url=github_url,
+        language=language,
+        force_refresh=False,
+    )
+
+
+@app.post("/api/git/scan")
+async def scan_git_repository_endpoint(req: GitScanRequest) -> dict:
+    try:
+        return scan_repository(
+            target_path_or_url=req.repo_path_or_url,
+            branch=req.branch,
+            max_depth=req.max_depth,
+            include_anomalies=req.include_anomalies,
+        )
+    except (FileNotFoundError, NotADirectoryError, ValueError) as err:
+        raise HTTPException(status_code=400, detail=str(err))
+    except Exception as err:
+        raise HTTPException(status_code=400, detail=f"Failed to scan repository: {err}")
+
+
+class GitNarrateRequest(GitScanRequest):
+    language: str = "en-IN"
+
+
+@app.post("/api/git/scan-narrated")
+async def scan_git_narrated(req: GitNarrateRequest) -> dict:
+    """Scan a repo and return the flowchart plus ordered, synchronized voice steps."""
+    result = await scan_git_repository_endpoint(req)
+    result["narration"] = narrate_flowchart(result["flowchart_graph"], req.language)
+    return result
+
+
+@app.get("/api/git/speak")
+async def git_speak_step(text: str, language: str = "en-IN") -> FileResponse:
+    r = await run_in_threadpool(git_speak, text, language, store.audio_dir)
+    return FileResponse(r["wav_path"], media_type="audio/wav", headers={"X-TTS-Provider": r["provider_mode"]})
 
 
 @app.get("/api/audio/{filename}")
@@ -330,7 +426,7 @@ async def get_settings_status() -> dict:
             },
             "llm_fence_compiler": {
                 "configured": bool(os.getenv("GEMINI_API_KEY", "").strip() or os.getenv("GROQ_API_KEY", "").strip()),
-                "models": "gemini-2.5-flash / llama-3.3-70b-versatile",
+                "models": "gemini-3.8-flash / llama-3.3-70b-versatile",
                 "mode": "Live LLM" if (os.getenv("GEMINI_API_KEY") or os.getenv("GROQ_API_KEY")) else "Deterministic AST-to-Fence Compiler",
             },
         },
