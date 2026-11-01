@@ -1,0 +1,29 @@
+[
+  {
+    "id": "CHK-01",
+    "repo_name": "HealthConnect",
+    "branch_name": "fix/payment-double-charge",
+    "author_handle": "@anjani",
+    "created_at": "2026-10-31T22:15:00+05:30",
+    "summary": "Investigating duplicate settlement webhook retries during 00:00 IST window (PR #212).",
+    "ruled_out_dead_ends": [
+      "Dropping retryCount from 5 to 1 in GatewayRouter.java (caused 18% midnight settlement drop on v1 gateway)",
+      "Wrapping sendV1Frame() in synchronous Redis SETNX lock (exceeded 4500ms SLA during Sentinel failover)"
+    ],
+    "next_untested_action": "Attach deterministic X-Idempotency-Key header derived from orderId + settlementWindow before upgrading gateway.version to v2.",
+    "audio_url": "/api/audio/checkpoint_fix_payment_double_charge.wav"
+  },
+  {
+    "id": "CHK-02",
+    "repo_name": "HealthConnect",
+    "branch_name": "fix/adreno-xray-gl-fence",
+    "author_handle": "@rahul-sre",
+    "created_at": "2026-10-30T17:40:00+05:30",
+    "summary": "Testing Vulkan/GLES texture flush alternatives on clinic tablets (PR #219).",
+    "ruled_out_dead_ends": [
+      "Replacing Thread.sleep(120) with glFinish() (still returns 95ms early on Adreno 619 v1.4 firmware)"
+    ],
+    "next_untested_action": "Verify vendor BSP v2.0 OTA image on testbench tablet before removing Thread.sleep(120).",
+    "audio_url": "/api/audio/checkpoint_fix_payment_double_charge.wav"
+  }
+]

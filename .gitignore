@@ -1,0 +1,26 @@
+# Environment variables and secrets
+.env
+.env.local
+*.env
+*.pem
+*.key
+*.cert
+*.p12
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+venv/
+.venv/
+
+# Node / Frontend
+node_modules/
+dist/
+.DS_Store
+
+# Agent Workspace & internal teamwork artifacts
+.agents/teamwork/
+.agents/skills/
+.hallmark/

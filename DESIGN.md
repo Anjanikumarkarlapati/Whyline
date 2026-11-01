@@ -1,0 +1,8 @@
+# DESIGN.md — Locked WhyLine Cream-and-Olive Field-Report System
+
+This file locks the visual design system defined in [`whyline_agritech_frontend_design_system.md`](./whyline_agritech_frontend_design_system.md) and [`whyline_agritech_ai_coding_agent_rules.md`](./whyline_agritech_ai_coding_agent_rules.md) alongside the Hallmark v2.0.0 Floor:
+
+- **Palette (Light / Dark):** `--bg-base` (`#FDFBD4` / `#1C1C12`), `--bg-surface` (`#FFFEF0` / `#25251A`), `--bg-raised` (`#F2F0CA` / `#2F2F22`), `--text-primary` (`#2A2919` / `#FDFBD4`), `--text-secondary` (`#545333` / `#D9D7B6`), `--border` (`#D9D7B6` / `#3A3A2A`), `--border-strong` (`#878672`), `--accent` (`#545333` / `#D9D7B6`), `--accent-hover` (`#3E3D25` / `#FDFBD4`), `--accent-wash` (`#ECEAD0` / `#343324`), `--on-accent` (`#FDFBD4` / `#2A2919`), `--block` (`#878672` / `#545333`), `--hero-ink` (`#2A2919` / `#141409`).
+- **Status Tokens:** `--status-good` (`#545333` / `#D9D7B6`), `--status-warning` (`#8F5A08` / `#D9A520`), `--status-critical` (`#B3261E` / `#E86A62`), `--status-info` (`#3B6E91` / `#6BA3C9`), `--status-muted` (`#6B6A55` / `#A9A890`). Every status badge pairs `Color Token (13% blend) + Phosphor Regular Icon (16px) + Explicit Translated Status Word`.
+- **Typography:** `--font-sans` (`DM Sans` 400/500/600 + Indic fallbacks), `--font-display` (`Crimson Text` 400 regular only), `--font-mono` (`DM Mono` 400/500 only, `tabular-nums`).
+- **Layout & Shapes:** `1320px` max-width centered container, `24px` flat cards (`.card-header` `16px 20px` + `.card-body` `20px 24px`), `12px` form inputs, `9999px` pill buttons/badges, `>= 44px` (`48px` mobile) touch targets, single accessible mobile drawer below `768px`, and zero box-shadows.

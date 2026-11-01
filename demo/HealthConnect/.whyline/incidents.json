@@ -1,0 +1,24 @@
+[
+  {
+    "id": "INC-9921",
+    "source": "PagerDuty Webhook",
+    "service": "HealthConnect Payment Gateway v1",
+    "title": "Midnight Settlement SYN Packet Drop (Every 4th Frame)",
+    "oncall_engineer": "@anjani",
+    "language": "te-IN",
+    "voice_postmortem": "Ardha ratri 12 \u0c17\u0c02\u0c1f\u0c32\u0c15\u0c41 Razorpay v1 load balancer prati 4th packet drop chestundi. Anduke GatewayRouter.java lo retryCount = 5 and timeoutMs = 4500 pettamu.",
+    "linked_fence_id": "FENCE-001",
+    "resolved_at": "2026-10-12T23:50:00+05:30"
+  },
+  {
+    "id": "INC-9984",
+    "source": "Slack #inc-radiology",
+    "service": "DICOM Tablet Shader Pipeline",
+    "title": "Adreno 619 Early glFenceSync Texture Corruption",
+    "oncall_engineer": "@anjani",
+    "language": "en-IN",
+    "voice_postmortem": "Adreno 619 driver v1.4 signals fence completion 95ms before DMA transfer finishes. Added Thread.sleep(120) in DicomShaderPipeline.java.",
+    "linked_fence_id": "FENCE-002",
+    "resolved_at": "2026-10-15T14:25:00+05:30"
+  }
+]

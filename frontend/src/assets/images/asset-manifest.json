@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0.0",
+  "designSystem": "Cream-and-Olive Field-Report System",
+  "assets": [
+    {
+      "slot": "auth-contextual-panel",
+      "route": "/login",
+      "component": "AuthNotebookStudioPanel",
+      "aspectRatio": "4:5",
+      "maxBudgetKB": 200,
+      "actualSizeKB": 4.2,
+      "altText": "Architectural field notebook beside a studio microphone and Spoken Fence schematic",
+      "provenance": "In-house 2px-stroke Cream-and-Olive SVG studio plate (Illustrative image badge attached)"
+    },
+    {
+      "slot": "onboarding-spoken-fence",
+      "route": "/fences",
+      "file": "frontend/src/components/illustrations/onboarding-spoken-fence.svg",
+      "viewBox": "0 0 320 200",
+      "maxBudgetKB": 15,
+      "actualSizeKB": 1.4,
+      "altText": "Soundwave entering a protective Spoken Fence gate anchored to an AST tree node"
+    },
+    {
+      "slot": "pipeline-hook-schematic",
+      "route": "/incidents",
+      "file": "frontend/src/components/illustrations/pipeline-hook-schematic.svg",
+      "viewBox": "0 0 320 200",
+      "maxBudgetKB": 15,
+      "actualSizeKB": 1.2,
+      "altText": "Technical schematic showing Git Diff flowing into Pre-Edit Hook, Spoken Fence, and CI Invariant Test"
+    },
+    {
+      "slot": "assistant-empty-state",
+      "route": "/copilot",
+      "file": "frontend/src/components/illustrations/assistant-empty-state.svg",
+      "viewBox": "0 0 320 200",
+      "maxBudgetKB": 15,
+      "actualSizeKB": 1.3,
+      "altText": "Minimalist field notebook and studio microphone resting on an archival grid line"
+    }
+  ]
+}

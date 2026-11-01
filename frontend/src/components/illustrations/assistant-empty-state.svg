@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200">
+  <rect x="20" y="24" width="280" height="152" rx="16" fill="var(--bg-raised)" stroke="var(--border)" stroke-width="2" />
+  <line x1="44" y1="148" x2="276" y2="148" stroke="var(--border-strong)" stroke-width="2" stroke-linecap="round" />
+  <rect x="68" y="56" width="88" height="76" rx="8" fill="var(--bg-surface)" stroke="var(--text-primary)" stroke-width="2" />
+  <rect x="196" y="52" width="32" height="52" rx="16" fill="var(--accent-wash)" stroke="var(--text-primary)" stroke-width="2" />
+</svg>

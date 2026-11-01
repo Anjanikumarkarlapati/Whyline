@@ -1,0 +1,47 @@
+{
+  "active_authors": [
+    "anjani@healthconnect.in",
+    "rahul-sre@healthconnect.in"
+  ],
+  "pull_requests": {
+    "#212": {
+      "pr_number": "#212",
+      "title": "fix(payments): hold retryCount=5 and timeoutMs=4500 for v1 midnight packet drop",
+      "reviewer": "@srinivas-principal",
+      "inline_comment": "Verified on packet capture: Razorpay v1 edge drops every 4th SYN between 00:00 and 00:15 IST. Do NOT let anyone or any AI cleanup bot drop retryCount below 5 until gateway.version is bumped to v2 in application.yml!",
+      "incident_id": "INC-9921",
+      "expiry_rule": {
+        "config_file": "config/application.yml",
+        "key_path": "healthconnect.payment.gateway.version",
+        "expected_value": "v2",
+        "description": "Expires automatically when healthconnect.payment.gateway.version == 'v2' in config/application.yml"
+      }
+    },
+    "#219": {
+      "pr_number": "#219",
+      "title": "fix(imaging): add 120ms Thread.sleep before LUT stage on Adreno tablet GPUs",
+      "reviewer": "@meera-graphics",
+      "inline_comment": "Tested on 12 clinic tablets: glFenceSync returns early on Adreno 619 driver v1.4. Keep Thread.sleep(120) until adreno_driver_patch == 'v2.0'.",
+      "incident_id": "INC-9984",
+      "expiry_rule": {
+        "config_file": "config/application.yml",
+        "key_path": "healthconnect.imaging.adreno_driver_patch",
+        "expected_value": "v2.0",
+        "description": "Expires when healthconnect.imaging.adreno_driver_patch == 'v2.0'"
+      }
+    },
+    "#149": {
+      "pr_number": "#149",
+      "title": "fix(auth): allow 180s JWT clock skew for Primary Health Centre edge routers",
+      "reviewer": "@vikram-legacy",
+      "inline_comment": "Author @vikram-legacy departed in Jan 2026. BSNL satellite routers block NTP port 123; keep 180s skew until auth.ntp_enforced is true.",
+      "incident_id": "INC-7410",
+      "expiry_rule": {
+        "config_file": "config/application.yml",
+        "key_path": "healthconnect.auth.ntp_enforced",
+        "expected_value": true,
+        "description": "Expires when healthconnect.auth.ntp_enforced == true"
+      }
+    }
+  }
+}

@@ -1,0 +1,325 @@
+[
+  {
+    "id": "ASM-29",
+    "timestamp": "2026-10-31T22:47:07.791624+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "GatewayRouter.java",
+    "declared_assumptions": [
+      "assumption"
+    ],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-28",
+    "timestamp": "2026-10-31T22:47:07.262750+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "declared_assumptions": [],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-27",
+    "timestamp": "2026-10-31T22:44:48.952318+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "GatewayRouter.java",
+    "declared_assumptions": [
+      "assumption"
+    ],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-26",
+    "timestamp": "2026-10-31T22:44:48.425685+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "declared_assumptions": [],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-25",
+    "timestamp": "2026-10-31T22:43:46.958031+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "GatewayRouter.java",
+    "declared_assumptions": [
+      "assumption"
+    ],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-24",
+    "timestamp": "2026-10-31T22:43:46.463461+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "declared_assumptions": [],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-23",
+    "timestamp": "2026-10-31T22:35:38.705528+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "GatewayRouter.java",
+    "declared_assumptions": [
+      "assumption"
+    ],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-22",
+    "timestamp": "2026-10-31T22:35:38.191202+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "declared_assumptions": [],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-21",
+    "timestamp": "2026-10-31T22:34:18.074272+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "GatewayRouter.java",
+    "declared_assumptions": [
+      "assumption"
+    ],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-20",
+    "timestamp": "2026-10-31T22:34:17.581994+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "declared_assumptions": [],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-19",
+    "timestamp": "2026-10-31T22:28:59.494109+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "GatewayRouter.java",
+    "declared_assumptions": [
+      "assumption"
+    ],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-18",
+    "timestamp": "2026-10-31T22:28:58.943600+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "declared_assumptions": [],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-17",
+    "timestamp": "2026-10-31T22:28:08.652206+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "GatewayRouter.java",
+    "declared_assumptions": [
+      "assumption"
+    ],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-16",
+    "timestamp": "2026-10-31T22:28:08.178093+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "declared_assumptions": [],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-15",
+    "timestamp": "2026-10-31T22:27:25.850217+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "GatewayRouter.java",
+    "declared_assumptions": [
+      "assumption"
+    ],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-14",
+    "timestamp": "2026-10-31T22:27:25.321155+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "declared_assumptions": [],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-13",
+    "timestamp": "2026-10-31T22:26:59.762391+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "GatewayRouter.java",
+    "declared_assumptions": [
+      "assumption"
+    ],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-12",
+    "timestamp": "2026-10-31T22:26:59.262418+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "declared_assumptions": [],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-11",
+    "timestamp": "2026-10-31T22:22:53.979485+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "GatewayRouter.java",
+    "declared_assumptions": [
+      "assumption"
+    ],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-10",
+    "timestamp": "2026-10-31T22:22:53.509959+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "declared_assumptions": [],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-09",
+    "timestamp": "2026-10-31T22:19:14.304493+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "GatewayRouter.java",
+    "declared_assumptions": [
+      "assumption"
+    ],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-08",
+    "timestamp": "2026-10-31T22:19:13.780623+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "declared_assumptions": [],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-07",
+    "timestamp": "2026-10-31T22:18:46.268821+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "GatewayRouter.java",
+    "declared_assumptions": [
+      "assumption"
+    ],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-06",
+    "timestamp": "2026-10-31T22:18:45.736319+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "declared_assumptions": [],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-05",
+    "timestamp": "2026-10-31T22:18:42.407402+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "GatewayRouter.java",
+    "declared_assumptions": [
+      "assumption"
+    ],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-04",
+    "timestamp": "2026-10-31T22:18:41.904465+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "declared_assumptions": [],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-03",
+    "timestamp": "2026-10-31T22:16:17.431062+00:00",
+    "agent_name": "AI Agent",
+    "target_file": "GatewayRouter.java",
+    "declared_assumptions": [
+      "assumption"
+    ],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [PENDING_CONFIRMATION] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
+  },
+  {
+    "id": "ASM-01",
+    "timestamp": "2026-10-31T21:10:00+05:30",
+    "agent_name": "Claude Code / Cursor Agent",
+    "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "declared_assumptions": [
+      "Assumes upstream Razorpay gateway responds within 1000ms on first attempt",
+      "Assumes retry loop in dispatchSettlement() is redundant legacy boilerplate"
+    ],
+    "verdict": "REJECTED_BY_FENCE",
+    "violated_fence_id": "FENCE-001",
+    "explanation": "Assumption contradicts PR #212 / INC-9921: v1 load balancer drops every 4th SYN packet at midnight."
+  },
+  {
+    "id": "ASM-02",
+    "timestamp": "2026-10-31T21:45:00+05:30",
+    "agent_name": "GitHub Copilot Workspace",
+    "target_file": "src/main/java/com/healthconnect/auth/JwtClockSkewFilter.java",
+    "declared_assumptions": [
+      "Assumes all clinic edge routers synchronize system clock via standard UDP NTP"
+    ],
+    "verdict": "CAUTION_UNVERIFIED_HISTORICAL",
+    "violated_fence_id": "FENCE-003",
+    "explanation": "Historical fence by departed author @vikram-legacy (PR #149): 14 tribal clinics on satellite backhaul block UDP port 123."
+  }
+]

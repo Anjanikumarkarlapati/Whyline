@@ -1,0 +1,11 @@
+healthconnect:
+  environment: "production-india-south"
+  payment:
+    gateway:
+      provider: "razorpay-legacy-edge"
+      version: "v1"
+      idempotency_outbox_enabled: false
+  imaging:
+    adreno_driver_patch: "v1.4-legacy"
+  auth:
+    ntp_enforced: false
