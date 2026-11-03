@@ -20,8 +20,8 @@ Developers spend hours debugging and preserving fragile, undocumented workaround
 ## 🏛️ Architecture & Visual System
 
 WhyLine Studio features an **architecture-studio aesthetic**:
-- **Design Tokens**: Warm canvas (`#F7F4EC`), crisp surface (`#FCFAF5`), deep ink (`#1B1A16`), and muted olive accents (`#4A4A2A`).
-- **Dark Mode**: High-contrast, calm dark theme (`#151510` canvas, `#1D1D16` surface, `#ECE8DA` ink).
+- **Design Tokens**: Cream canvas (`#FDFBD4`), crisp surface (`#FFFEF0`), olive ink (`#545333`), and raised surface (`#F2F0CA`).
+- **Dark Mode**: High-contrast, calm dark theme (`#1C1C10` canvas, `#25251A` surface, `#FDFBD4` ink).
 - **Accessibility**: 100% WCAG 2.2 AA compliant contrast ratios across all elements, `aria-live` voice indicators, and keyboard accessibility.
 - **Visual Design**: Strict 1200px container, zero decorative fluff, 44px min touch targets, and inline mono code rendering.
 
@@ -38,7 +38,7 @@ WhyLine Studio features an **architecture-studio aesthetic**:
 
 ```bash
 # Clone the repository
-git clone https://github.com/Anjanikumarkarlapati/Whyline.git
+git clone https://github.com/nandhan262006/Whyline.git
 cd Whyline
 
 # Install backend dependencies
