@@ -1,0 +1,7 @@
+{
+  "name": "WhyLine Studio",
+  "description": "Engineering Field-Report Studio & Spoken Fences — Guard the unwritten why behind code with AST anomaly detection, multilingual spoken fences, and architectural co-pilot.",
+  "permissions": [],
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

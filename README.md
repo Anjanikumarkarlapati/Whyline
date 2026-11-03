@@ -11,9 +11,9 @@ Developers spend hours debugging and preserving fragile, undocumented workaround
 
 **WhyLine Studio** bridges this gap:
 1. **AST Anomaly Detection**: Parses codebases to detect suspicious patterns (`MAGIC_LITERAL_CONTROL_FLOW`, `EXPLICIT_THREAD_HALT`, `VALIDATION_BYPASS`, `SWALLOWED_EXCEPTION`).
-2. **Spoken Fences & Provenance Mining**: Extracts historical git blame, PR context, and allows engineers to attach 10-second voice postmortems in English, Telugu, or Hindi (via Gnani Vachana AI).
+2. **Spoken Fences & Provenance Mining**: Extracts historical git blame, PR context, and allows engineers to attach 10-second voice postmortems in English, Telugu, or Hindi.
 3. **Model Context Protocol (MCP) Server**: Intercepts automated agent edits and git commits before they are finalized. Rejects changes that violate active fences.
-4. **Architectural Co-Pilot**: Voice-to-voice and text query interface powered by Supabase pgvector hybrid Reciprocal Rank Fusion (RRF), delivering strategies to crack bugs safely.
+4. **Architectural Co-Pilot**: Voice-to-voice and text query interface powered by hybrid Reciprocal Rank Fusion (RRF), delivering strategies to crack bugs safely.
 
 ---
 
@@ -30,40 +30,26 @@ WhyLine Studio features an **architecture-studio aesthetic**:
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.10+
 - Node.js 18+ & npm
-- (Optional) Supabase project & Gnani Vachana API key (runs seamlessly in deterministic local fallback mode if omitted)
 
-### 1. Backend Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/nandhan262006/Whyline.git
-cd Whyline
-
-# Install backend dependencies
-pip install fastapi uvicorn pydantic tree-sitter tree-sitter-java requests python-dotenv
-
-# Run backend API server
-python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
-```
-
-Backend will be live at `http://127.0.0.1:8000`.
-
-### 2. Frontend Setup
+### Development Server
 
 ```bash
-# Navigate to frontend
-cd frontend
-
 # Install dependencies
 npm install
 
-# Start Vite development server
+# Start Vite development server on port 3000
 npm run dev
 ```
 
-Frontend will be accessible at `http://localhost:5173`.
+App is accessible at `http://localhost:3000`.
+
+### Production Build
+
+```bash
+npm run build
+npm run preview
+```
 
 ---
 
@@ -87,38 +73,6 @@ Frontend will be accessible at `http://localhost:5173`.
 - Ask questions about the codebase via speech or text.
 - Returns spoken briefings, recommended code patches, and 3 ranked architectural strategies with visual risk meters.
 
-### 5. Deterministic MCP Server (`mcp/whyline_mcp.py`)
-- Standard Model Context Protocol interface for AI coding agents:
-  - `check_diff`: Validates proposed diffs against AST fences and rejects edits breaking active invariants.
-  - `query_fences`: Exposes fences and historical reasons to the model's tool context.
-
----
-
-## 🧪 Testing & Verification
-
-Run the comprehensive test suite:
-
-```bash
-# Run backend tests
-python -m pytest tests/ -v
-
-# Run design token & contrast verification
-python scripts/audit_design_system.py
-python scripts/verify_contrast_and_a11y.py
-
-# Build frontend production bundle
-cd frontend && npm run build
-```
-
----
-
-## 🔒 Security & Privacy
-
-- All sensitive keys (`GNANI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GITHUB_TOKEN`) are configured through `.env` and are strictly excluded from source control.
-- Deterministic sandbox fallbacks ensure full offline local development without external API exposure.
-
----
-
-## 📄 License
-
-MIT License. Designed and engineered for resilient software architectures.
+### 5. Interactive Git Architecture Flowchart (`/git`)
+- Directed flowchart graph visualizer with 5 architectural stages.
+- Multilingual synchronized step-by-step voice narration in Telugu, Hindi, or English.
