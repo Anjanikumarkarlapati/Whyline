@@ -1400,7 +1400,7 @@ img.brand-mark {
   cursor: pointer;
   white-space: nowrap;
   transition: background-color 150ms ease-out, color 150ms ease-out,
-    transform 90ms ease-out, box-shadow 90ms ease-out;
+    transform 90ms ease-out;
 }
 
 .segmented-btn:hover {
@@ -1419,7 +1419,7 @@ img.brand-mark {
 .segmented-btn[data-pressing],
 .filter-chip[data-pressing] {
   transform: translateY(1px) !important;
-  transition: transform 90ms ease-out, box-shadow 90ms ease-out;
+  transition: transform 90ms ease-out;
 }
 
 /* Flowchart node keyboard press */

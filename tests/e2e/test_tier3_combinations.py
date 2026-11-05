@@ -70,7 +70,7 @@ def test_tier3_mcp_git_diff_to_pre_commit_abort(temp_repo: Path):
     proposed_diff = (
         "--- a/src/main/java/com/healthconnect/payments/GatewayRouter.java\n"
         "+++ b/src/main/java/com/healthconnect/payments/GatewayRouter.java\n"
-        "@@ -107,3 +107,3 @@\n"
+        "@@ -6,3 +6,3 @@\n"
         "-        int retryCount = 5;\n"
         "+        int retryCount = 1;\n"
     )

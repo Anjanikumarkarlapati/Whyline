@@ -26,29 +26,32 @@ Developers spend hours debugging and preserving fragile, undocumented workaround
 
 ## 🔒 Security & Privacy
 
-WhyLine is built with a **Zero-Secret Guarantee** to prevent private keys, authentication tokens, and credentials from ever leaking:
+WhyLine is built with an enterprise-grade **Zero-Secret Guarantee** to prevent private keys, authentication tokens, and credentials from leaking into source control:
 
 ### 1. Automated Secret Scanning (`scripts/scan_secrets.py`)
-- Runs automatically on `pre-commit` and CI sweeps across all repository files.
+- Runs automatically on every `git commit` via pre-commit hooks and CI sweeps across all repository files.
 - Inspects high-entropy token signatures including:
-  - Google API Keys (`AIza...`)
+  - Google API Keys & Gemini Developer Studio Keys (`AIza...`, `AQ....`)
+  - Gnani Vachana Production Tokens (`vach_...`)
+  - Supabase Service Role and Publishable Keys (`sb_secret_...`, `sb_publishable_...`)
   - GitHub Personal Access Tokens (`ghp_...`, `github_pat_...`)
   - Anthropic / OpenAI Secret Keys (`sk-...`)
   - AWS Access Keys (`AKIA...`)
   - RSA / EC / OpenSSH Private Keys (`-----BEGIN ... PRIVATE KEY-----`)
-  - Gnani Vachana Credentials
-- Run audit manually:
+  - Hardcoded production webhook secrets
+- Run audit manually anytime:
   ```bash
   python scripts/scan_secrets.py --all
   ```
-  *(Output: `All checks passed. Zero secrets detected.`)*
+  *(Expected Output: `[WhyLine Secret Scan] All checks passed. Zero secrets detected.`)*
 
-### 2. Strict Ignored Credentials (`.gitignore`)
+### 2. Strict Ignored Credentials & Files (`.gitignore`)
 - All `.env`, `*.env`, `.env.local`, `*.pem`, `*.key`, `*.cert`, and `*.p12` certificates are strictly excluded from git.
-- Only `.env.example` is committed, providing safe dummy placeholder keys (`your-gnani-vachana-api-key`, `your-supabase-service-role-secret-key`).
+- Only `.env.example` is committed, providing safe dummy placeholder keys (`your-gnani-vachana-api-key`, `your-supabase-service-role-secret-key`, `your-random-webhook-secret-here`).
+- Personal office documents (`*.xlsx`, `*.docx`, `*.doc`) and scratch output directories (`outputs/`, `tmp_test/`) are excluded from tracking.
 
 ### 3. Isolated Sandbox Fallbacks
-- When `GNANI_API_KEY` or `SUPABASE_SERVICE_ROLE_KEY` are unset, WhyLine operates 100% offline using deterministic local PCM synthesis and in-memory AST RRF search with zero network leakage.
+- When `GNANI_API_KEY`, `GEMINI_API_KEY`, or `SUPABASE_SERVICE_ROLE_KEY` are unset, WhyLine operates 100% offline using deterministic local PCM audio synthesis and in-memory AST Reciprocal Rank Fusion (RRF) search with zero network leakage.
 
 ---
 
