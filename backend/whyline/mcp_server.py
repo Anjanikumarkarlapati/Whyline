@@ -65,7 +65,9 @@ def parse_unified_diff(diff_text: str) -> tuple[list[int], list[str], list[str],
     for line in diff_text.splitlines():
         m = re.match(r"^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@", line)
         if m:
-            curr_orig_line = int(m.group(1))
+            orig_start = int(m.group(1))
+            new_start = int(m.group(3))
+            curr_orig_line = orig_start if orig_start > 0 else (new_start if new_start > 0 else 1)
             in_hunk = True
             continue
 
@@ -193,6 +195,17 @@ class WhyLineMcpEngine:
 
             token_in_removed = bool(token and (token in removed_str or (token_compact and token_compact in removed_compact)))
             token_in_added = bool(token and (token in added_str or (token_compact and token_compact in added_compact)))
+
+            # If token is not in added lines, verify whether target file on disk is missing the invariant token
+            if token and not token_in_added:
+                target_disk = self.store.repo_dir / norm_target
+                if target_disk.exists():
+                    try:
+                        disk_content = target_disk.read_text(encoding="utf-8", errors="ignore")
+                        if token not in disk_content and token_compact not in re.sub(r"\s+", "", disk_content):
+                            token_in_removed = True
+                    except Exception:
+                        pass
 
             # 1. Whitespace-only edit (token must not be deleted)
             if is_whitespace_only and not (token_in_removed and not token_in_added):
