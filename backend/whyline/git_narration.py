@@ -12,7 +12,7 @@ _TEMPLATES = {
     "hi-IN": "चरण {n}। {label}। {summary}। यह {file} में है।",
     "te-IN": "దశ {n}. {label}. {summary}. ఇది {file} లో ఉంది.",
 }
-_VOICES = {"en-IN": "Nalini", "hi-IN": "Bhavna", "te-IN": "Nalini"}
+_VOICES = {"en-IN": "Pranav", "hi-IN": "Bhavna", "te-IN": "Nalini"}
 
 
 def _order(graph: dict) -> list[dict]:
@@ -31,24 +31,23 @@ def _order(graph: dict) -> list[dict]:
     return [nodes[i] for i in seen]
 
 
-def narrate_flowchart(graph: dict, language: str) -> list[dict]:
-    """Ordered steps [{step, node_id, text, audio_url}].
-
-    Text is instant; audio is synthesized lazily per step via GET /api/git/speak, so the scan
-    returns immediately and the UI can prefetch the next step while the current one plays.
-    """
+def narrate_flowchart(graph: dict, language: str, output_dir: Path | None = None) -> list[dict]:
+    """Ordered steps [{step, node_id, text, audio_url}]."""
     lang = language if language in _TEMPLATES else "en-IN"
     steps = []
     for i, n in enumerate(_order(graph), start=1):
         text = _TEMPLATES[lang].format(
             n=i, label=n["label"], summary=n.get("summary", ""), file=n.get("file_path", "")
         )
+        stem = "git_" + hashlib.sha1(f"{lang}:{text}".encode()).hexdigest()[:16]
+        if output_dir:
+            speak(text, lang, output_dir)
         steps.append(
             {
                 "step": i,
                 "node_id": n["id"],
                 "text": text,
-                "audio_url": f"/api/git/speak?{urlencode({'text': text, 'language': lang})}",
+                "audio_url": f"/api/audio/{stem}.wav",
             }
         )
     return steps

@@ -10,6 +10,7 @@ import {
 import { useI18n } from '../i18n';
 import StatusBadge from '../components/StatusBadge';
 import { CodeBlock, FormattedText } from '../components/CodeText';
+import AudioWaveform from '../components/AudioWaveform';
 
 export default function SpokenFencesPage() {
   const { lang, t } = useI18n();
@@ -25,6 +26,10 @@ export default function SpokenFencesPage() {
   const [rescoreLog, setRescoreLog] = useState([]);
   const [interceptOutput, setInterceptOutput] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(10);
+  const audioRef = useRef(null);
   const drawerCloseRef = useRef(null);
 
   const loadFences = async () => {
@@ -75,61 +80,111 @@ export default function SpokenFencesPage() {
 
   const handleConfirmByVoice = async () => {
     if (!selectedFence) return;
-    const resp = await fetch(`/api/fences/${selectedFence.id}/confirm`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        transcript_text: voiceInput,
-        language: lang === 'hi' ? 'hi-IN' : 'te-IN',
-        author_handle: '@anjani',
-      }),
-    });
-    const data = await resp.json();
-    setRescoreLog(data?.stt_telemetry?.ast_replacements || []);
-    await loadFences();
-    showToast(`${selectedFence.id} confirmed by voice and locked in AST ledger.`);
-    if (data?.fence?.audio_url) {
-      const audio = new Audio(data.fence.audio_url);
-      audio.play().catch(() => {});
+    try {
+      const resp = await fetch(`/api/fences/${selectedFence.id}/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcript_text: voiceInput,
+          language: lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN',
+          author_handle: '@anjani',
+        }),
+      });
+      if (!resp.ok) throw new Error('Voice confirmation failed');
+      const data = await resp.json();
+      setRescoreLog(data?.stt_telemetry?.ast_replacements || []);
+      await loadFences();
+      showToast(`${selectedFence.id} confirmed by voice and locked in AST ledger.`);
+      if (data?.fence?.audio_url) {
+        handlePlayAudio(data.fence.audio_url);
+      }
+    } catch (err) {
+      showToast(`Error confirming fence: ${err.message || err}`);
     }
   };
 
   const handlePlayAudio = (url) => {
     if (!url) return;
-    const audio = new Audio(url);
-    audio.play().catch(() => {});
+    try {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.ontimeupdate = () => {
+        setAudioCurrentTime(audio.currentTime);
+      };
+      audio.onloadedmetadata = () => {
+        if (audio.duration) setAudioDuration(audio.duration);
+      };
+      audio.onended = () => {
+        setIsPlayingAudio(false);
+        setAudioCurrentTime(0);
+      };
+      audio.onerror = () => {
+        setIsPlayingAudio(false);
+      };
+      audio.play().then(() => {
+        setIsPlayingAudio(true);
+      }).catch((err) => {
+        console.warn('Audio play failed:', err);
+        setIsPlayingAudio(false);
+      });
+    } catch (err) {
+      console.warn('Audio initialization failed:', err);
+      setIsPlayingAudio(false);
+    }
+  };
+
+  const handleToggleAudio = () => {
+    if (isPlayingAudio && audioRef.current) {
+      audioRef.current.pause();
+      setIsPlayingAudio(false);
+    } else if (selectedFence?.audio_url) {
+      handlePlayAudio(selectedFence.audio_url);
+    }
   };
 
   const handleSimulateIntercept = async () => {
     if (!selectedFence) return;
-    const resp = await fetch('/api/fences/intercept-test', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        file_path: selectedFence.file_path,
-        proposed_diff: `- ${selectedFence.matched_token};\n+ // AI Agent cleaned up legacy workaround`,
-        agent_name: 'Claude Code / Cursor Agent',
-        declared_assumptions: [
-          `Assumes ${selectedFence.matched_token} in ${selectedFence.method_name} is obsolete`,
-        ],
-      }),
-    });
-    const data = await resp.json();
-    setInterceptOutput(data.fence_check);
-    if (data?.fence_check?.spoken_warning_url) {
-      handlePlayAudio(data.fence_check.spoken_warning_url);
+    try {
+      const resp = await fetch('/api/fences/intercept-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_path: selectedFence.file_path,
+          proposed_diff: `- ${selectedFence.matched_token};\n+ // AI Agent cleaned up legacy workaround`,
+          agent_name: 'Claude Code / Cursor Agent',
+          declared_assumptions: [
+            `Assumes ${selectedFence.matched_token} in ${selectedFence.method_name} is obsolete`,
+          ],
+        }),
+      });
+      if (!resp.ok) throw new Error('Intercept simulation failed');
+      const data = await resp.json();
+      setInterceptOutput(data.fence_check);
+      if (data?.fence_check?.spoken_warning_url) {
+        handlePlayAudio(data.fence_check.spoken_warning_url);
+      }
+    } catch (err) {
+      showToast(`Error simulating agent edit: ${err.message || err}`);
     }
   };
 
   const handleToggleGatewayVersion = async () => {
     const nextVersion = gatewayVersion === 'v2' ? 'v1' : 'v2';
-    await fetch('/api/config/gateway-version', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ version: nextVersion }),
-    });
-    await loadFences();
-    showToast(`Config updated: gateway.version = ${nextVersion}`);
+    try {
+      const resp = await fetch('/api/config/gateway-version', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version: nextVersion }),
+      });
+      if (!resp.ok) throw new Error('Gateway version update failed');
+      await loadFences();
+      showToast(`Config updated: gateway.version = ${nextVersion}`);
+    } catch (err) {
+      showToast(`Error toggling gateway version: ${err.message || err}`);
+    }
   };
 
   return (
@@ -370,36 +425,40 @@ export default function SpokenFencesPage() {
                 </p>
               </div>
 
-              {/* Audio Player & Transcript */}
-              <div
-                style={{
-                  padding: '16px',
-                  borderRadius: 'var(--radius-control)',
-                  border: '1px solid var(--hairline)',
-                  background: 'var(--canvas)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '10px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span className="small-caps">Spoken ADR Audio &amp; Transcript</span>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ minHeight: '36px', padding: '0 12px' }}
-                    onClick={() => handlePlayAudio(selectedFence.audio_url)}
-                  >
-                    <SpeakerHigh size={16} weight="regular" aria-hidden="true" />
-                    <span>{t('btnPlayTimbre')}</span>
-                  </button>
-                </div>
+              {/* Interactive Audio Waveform & Transcript */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <AudioWaveform
+                  isPlaying={isPlayingAudio}
+                  currentTime={audioCurrentTime}
+                  duration={audioDuration}
+                  onTogglePlay={handleToggleAudio}
+                  onSeek={(seekTime) => {
+                    if (audioRef.current) {
+                      audioRef.current.currentTime = seekTime;
+                      setAudioCurrentTime(seekTime);
+                    }
+                  }}
+                  title={`Spoken ADR • ${selectedFence.id}`}
+                  subtitle={`Author: ${selectedFence.author_handle} (${selectedFence.language || 'te-IN'})`}
+                />
                 {selectedFence.transcript ? (
-                  <p className="form-helper" style={{ color: 'var(--ink)' }}>
-                    <FormattedText text={selectedFence.transcript} />
-                  </p>
+                  <div
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: 'var(--radius-control)',
+                      border: '1px solid var(--border-default)',
+                      backgroundColor: 'var(--bg-surface)',
+                    }}
+                  >
+                    <div className="small-caps" style={{ fontSize: '11px', marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                      Verified Voice ADR Transcript
+                    </div>
+                    <p className="form-helper" style={{ color: 'var(--text-primary)', margin: 0 }}>
+                      <FormattedText text={selectedFence.transcript} />
+                    </p>
+                  </div>
                 ) : (
-                  <p className="form-helper">
+                  <p className="form-helper" style={{ color: 'var(--text-secondary)' }}>
                     No voice note recorded yet. Use the 10-second confirmation below to record and lock this fence.
                   </p>
                 )}

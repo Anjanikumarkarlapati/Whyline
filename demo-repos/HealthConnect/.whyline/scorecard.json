@@ -1,6 +1,6 @@
 {
   "repo_name": "HealthConnect",
-  "measured_at": "2026-11-01T16:46:54.926409+00:00",
+  "measured_at": "2026-11-05T14:51:54.166735+00:00",
   "total_seeded_anomalies": 10,
   "routine_crud_false_positives": 0,
   "hard_blocked_edits": 7,
@@ -146,8 +146,8 @@
       "confirmations": 7
     }
   ],
-  "live_intercept_events": 2,
-  "last_intercepted_fence_id": "FENCE-003",
-  "last_intercept_decision": "WARN_AND_REQUIRE_CONFIRMATION",
-  "last_intercept_at": "2026-11-01T16:46:55.042020+00:00"
+  "live_intercept_events": 26,
+  "last_intercepted_fence_id": "FENCE-007",
+  "last_intercept_decision": "REJECT_EDIT",
+  "last_intercept_at": "2026-11-05T15:49:35.100555+00:00"
 }

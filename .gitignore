@@ -38,3 +38,9 @@ screenshots/
 
 # OS artifacts
 Thumbs.db
+
+# User documents & external scratch
+*.docx
+*.doc
+*.xlsx
+outputs/

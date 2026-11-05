@@ -1,6 +1,13 @@
 #!/usr/bin/env sh
-# WhyLine Deterministic Pre-Commit Spoken Fence Guardrail
-# Aborts commit if any staged changes violate active Spoken Fences (.whyline/fences.json)
+# WhyLine Deterministic Pre-Commit Hook: Secret Scan + Spoken Fence Guardrail
+
+echo "[WhyLine Secret Scan] Scanning staged changes for credentials and .env leaks..."
+python scripts/scan_secrets.py
+SECRET_EXIT=$?
+if [ $SECRET_EXIT -ne 0 ]; then
+    echo "[WhyLine Secret Scan] Commit aborted: Secret or credential detected." >&2
+    exit $SECRET_EXIT
+fi
 
 echo "[WhyLine Guard] Verifying staged hunks against .whyline/fences.json..."
 python -m backend.whyline.cli_and_hooks check-staged

@@ -100,7 +100,10 @@ def test_end_to_end_90s_demo_lifecycle_via_api() -> None:
             )
         )
         assert len(copilot_resp["strategies"]) == 3
-        assert copilot_resp["rrf_telemetry"]["latency_ms"] < 50.0
+        if copilot_resp["rrf_telemetry"].get("mode") == "supabase_pgvector_live":
+            assert copilot_resp["rrf_telemetry"]["latency_ms"] < 1500.0
+        else:
+            assert copilot_resp["rrf_telemetry"]["latency_ms"] < 50.0
 
         # 6. Flip gateway.version to v2 in config/application.yml -> FENCE-001 becomes EXPIRED_SAFE_TO_REMOVE
         exp_resp = await update_gateway_version(GatewayVersionRequest(version="v2"))

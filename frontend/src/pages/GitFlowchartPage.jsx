@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useI18n } from '../i18n';
 import InteractiveFlowchartSvg from '../components/InteractiveFlowchartSvg';
 
 const LANGS = [
@@ -8,8 +9,11 @@ const LANGS = [
 ];
 
 export default function GitFlowchartPage() {
+  const { lang: globalLang, setLang: setGlobalLang, t } = useI18n();
   const [target, setTarget] = useState('.');
-  const [lang, setLang] = useState('en-IN');
+  const [lang, setLang] = useState(
+    globalLang === 'hi' ? 'hi-IN' : globalLang === 'te' ? 'te-IN' : 'en-IN'
+  );
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,6 +21,17 @@ export default function GitFlowchartPage() {
   const [done, setDone] = useState([]);
   const audioRef = useRef(null);
   const stopRef = useRef(false);
+
+  useEffect(() => {
+    const mapped = globalLang === 'hi' ? 'hi-IN' : globalLang === 'te' ? 'te-IN' : 'en-IN';
+    setLang(mapped);
+  }, [globalLang]);
+
+  const handleLanguageChange = (newLangCode) => {
+    setLang(newLangCode);
+    const shortCode = newLangCode.startsWith('hi') ? 'hi' : newLangCode.startsWith('te') ? 'te' : 'en';
+    setGlobalLang(shortCode);
+  };
 
   const scan = async () => {
     stopRef.current = true;
@@ -44,9 +59,9 @@ export default function GitFlowchartPage() {
 
   const playFrom = async (idx) => {
     stopRef.current = false;
-    const steps = data.narration;
+    const steps = data?.narration || [];
     const load = (i) => {
-      const a = new Audio(steps[i].audio_url); // browser fetches (and server synthesizes) while earlier steps play
+      const a = new Audio(steps[i]?.audio_url);
       a.preload = 'auto';
       return a;
     };
@@ -58,11 +73,17 @@ export default function GitFlowchartPage() {
       audioRef.current = audio;
       // eslint-disable-next-line no-await-in-loop
       await new Promise((res) => {
+        if (!audio) {
+          res();
+          return;
+        }
         audio.onended = res;
         audio.onerror = res;
         audio.play().catch(res);
       });
-      setDone((d) => [...d, steps[i].node_id]);
+      if (steps[i]?.node_id) {
+        setDone((d) => [...d, steps[i].node_id]);
+      }
     }
     if (!stopRef.current) setActiveStep(null);
   };
@@ -73,48 +94,52 @@ export default function GitFlowchartPage() {
     setActiveStep(null);
   };
 
-  const step = activeStep != null ? data.narration[activeStep] : null;
-  const nodeIdx = (id) => data.narration.findIndex((s) => s.node_id === id);
+  const step = activeStep != null && data?.narration ? data.narration[activeStep] : null;
+  const nodeIdx = (id) => data?.narration?.findIndex((s) => s.node_id === id) ?? -1;
 
   return (
     <div className="page-stack">
       <section className="context-header">
         <div>
-          <p className="context-meta">Git scanner • step-by-step voice</p>
-          <h1 className="page-title">Repository Flowchart</h1>
+          <p className="context-meta">{t('gitFlowchartContext')}</p>
+          <h1 className="page-title">{t('gitFlowchartTitle')}</h1>
         </div>
       </section>
 
       <section className="card card-padded" style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
         <input
-          className="form-input"
+          className="form-input git-scan-input"
           aria-label="Repository path or URL"
           value={target}
           onChange={(e) => setTarget(e.target.value)}
-          style={{ flex: '1 1 320px' }}
         />
-        <select className="form-input" aria-label="Voice language" value={lang} onChange={(e) => setLang(e.target.value)}>
+        <select
+          className="form-input"
+          aria-label="Voice language"
+          value={lang}
+          onChange={(e) => handleLanguageChange(e.target.value)}
+        >
           {LANGS.map(([v, l]) => (
             <option key={v} value={v}>{l}</option>
           ))}
         </select>
         <button type="button" className="btn btn-primary" onClick={scan} disabled={loading}>
-          {loading ? 'Scanning…' : 'Scan & Explain'}
+          {loading ? t('btnScanning') : t('btnScanExplain')}
         </button>
         {data && (
           <>
-            <button type="button" className="btn btn-secondary" onClick={() => playFrom(0)}>Play walkthrough</button>
-            <button type="button" className="btn btn-secondary" onClick={stop}>Stop</button>
+            <button type="button" className="btn btn-secondary" onClick={() => playFrom(0)}>{t('btnPlayWalkthrough')}</button>
+            <button type="button" className="btn btn-secondary" onClick={stop}>{t('btnStop')}</button>
           </>
         )}
       </section>
 
-      {error && <div role="alert" className="card card-padded" style={{ color: 'var(--danger)' }}>Error: {error}</div>}
+      {error && <div role="alert" className="card card-padded git-error">Error: {error}</div>}
 
       {data && (
         <section className="card card-padded">
           <p className="form-helper" aria-live="polite">
-            {step ? `Step ${step.step}/${data.narration.length}: ${step.text}` : `${data.repo_metadata.name} — ${data.narration.length} steps ready`}
+            {step ? `Step ${step.step}/${data.narration?.length || 0}: ${step.text}` : `${data?.repo_metadata?.name || 'Repository'} — ${data.narration?.length || 0} steps ready`}
           </p>
           <InteractiveFlowchartSvg
             graph={data.flowchart_graph}

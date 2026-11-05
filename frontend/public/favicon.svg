@@ -1,4 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="8" fill="#545333" />
-  <text x="16" y="22" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="16" font-weight="700" fill="#FDFBD4">W</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <title>WhyLine — Speaking Fence</title>
+  <rect width="32" height="32" rx="8" fill="#545333"/>
+  <!-- fence pickets: 4 uprights -->
+  <rect x="4"  y="10" width="4" height="14" rx="1" fill="#FDFBD4" opacity="0.9"/>
+  <rect x="10" y="8"  width="4" height="16" rx="1" fill="#FDFBD4" opacity="0.9"/>
+  <rect x="16" y="10" width="4" height="14" rx="1" fill="#FDFBD4" opacity="0.9"/>
+  <!-- amber picket = the one that speaks -->
+  <rect x="22" y="8"  width="4" height="16" rx="1" fill="#D9A520"/>
+  <!-- horizontal rail -->
+  <rect x="3"  y="20" width="26" height="3" rx="1" fill="#FDFBD4" opacity="0.6"/>
+  <!-- sound wave arcs emanating from amber picket -->
+  <path d="M 28.5 12 Q 31 16 28.5 20" stroke="#D9A520" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.9"/>
 </svg>

@@ -46,6 +46,7 @@ from collections import OrderedDict
 MAX_TTS_CACHE_ENTRIES = 64
 _TTS_WAV_CACHE: OrderedDict[str, bytes] = OrderedDict()
 _CACHE_LOCK = threading.Lock()
+_GNANI_CALL_LOCK = threading.Lock()
 
 
 def _cache_get(key: str) -> bytes | None:
@@ -106,7 +107,7 @@ _atomic_write_bytes = _safe_write_wav
 
 
 def normalize_gnani_language(language: str) -> str:
-    """Maps BCP-47 or short codes (te-IN, hi-IN, en-IN) to Vachana TTS language names."""
+    """Maps BCP-47 or short codes (te-IN, hi-IN, en-IN) to Vachana Timbre v2.5 language names."""
     lang = (language or "en-IN").strip().lower()
     if lang.startswith("te") or "telugu" in lang:
         return "telugu"
@@ -257,40 +258,40 @@ class GnaniSpeechClient:
             }
             resp = None
             max_retries = 5
-            for attempt in range(max_retries):
-                try:
-                    files = {
-                        "audio_file": ("audio.wav", audio_bytes, "audio/wav"),
-                    }
-                    resp = requests.post(
-                        self.stt_rest_url,
-                        headers=headers,
-                        files=files,
-                        data=form_data,
-                        timeout=15.0,
-                    )
-                    if resp.status_code == 200:
+            with _GNANI_CALL_LOCK:
+                for attempt in range(max_retries):
+                    try:
+                        files = {
+                            "audio_file": ("audio.wav", audio_bytes, "audio/wav"),
+                        }
+                        resp = requests.post(
+                            self.stt_rest_url,
+                            headers=headers,
+                            files=files,
+                            data=form_data,
+                            timeout=15.0,
+                        )
+                        if resp.status_code == 200:
+                            break
+                        if resp.status_code in (429, 500, 502, 503, 504):
+                            if attempt < max_retries - 1:
+                                delay = 2.0 * (attempt + 1) + random.uniform(0.5, 1.5)
+                                time.sleep(delay)
+                                continue
                         break
-                    if resp.status_code in (429, 500, 502, 503, 504):
+                    except Exception:
                         if attempt < max_retries - 1:
                             delay = 2.0 * (attempt + 1) + random.uniform(0.5, 1.5)
                             time.sleep(delay)
                             continue
-                    break
-                except Exception:
-                    if attempt < max_retries - 1:
-                        delay = 2.0 * (attempt + 1) + random.uniform(0.5, 1.5)
-                        time.sleep(delay)
-                        continue
-                    resp = None
-                    break
+                        resp = None
+                        break
 
             if resp is not None and resp.status_code == 200:
                 provider_mode = "gnani-prisma-v2.5-live"
                 try:
                     resp_data = resp.json()
                     if isinstance(resp_data, dict):
-                        # Genuinely report upstream transcript without mock facade
                         raw_text = (
                             resp_data.get("transcript")
                             or resp_data.get("text")
@@ -298,14 +299,19 @@ class GnaniSpeechClient:
                             or resp_data.get("data", {}).get("text")
                             or ""
                         )
+                        detected_language = resp_data.get("detected_language_code") or stt_lang
                     elif isinstance(resp_data, str):
                         raw_text = resp_data
+                        detected_language = stt_lang
                     else:
                         raw_text = ""
+                        detected_language = stt_lang
                 except Exception:
                     raw_text = resp.text.strip()
+                    detected_language = stt_lang
             else:
                 provider_mode = "gnani-prisma-v2.5-fallback"
+                detected_language = stt_lang
                 if not raw_text:
                     if stt_lang.startswith("te"):
                         raw_text = (
@@ -323,6 +329,7 @@ class GnaniSpeechClient:
                             "until gateway dot version is v2 in application yml."
                         )
         elif not raw_text:
+            detected_language = stt_lang
             # Sandbox mode
             if stt_lang.startswith("te"):
                 raw_text = (
@@ -339,6 +346,8 @@ class GnaniSpeechClient:
                     "Confirmed: keep retry count = 5 and timeout ms = 4500 in gateway router "
                     "until gateway dot version is v2 in application yml."
                 )
+        else:
+            detected_language = stt_lang
 
         rescore_result = self.rescore_ast_vocabulary(raw_text, repo_vocab=repo_vocab)
         return {
@@ -346,6 +355,7 @@ class GnaniSpeechClient:
             "ws_endpoint": self.stt_ws_url,
             "provider_mode": provider_mode,
             "language": language,
+            "detected_language": detected_language,
             **rescore_result,
         }
 
@@ -355,10 +365,10 @@ class GnaniSpeechClient:
         language: str = "te-IN",
         repo_vocab: list[str] | None = None,
     ) -> dict:
-        """Streams audio to Prisma v2.5 STT WebSocket (wss://api.vachana.ai/v1/stt/realtime)
+        """Streams audio to Prisma v3.0 STT WebSocket (wss://api.vachana.ai/v1/stt/realtime)
         with graceful fallback when offline.
         """
-        provider_mode = "gnani-prisma-v2.5-ws-sandbox"
+        provider_mode = "gnani-prisma-v3.0-ws-sandbox"
         raw_transcript = ""
 
         if self.api_key:
@@ -374,7 +384,7 @@ class GnaniSpeechClient:
                     },
                 ) as ws:
                     init_msg = json.dumps(
-                        {"action": "start", "model": "prisma-v2.5", "language": language, "sample_rate": 16000}
+                        {"action": "start", "model": "prisma-v3.0", "language": language, "sample_rate": 16000}
                     )
                     await ws.send(init_msg)
 
@@ -389,17 +399,17 @@ class GnaniSpeechClient:
                         data = json.loads(msg)
                         if data.get("is_final"):
                             raw_transcript = data.get("transcript", "")
-                            provider_mode = "gnani-prisma-v2.5-ws-live"
+                            provider_mode = "gnani-prisma-v3.0-ws-live"
                             break
             except Exception:
-                provider_mode = "gnani-prisma-v2.5-ws-fallback"
+                provider_mode = "gnani-prisma-v3.0-ws-fallback"
 
         if not raw_transcript:
             return self.transcribe(fallback_text=None, language=language, repo_vocab=repo_vocab)
 
         rescore_result = self.rescore_ast_vocabulary(raw_transcript, repo_vocab=repo_vocab)
         return {
-            "model": "prisma-v2.5",
+            "model": "prisma-v3.0",
             "ws_endpoint": self.stt_ws_url,
             "provider_mode": provider_mode,
             "language": language,
@@ -430,11 +440,11 @@ class GnaniSpeechClient:
         output_dir: Path,
         file_stem: str,
         voice: str = "Nalini",
-        language: str = "te-IN",
+        language: str = "en-IN",
         speaker_embedding: str | None = None,
         force_live: bool = False,
     ) -> dict:
-        """Synthesizes 16kHz linear_pcm WAV speech via Timbre v2.5 (model="timbre-v2.5", voices "Nalini"/"Pranav"),
+        """Synthesizes 16kHz linear_pcm WAV speech via Timbre v2.5 (model="timbre-v2.5", voices "Nalini"/"Bhavna"/"Pranav"),
         or falls back to local pleasant 16kHz WAV generation when offline.
         """
         output_dir = Path(output_dir)
@@ -442,7 +452,9 @@ class GnaniSpeechClient:
         wav_path = output_dir / f"{file_stem}.wav"
         gnani_lang = normalize_gnani_language(language)
         clean_text = (text or "WhyLine Spoken Fence audio cue.").strip()[:420]
-        cache_key = hashlib.sha256(f"{voice}:{gnani_lang}:{clean_text}".encode("utf-8")).hexdigest()[:20]
+        v2_voices = {"Nalini", "Bhavna", "Pranav"}
+        active_voice = voice if voice in v2_voices else "Nalini"
+        cache_key = hashlib.sha256(f"{active_voice}:{gnani_lang}:{clean_text}".encode("utf-8")).hexdigest()[:20]
 
         cached_bytes = _cache_get(cache_key)
 
@@ -450,7 +462,7 @@ class GnaniSpeechClient:
             _safe_write_wav(wav_path, cached_bytes)
             return {
                 "model": "timbre-v2.5",
-                "voice": voice,
+                "voice": active_voice,
                 "sample_rate": 16000,
                 "provider_mode": "gnani-timbre-v2.5-live-cached",
                 "language": language,
@@ -468,16 +480,10 @@ class GnaniSpeechClient:
         provider_mode = "gnani-timbre-v2.5-live" if use_live else "gnani-timbre-v2.5-sandbox"
 
         if use_live:
-            tts_text = clean_text
-            if gnani_lang == "hindi":
-                tts_text = tts_text.replace("रीట్రై కౌంట్", "रीट्राई काउंट")
-                tts_text = re.sub(r"[\u0C00-\u0C7F]+", "", tts_text)
-            elif gnani_lang == "telugu":
-                tts_text = re.sub(r"[\u0900-\u097F]+", "", tts_text)
             payload_dict: dict = {
                 "model": "timbre-v2.5",
-                "voice": voice,
-                "text": tts_text,
+                "voice": active_voice,
+                "text": clean_text,
                 "language": gnani_lang,
                 "sample_rate": 16000,
                 "format": "wav",
@@ -495,31 +501,32 @@ class GnaniSpeechClient:
                 }
                 resp = None
                 max_retries = 4
-                for attempt in range(max_retries):
-                    try:
-                        resp = requests.post(
-                            self.tts_rest_url,
-                            json=payload_dict,
-                            headers=headers,
-                            timeout=15.0,
-                        )
-                        if resp.status_code == 200:
+                with _GNANI_CALL_LOCK:
+                    for attempt in range(max_retries):
+                        try:
+                            resp = requests.post(
+                                self.tts_rest_url,
+                                json=payload_dict,
+                                headers=headers,
+                                timeout=15.0,
+                            )
+                            if resp.status_code == 200:
+                                break
+                            if resp.status_code == 429:
+                                if attempt < max_retries - 1:
+                                    delay = 1.5 * (attempt + 1) + random.uniform(0.3, 1.0)
+                                    time.sleep(delay)
+                                    continue
+                            elif resp.status_code in (500, 502, 503, 504):
+                                if attempt < max_retries - 1:
+                                    time.sleep(1.0 * (attempt + 1))
+                                    continue
                             break
-                        if resp.status_code == 429:
+                        except Exception:
                             if attempt < max_retries - 1:
-                                delay = 1.5 * (attempt + 1) + random.uniform(0.3, 1.0)
-                                time.sleep(delay)
+                                time.sleep(1.5 * (attempt + 1))
                                 continue
-                        elif resp.status_code in (500, 502, 503, 504):
-                            if attempt < max_retries - 1:
-                                time.sleep(1.0 * (attempt + 1))
-                                continue
-                        break
-                    except Exception:
-                        if attempt < max_retries - 1:
-                            time.sleep(1.5 * (attempt + 1))
-                            continue
-                        raise
+                            raise
 
                 if resp is not None and resp.status_code == 200:
                     raw_bytes = resp.content
@@ -559,7 +566,7 @@ class GnaniSpeechClient:
 
         return {
             "model": "timbre-v2.5",
-            "voice": voice,
+            "voice": active_voice,
             "sample_rate": 16000,
             "provider_mode": provider_mode,
             "language": language,

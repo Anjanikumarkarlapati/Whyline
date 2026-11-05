@@ -58,46 +58,62 @@ export default function IncidentsAndMemoryPage() {
 
   const handleTriggerWebhook = async (e) => {
     e.preventDefault();
-    await fetch('/api/incidents/webhook', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        incident_id: incidentId,
-        source: 'PagerDuty Webhook',
-        service: serviceName,
-        title: 'Midnight Settlement SYN Packet Drop',
-        oncall_engineer: '@anjani',
-        language: lang === 'hi' ? 'hi-IN' : 'te-IN',
-        voice_postmortem: voicePostmortem,
-        linked_fence_id: 'FENCE-001',
-      }),
-    });
-    await loadData();
-    showToast(`Captured incident postmortem ${incidentId} and linked to FENCE-001.`);
+    try {
+      const resp = await fetch('/api/incidents/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          incident_id: incidentId,
+          source: 'PagerDuty Webhook',
+          service: serviceName,
+          title: 'Midnight Settlement SYN Packet Drop',
+          oncall_engineer: '@anjani',
+          language: lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN',
+          voice_postmortem: voicePostmortem,
+          linked_fence_id: 'FENCE-001',
+        }),
+      });
+      if (!resp.ok) throw new Error('Failed to record incident webhook');
+      await loadData();
+      showToast(`Captured incident postmortem ${incidentId} and linked to FENCE-001.`);
+    } catch (err) {
+      showToast(`Webhook error: ${err.message || err}`);
+    }
   };
 
   const handleSaveCheckpoint = async (e) => {
     e.preventDefault();
-    await fetch('/api/checkpoints', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        branch_name: branchName,
-        action: 'pause',
-        author_handle: '@anjani',
-        summary: 'Branch debugging checkpoint via whyline pause',
-        ruled_out_dead_ends: [deadEndInput],
-        next_untested_action: nextActionInput,
-      }),
-    });
-    await loadData();
-    showToast(`Saved branch checkpoint for ${branchName}.`);
+    try {
+      const resp = await fetch('/api/checkpoints', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          branch_name: branchName,
+          action: 'pause',
+          author_handle: '@anjani',
+          summary: 'Branch debugging checkpoint via whyline pause',
+          ruled_out_dead_ends: [deadEndInput],
+          next_untested_action: nextActionInput,
+        }),
+      });
+      if (!resp.ok) throw new Error('Failed to save checkpoint');
+      await loadData();
+      showToast(`Saved branch checkpoint for ${branchName}.`);
+    } catch (err) {
+      showToast(`Checkpoint error: ${err.message || err}`);
+    }
   };
 
   const playAudio = (url) => {
     if (!url) return;
-    const audio = new Audio(url);
-    audio.play().catch(() => {});
+    try {
+      const audio = new Audio(url);
+      audio.play().catch((err) => {
+        console.warn('Audio play failed:', err);
+      });
+    } catch (err) {
+      console.warn('Audio initialization failed:', err);
+    }
   };
 
   return (

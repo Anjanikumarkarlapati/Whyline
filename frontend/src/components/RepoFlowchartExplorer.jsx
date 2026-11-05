@@ -2,9 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowsClockwise,
+  Brain,
   CheckCircle,
   Code,
   GitBranch,
+  Graph,
+  Lightbulb,
   Pause,
   Play,
   SkipForward,
@@ -13,6 +16,8 @@ import {
 import { useI18n } from '../i18n';
 import StatusBadge from './StatusBadge';
 import { CodeBlock, FormattedText } from './CodeText';
+import InteractiveFlowchartSvg from './InteractiveFlowchartSvg';
+import { useKbPress } from '../hooks/useKbPress';
 
 const DEMO_REPOS = [
   {
@@ -25,7 +30,7 @@ const DEMO_REPOS = [
   },
 ];
 
-export default function RepoFlowchartExplorer() {
+export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber }) {
   const { lang, setLang } = useI18n();
   const [githubUrl, setGithubUrl] = useState(
     'https://github.com/healthconnect-india/payment-gateway-service'
@@ -35,6 +40,7 @@ export default function RepoFlowchartExplorer() {
   const [activeStepIdx, setActiveStepIdx] = useState(0);
   const [isWalkthroughPlaying, setIsWalkthroughPlaying] = useState(false);
   const [voiceAgentStatus, setVoiceAgentStatus] = useState('Idle');
+  const [viewMode, setViewMode] = useState('steps'); // 'steps' | 'graph'
 
   const audioRef = useRef(null);
   const walkthroughTimerRef = useRef(null);
@@ -62,6 +68,36 @@ export default function RepoFlowchartExplorer() {
     }
   };
 
+  const playProjectSummaryAudio = (projectSummary) => {
+    if (!projectSummary) return;
+    stopVoiceWalkthrough();
+    setVoiceAgentStatus(`Speaking Project Summary (${langCode} • Gnani Voice)`);
+
+    if (projectSummary.audio_url) {
+      if (!audioRef.current) {
+        audioRef.current = new Audio(projectSummary.audio_url);
+      } else {
+        audioRef.current.src = projectSummary.audio_url;
+      }
+      audioRef.current.onended = () => setVoiceAgentStatus('Ready');
+      audioRef.current.onerror = () => setVoiceAgentStatus('Ready');
+      audioRef.current.play().catch(() => {
+        setVoiceAgentStatus('Ready');
+      });
+    } else if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        const text = `${projectSummary.simple_explanation || ''} ${projectSummary.real_world_example || ''}`;
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = langCode;
+        utter.onend = () => setVoiceAgentStatus('Ready');
+        window.speechSynthesis.speak(utter);
+      } catch {
+        setVoiceAgentStatus('Ready');
+      }
+    }
+  };
+
   const fetchFlowchartScan = async (targetUrl, targetLangCode, autoPlayWalkthrough = false) => {
     stopVoiceWalkthrough();
     setLoading(true);
@@ -79,6 +115,9 @@ export default function RepoFlowchartExplorer() {
       setFlowData(json);
       setActiveStepIdx(0);
       setVoiceAgentStatus('Ready');
+      if (json?.steps?.length > 0 && onSelectStep) {
+        onSelectStep(json.steps[0]);
+      }
       if (autoPlayWalkthrough && json?.steps?.length > 0) {
         startStepWalkthrough(json.steps, 0);
       }
@@ -93,6 +132,15 @@ export default function RepoFlowchartExplorer() {
     fetchFlowchartScan(githubUrl, langCode, false);
     return () => stopVoiceWalkthrough();
   }, [lang]);
+
+  useEffect(() => {
+    if (selectedStepNumber && flowData?.steps) {
+      const foundIdx = flowData.steps.findIndex((s) => s.step_number === selectedStepNumber);
+      if (foundIdx >= 0 && foundIdx !== activeStepIdx) {
+        setActiveStepIdx(foundIdx);
+      }
+    }
+  }, [selectedStepNumber, flowData]);
 
   const playSingleStepAudio = (stepObj, onComplete) => {
     if (!stepObj) return;
@@ -164,6 +212,19 @@ export default function RepoFlowchartExplorer() {
   const steps = flowData?.steps || [];
   const currentStep = steps[activeStepIdx] || steps[0] || null;
 
+  // Keyboard 3D press-effect handlers for action buttons
+  const kbScan = useKbPress(() => fetchFlowchartScan(githubUrl, langCode, true));
+  const kbStop = useKbPress(stopVoiceWalkthrough);
+  const kbPlay = useKbPress(() => startStepWalkthrough(steps, 0));
+  const kbSpeakSummary = useKbPress(() => playProjectSummaryAudio(flowData?.project_summary));
+  const kbSpeakStep = useKbPress(() => playSingleStepAudio(currentStep));
+  const kbNextStep = useKbPress(() => {
+    const nextIdx = (activeStepIdx + 1) % steps.length;
+    setActiveStepIdx(nextIdx);
+    playSingleStepAudio(steps[nextIdx]);
+    if (onSelectStep) onSelectStep(steps[nextIdx]);
+  });
+
   return (
     <article className="card" aria-label="GitHub Repository Deep Scanner and Voice Flowchart">
       <div className="card-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
@@ -222,6 +283,7 @@ export default function RepoFlowchartExplorer() {
             type="submit"
             className="btn btn-primary"
             disabled={loading}
+            {...kbScan}
           >
             <ArrowsClockwise size={16} weight="regular" aria-hidden="true" />
             <span>{loading ? 'Scanning Repo…' : 'Scan GitHub Repo & Explain'}</span>
@@ -233,6 +295,7 @@ export default function RepoFlowchartExplorer() {
               type="button"
               className="btn btn-danger"
               onClick={stopVoiceWalkthrough}
+              {...kbStop}
             >
               <Pause size={16} weight="regular" aria-hidden="true" />
               <span>Stop Voice Agent</span>
@@ -244,6 +307,7 @@ export default function RepoFlowchartExplorer() {
               className="btn btn-secondary"
               onClick={() => startStepWalkthrough(steps, 0)}
               disabled={!steps.length}
+              {...kbPlay}
             >
               <Play size={16} weight="regular" aria-hidden="true" />
               <span>Play Step-by-Step Voice Walkthrough</span>
@@ -296,8 +360,149 @@ export default function RepoFlowchartExplorer() {
           </div>
         </div>
 
-        {/* Row 3: Interactive 5-Stage Visual Flowchart (Part-by-Part Node Pipeline) */}
+        {/* Beginner Project Report Card (Gemini Brain Summary & Gnani Audio) */}
+        {flowData && (
+          <div
+            id="beginner-project-report-card"
+            style={{
+              padding: '16px 20px',
+              borderRadius: 'var(--radius-control)',
+              border: '1px solid var(--hairline-strong)',
+              backgroundColor: 'var(--surface-raised)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Brain size={18} weight="fill" style={{ color: 'var(--accent)' }} aria-hidden="true" />
+                <span className="small-caps" style={{ fontWeight: 600 }}>
+                  Beginner Project Report Card • Gemini API Reasoning
+                </span>
+              </div>
+              <button
+                id="btn-speak-project-summary"
+                type="button"
+                className="btn btn-secondary"
+                style={{ minHeight: '32px', padding: '0 12px' }}
+                onClick={() => playProjectSummaryAudio(flowData?.project_summary)}
+                {...kbSpeakSummary}
+              >
+                <SpeakerHigh size={14} weight="regular" aria-hidden="true" />
+                <span>Speak Project Summary (Gnani Voice)</span>
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div>
+                <span className="small-caps" style={{ fontSize: '11px', color: 'var(--ink-muted)' }}>
+                  What This Project Does (In Simple Terms)
+                </span>
+                <p className="body-prose" style={{ margin: '3px 0 0', fontWeight: 500, color: 'var(--ink)' }}>
+                  <FormattedText
+                    text={
+                      flowData?.project_summary?.simple_explanation ||
+                      'WhyLine acts as an architectural black box recorder and safety guardrail that scans code repositories to find historical bug fences and prevent repeat outages.'
+                    }
+                  />
+                </p>
+              </div>
+
+              <div>
+                <span className="small-caps" style={{ fontSize: '11px', color: 'var(--ink-muted)' }}>
+                  How It Works (Real-Life Example)
+                </span>
+                <p className="body-prose" style={{ margin: '3px 0 0', color: 'var(--ink)' }}>
+                  💡{' '}
+                  <FormattedText
+                    text={
+                      flowData?.project_summary?.real_world_example ||
+                      "Think of Chesterton's fence: before removing an odd wooden fence across a mountain pass, you first discover why the town built it (to stop rockfalls), so you don't rebuild the exact disaster."
+                    }
+                  />
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* View Mode Toggle: Part-by-Part Cards vs Interactive SVG Graph */}
         {steps.length > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <div className="segmented-control" role="group" aria-label="Flowchart view style">
+              <button
+                type="button"
+                className={`segmented-btn ${viewMode === 'steps' ? 'active' : ''}`}
+                onClick={() => setViewMode('steps')}
+              >
+                5-Stage Flowchart
+              </button>
+              <button
+                type="button"
+                className={`segmented-btn ${viewMode === 'graph' ? 'active' : ''}`}
+                onClick={() => setViewMode('graph')}
+              >
+                <Graph size={14} weight="regular" style={{ marginRight: '4px' }} aria-hidden="true" />
+                SVG Graph
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Row 3: Interactive Visual Flowchart (Part-by-Part Node Pipeline or SVG Graph) */}
+        {steps.length > 0 && viewMode === 'graph' && (
+          <div
+            style={{
+              padding: '20px',
+              borderRadius: 'var(--radius-control)',
+              border: '1px solid var(--hairline)',
+              background: 'var(--surface-raised)',
+            }}
+          >
+            <InteractiveFlowchartSvg
+              graph={
+                flowData?.graph || {
+                  nodes: steps.map((s, idx) => ({
+                    id: s.node_id,
+                    label: s.title,
+                    category: s.phase,
+                    position: { x: (idx % 3) * 230 + 20, y: Math.floor(idx / 3) * 110 + 20 },
+                  })),
+                  edges: steps.slice(0, -1).map((s, idx) => ({
+                    id: `e-${idx}`,
+                    source: s.node_id,
+                    target: steps[idx + 1].node_id,
+                    label: 'next',
+                  })),
+                }
+              }
+              activeId={currentStep?.node_id}
+              doneIds={steps.slice(0, activeStepIdx).map((s) => s.node_id)}
+              onSelect={(nodeId) => {
+                const foundIdx = steps.findIndex((s) => s.node_id === nodeId);
+                if (foundIdx >= 0) {
+                  stopVoiceWalkthrough();
+                  setActiveStepIdx(foundIdx);
+                  playSingleStepAudio(steps[foundIdx]);
+                  if (onSelectStep) {
+                    onSelectStep(steps[foundIdx]);
+                  }
+                }
+              }}
+            />
+          </div>
+        )}
+
+        {steps.length > 0 && viewMode === 'steps' && (
           <div
             role="region"
             aria-label="Repository execution and spoken fence flowchart"
@@ -331,6 +536,7 @@ export default function RepoFlowchartExplorer() {
                   className="btn btn-secondary"
                   style={{ minHeight: '32px', padding: '0 12px' }}
                   onClick={() => playSingleStepAudio(currentStep)}
+                  {...kbSpeakStep}
                 >
                   <SpeakerHigh size={14} weight="regular" aria-hidden="true" />
                   <span>Speak Part {activeStepIdx + 1}</span>
@@ -344,7 +550,11 @@ export default function RepoFlowchartExplorer() {
                     const nextIdx = (activeStepIdx + 1) % steps.length;
                     setActiveStepIdx(nextIdx);
                     playSingleStepAudio(steps[nextIdx]);
+                    if (onSelectStep) {
+                      onSelectStep(steps[nextIdx]);
+                    }
                   }}
+                  {...kbNextStep}
                 >
                   <SkipForward size={14} weight="regular" aria-hidden="true" />
                   <span>Next Part ({((activeStepIdx + 1) % steps.length) + 1}/{steps.length})</span>
@@ -373,7 +583,24 @@ export default function RepoFlowchartExplorer() {
                       stopVoiceWalkthrough();
                       setActiveStepIdx(idx);
                       playSingleStepAudio(step);
+                      if (onSelectStep) {
+                        onSelectStep(step);
+                      }
                     }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.currentTarget.setAttribute('data-pressing', '');
+                        stopVoiceWalkthrough();
+                        setActiveStepIdx(idx);
+                        playSingleStepAudio(step);
+                        if (onSelectStep) onSelectStep(step);
+                      }
+                    }}
+                    onKeyUp={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') e.currentTarget.removeAttribute('data-pressing');
+                    }}
+                    onBlur={(e) => e.currentTarget.removeAttribute('data-pressing')}
                     style={{
                       textAlign: 'left',
                       padding: '14px 16px',
@@ -410,6 +637,24 @@ export default function RepoFlowchartExplorer() {
                     <div style={{ fontWeight: 600, fontSize: '14px', lineHeight: 1.3 }}>
                       {step.title}
                     </div>
+
+                    {step.simple_explanation && (
+                      <p
+                        className="body-prose"
+                        style={{
+                          fontSize: '12px',
+                          color: 'var(--ink)',
+                          margin: 0,
+                          lineHeight: 1.35,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {step.simple_explanation}
+                      </p>
+                    )}
 
                     <div
                       className="mono-metric"
@@ -510,6 +755,65 @@ export default function RepoFlowchartExplorer() {
                 <FormattedText text={currentStep.spoken_narration} />
               </p>
             </div>
+
+            {/* Gemini Brain Simple Explanation & Real-Life Metaphor */}
+            {(currentStep.simple_explanation || currentStep.real_world_example) && (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                  gap: '12px',
+                }}
+              >
+                {currentStep.simple_explanation && (
+                  <div
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: 'var(--radius-control)',
+                      border: '1px solid var(--hairline)',
+                      background: 'var(--surface)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Brain size={15} weight="fill" style={{ color: 'var(--accent)' }} aria-hidden="true" />
+                      <span className="small-caps" style={{ fontWeight: 600 }}>
+                        In Simple Terms (Gemini Brain)
+                      </span>
+                    </div>
+                    <p className="body-prose" style={{ margin: 0, fontSize: '14px', color: 'var(--ink)' }}>
+                      <FormattedText text={currentStep.simple_explanation} />
+                    </p>
+                  </div>
+                )}
+
+                {currentStep.real_world_example && (
+                  <div
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: 'var(--radius-control)',
+                      border: '1px solid var(--hairline)',
+                      background: 'var(--surface)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Lightbulb size={15} weight="fill" style={{ color: 'var(--warning)' }} aria-hidden="true" />
+                      <span className="small-caps" style={{ fontWeight: 600 }}>
+                        Real-Life Everyday Analogy
+                      </span>
+                    </div>
+                    <p className="body-prose" style={{ margin: 0, fontSize: '14px', color: 'var(--ink)' }}>
+                      <FormattedText text={currentStep.real_world_example} />
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Two-Column Part Breakdown: Architectural Flow & Guarded Source Snippet */}
             <div className="two-col-grid">

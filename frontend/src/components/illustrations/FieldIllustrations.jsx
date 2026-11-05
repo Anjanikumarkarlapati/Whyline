@@ -1,4 +1,5 @@
 import React from 'react';
+import { CheckCircle } from '@phosphor-icons/react';
 
 export function AstArchaeologyIllustration() {
   return (
@@ -269,7 +270,10 @@ export function AuthNotebookStudioPanel({ caption }) {
             gap: '8px',
           }}
         >
-          <span className="status-badge status-good">Illustrative image</span>
+          <span className="status-badge status-good">
+            <CheckCircle size={14} weight="regular" aria-hidden="true" />
+            <span>Illustrative image</span>
+          </span>
           <span className="mono-metric">Gnani Vachana • 16kHz PCM</span>
         </div>
         <svg

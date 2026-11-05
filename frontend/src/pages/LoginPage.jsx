@@ -4,7 +4,7 @@ import { ArrowRight, Moon, ShieldCheck, Sun } from '@phosphor-icons/react';
 import { useI18n } from '../i18n';
 
 export default function LoginPage({ theme = 'light', onToggleTheme }) {
-  const { t } = useI18n();
+  const { t, lang, setLang } = useI18n();
   const navigate = useNavigate();
   const [email, setEmail] = useState('anjani@healthconnect.in');
   const [repo, setRepo] = useState('demo-repos/HealthConnect');
@@ -42,37 +42,47 @@ export default function LoginPage({ theme = 'light', onToggleTheme }) {
           <article className="card auth-card">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Top Brand & Theme Switcher */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              <div className="login-brand">
                 <span className="brand-mark" aria-hidden="true">
                   W
                 </span>
                 <div>
-                  <span style={{ fontWeight: 600, fontSize: '15px', color: 'var(--ink)' }}>
-                    WhyLine Studio
-                  </span>
-                  <span className="small-caps" style={{ display: 'block' }}>
-                    Spoken Fence &amp; Provenance Ledger
-                  </span>
+                  <span className="login-brand-name">WhyLine Studio</span>
+                  <span className="login-brand-tagline">Spoken Fence &amp; Provenance Ledger</span>
                 </div>
               </div>
 
-              {onToggleTheme && (
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={onToggleTheme}
-                  aria-label="Toggle color theme"
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <select
+                  className="form-input"
+                  style={{ minHeight: '32px', padding: '2px 8px', fontSize: '13px', width: 'auto' }}
+                  aria-label={t('langLabel')}
+                  value={lang}
+                  onChange={(e) => setLang(e.target.value)}
                 >
-                  {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-                  <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
-                </button>
-              )}
+                  <option value="en">English (EN)</option>
+                  <option value="te">తెలుగు (Telugu)</option>
+                  <option value="hi">हिंदी (Hindi)</option>
+                </select>
+
+                {onToggleTheme && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={onToggleTheme}
+                    aria-label="Toggle color theme"
+                  >
+                    {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                    <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             <div>
               <h1 className="auth-headline">{t('loginHeadline')}</h1>
-              <p className="body-prose" style={{ color: 'var(--ink-muted)', marginTop: '8px' }}>
+              <p className="body-prose briefing-subtitle">
                 {t('loginSubtitle')}
               </p>
             </div>
@@ -132,7 +142,7 @@ export default function LoginPage({ theme = 'light', onToggleTheme }) {
                 )}
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ marginTop: '8px', width: '100%' }}>
+              <button type="submit" className="btn btn-primary login-form-btn">
                 <ShieldCheck size={18} weight="regular" aria-hidden="true" />
                 <span>{t('btnEnterStudio')}</span>
                 <ArrowRight size={16} weight="regular" aria-hidden="true" />

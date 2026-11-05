@@ -199,6 +199,36 @@ def test_tier2_speech_offline_synthesis_fallback(tmp_path: Path):
     assert wav_file.stat().st_size > 44
 
 
+def test_tier2_speech_stt_invalid_base64_raises_400(client: TestClient):
+    """Verify that corrupt or non-base64 audio payloads to /api/gnani/stt raise HTTP 400."""
+    resp = client.post(
+        "/api/gnani/stt",
+        json={"audio_base64": "!!!not_valid_base64@@@===", "language": "te-IN"},
+    )
+    assert resp.status_code == 400
+    assert "Invalid base64 audio payload" in resp.json()["detail"]
+
+
+def test_tier2_speech_audio_retrieval_by_opaque_id(client: TestClient):
+    """Verify GET /api/audio/{id} successfully resolves audio file synthesized via POST /api/tts."""
+    synth_resp = client.post(
+        "/api/tts",
+        json={"text": "E2E Opaque ID Audio Retrieval Test", "language": "en-IN", "voice": "Nalini"},
+    )
+    assert synth_resp.status_code == 200
+    audio_id = synth_resp.json()["id"]
+
+    # 1. Retrieve by raw opaque ID (without .wav suffix)
+    get_resp = client.get(f"/api/audio/{audio_id}")
+    assert get_resp.status_code == 200
+    assert get_resp.headers["content-type"] == "audio/wav"
+
+    # 2. Retrieve with .wav suffix
+    get_wav_resp = client.get(f"/api/audio/{audio_id}.wav")
+    assert get_wav_resp.status_code == 200
+    assert get_wav_resp.headers["content-type"] == "audio/wav"
+
+
 # ==============================================================================
 # FEATURE 4: RAG Boundaries (5 tests)
 # ==============================================================================
@@ -421,6 +451,9 @@ def test_tier2_demo_invalid_branch_checkpoint(client: TestClient):
 
 def test_tier2_demo_duplicate_incident_webhook(client: TestClient):
     """Verify receiving duplicate incident webhook updates array without JSON corruption."""
+    import hashlib
+    import hmac
+
     webhook_data = {
         "incident_id": "INC-DUPLICATE-TEST",
         "source": "PagerDuty",
@@ -431,10 +464,27 @@ def test_tier2_demo_duplicate_incident_webhook(client: TestClient):
         "voice_postmortem": "retry count = 5 alage unchandi",
         "linked_fence_id": "FENCE-001",
     }
-    r1 = client.post("/api/incidents/webhook", json=webhook_data)
-    r2 = client.post("/api/incidents/webhook", json=webhook_data)
+    from backend.app import store
+    if store.incidents_path.exists():
+        try:
+            curr = json.loads(store.incidents_path.read_text(encoding="utf-8"))
+            filtered = [x for x in curr if x.get("id") != "INC-DUPLICATE-TEST"]
+            store.incidents_path.write_text(json.dumps(filtered, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
+    secret = (os.getenv("WEBHOOK_SECRET") or os.getenv("INCIDENT_WEBHOOK_SECRET") or "whyline_test_webhook_secret_local").strip()
+    raw_bytes = json.dumps(webhook_data).encode("utf-8")
+    sig = hmac.new(secret.encode("utf-8"), raw_bytes, hashlib.sha256).hexdigest()
+    headers = {
+        "X-PagerDuty-Signature": f"sha256={sig}",
+        "Content-Type": "application/json",
+    }
+    r1 = client.post("/api/incidents/webhook", content=raw_bytes, headers=headers)
+    r2 = client.post("/api/incidents/webhook", content=raw_bytes, headers=headers)
     assert r1.status_code == 200
     assert r2.status_code == 200
+    assert r2.json().get("status") == "duplicate_ignored"
 
 
 def test_tier2_demo_missing_git_directory(temp_repo: Path):

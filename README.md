@@ -3,6 +3,13 @@
 > **Guard the unwritten "why" behind code.**  
 > AST Anomaly Detection, Multilingual Spoken Fences (Gnani Prisma & Timbre), and Model Context Protocol (MCP) Pre-Commit Interception.
 
+[![Security Audit Passed](https://img.shields.io/badge/Security%20Audit-Zero%20Secrets%20Passed-brightgreen.svg)](#-security--privacy)
+[![WCAG 2.2 AA](https://img.shields.io/badge/A11y-WCAG%202.2%20AA%20Verified-brightgreen.svg)](#-architecture--visual-system)
+[![Gnani Vachana AI](https://img.shields.io/badge/Voice%20Stack-Gnani%20Prisma%20%26%20Timbre-blue.svg)](#-multilingual-voice-pipeline-gnani-ai)
+[![Eval Accuracy](https://img.shields.io/badge/Benchmark-100%25%20Accuracy%20(24%2F24)-success.svg)](#-guard-quality--benchmark-evaluation-evalmd)
+
+**GitHub Repository**: [https://github.com/Anjanikumarkarlapati/Whyline](https://github.com/Anjanikumarkarlapati/Whyline)
+
 ---
 
 ## 🌟 Overview
@@ -17,13 +24,70 @@ Developers spend hours debugging and preserving fragile, undocumented workaround
 
 ---
 
+## 🔒 Security & Privacy
+
+WhyLine is built with a **Zero-Secret Guarantee** to prevent private keys, authentication tokens, and credentials from ever leaking:
+
+### 1. Automated Secret Scanning (`scripts/scan_secrets.py`)
+- Runs automatically on `pre-commit` and CI sweeps across all repository files.
+- Inspects high-entropy token signatures including:
+  - Google API Keys (`AIza...`)
+  - GitHub Personal Access Tokens (`ghp_...`, `github_pat_...`)
+  - Anthropic / OpenAI Secret Keys (`sk-...`)
+  - AWS Access Keys (`AKIA...`)
+  - RSA / EC / OpenSSH Private Keys (`-----BEGIN ... PRIVATE KEY-----`)
+  - Gnani Vachana Credentials
+- Run audit manually:
+  ```bash
+  python scripts/scan_secrets.py --all
+  ```
+  *(Output: `All checks passed. Zero secrets detected.`)*
+
+### 2. Strict Ignored Credentials (`.gitignore`)
+- All `.env`, `*.env`, `.env.local`, `*.pem`, `*.key`, `*.cert`, and `*.p12` certificates are strictly excluded from git.
+- Only `.env.example` is committed, providing safe dummy placeholder keys (`your-gnani-vachana-api-key`, `your-supabase-service-role-secret-key`).
+
+### 3. Isolated Sandbox Fallbacks
+- When `GNANI_API_KEY` or `SUPABASE_SERVICE_ROLE_KEY` are unset, WhyLine operates 100% offline using deterministic local PCM synthesis and in-memory AST RRF search with zero network leakage.
+
+---
+
+## 🎙️ Multilingual Voice Pipeline (Gnani AI)
+
+WhyLine features synchronized speech-to-text (STT) and text-to-speech (TTS) via **Gnani Vachana AI**:
+
+### 1. Language-to-Voice Model Linkage
+Switching the UI language automatically switches the dedicated neural voice model:
+| Language | Locale | Voice Model | Persona | Quality |
+|---|---|---|---|---|
+| **English** | `en-IN` | **Pranav** | Male • Authoritative | 16kHz linear_pcm WAV |
+| **Telugu** | `te-IN` | **Nalini** | Female • Crisp Timbre | 16kHz linear_pcm WAV |
+| **Hindi** | `hi-IN` | **Bhavna** | Female • Articulate Neural | 16kHz linear_pcm WAV |
+
+### 2. AST Vocabulary Rescorer
+Code-mixed speech often misrecognizes programming terms. WhyLine's phonetic rescorer intercepts live STT output and restores exact CamelCase/snake_case code symbols:
+- Spoken *"gateway router dot java"* $\rightarrow$ `GatewayRouter.java`
+- Spoken *"రీట్రై కౌంట్"* / *"रिट्राई काउंट"* $\rightarrow$ `retryCount`
+- Spoken *"టైమౌట్ మిల్లీసెకన్లు"* $\rightarrow$ `timeoutMs`
+- Spoken *"అప్లికేషన్ వై ఎమ్ ఎల్"* $\rightarrow$ `application.yml`
+
+### 3. Interactive Audio Waveform (`AudioWaveform.jsx`)
+- 36-bar acoustic spectrum displaying real-time recording energy.
+- Interactive click-and-drag scrubber with playhead tracker and timestamp tooltip.
+- Accessible keyboard navigation (`Space`/`Enter` play toggle, `Left`/`Right` arrow keys for 1-second seeking).
+
+---
+
 ## 🏛️ Architecture & Visual System
 
-WhyLine Studio features an **architecture-studio aesthetic**:
-- **Design Tokens**: Warm canvas (`#F7F4EC`), crisp surface (`#FCFAF5`), deep ink (`#1B1A16`), and muted olive accents (`#4A4A2A`).
-- **Dark Mode**: High-contrast, calm dark theme (`#151510` canvas, `#1D1D16` surface, `#ECE8DA` ink).
-- **Accessibility**: 100% WCAG 2.2 AA compliant contrast ratios across all elements, `aria-live` voice indicators, and keyboard accessibility.
-- **Visual Design**: Strict 1320px container, zero decorative fluff, 44px min touch targets, and inline mono code rendering.
+WhyLine Studio implements an **architecture-studio field report aesthetic**:
+- **Design Tokens**: Warm canvas (`#FDFBD4`), crisp surface (`#FFFEF0`), deep ink (`#2A2919`), and muted olive accents (`#545333`).
+- **L2 Floating Glass**: Topbar, navigation sheets, dialog modals, and footer feature `backdrop-filter: blur(14px) saturate(140%)` with top highlights and edge hairlines.
+- **3D Depth & Embossing**:
+  - **L1 Card**: Solid surface with 1px top highlight and soft two-layer shadows.
+  - **L3 Well (Deboss)**: Code containers and waveform tracks with inner shadows and bottom catch-light bevels.
+  - **Raised-Cap Controls**: Buttons and filter chips with 1px top highlight, 2px bottom lip, 1px hover lift, and 1px active sink.
+- **Accessibility & Contrast**: 100% WCAG 2.2 AA compliant contrast ratios across light and dark modes (`scripts/verify_contrast_and_a11y.py` $\rightarrow$ 18/18 PASS).
 
 ---
 
@@ -32,7 +96,7 @@ WhyLine Studio features an **architecture-studio aesthetic**:
 ### Prerequisites
 - Python 3.10+
 - Node.js 18+ & npm
-- (Optional) Supabase project & Gnani Vachana API key (runs seamlessly in deterministic local fallback mode if omitted)
+- (Optional) Gnani Vachana API key & Supabase project
 
 ### 1. Backend Setup
 
@@ -40,6 +104,9 @@ WhyLine Studio features an **architecture-studio aesthetic**:
 # Clone the repository
 git clone https://github.com/Anjanikumarkarlapati/Whyline.git
 cd Whyline
+
+# Copy safe environment configuration
+cp .env.example .env
 
 # Install backend dependencies
 pip install fastapi uvicorn pydantic tree-sitter tree-sitter-java requests python-dotenv
@@ -76,7 +143,8 @@ Frontend will be accessible at `http://localhost:5173`.
 
 ### 2. Protected Code Studio (`/studio`)
 - Integrated Monaco Editor with gutter fence pins marking protected code regions.
-- Side panel detailing the fence invariant, audio note player, and cutover conditions (e.g. `gateway.version == 'v2'`).
+- Developer Guide callout explicitly explaining guarded source visibility and invariant rationale.
+- Interactive Audio Waveform player for Spoken ADRs.
 
 ### 3. Incidents & Dead-End Memory (`/incidents`)
 - PagerDuty/webhook postmortem simulator.
@@ -92,11 +160,15 @@ Frontend will be accessible at `http://localhost:5173`.
 - CLI fallback for non-MCP environments: `whyline check <diff_file>` or `whyline check -` (reads unified diff from stdin).
 - Diff-aware guardrail: blocks only when the diff modifies fenced lines or violates invariant tokens, allowing whitespace, comments, renamed variables outside invariants, and safe code relocations.
 
-### 6. Guard Quality & Benchmark Evaluation (`EVAL.md`)
+---
+
+## 📊 Guard Quality & Benchmark Evaluation (`EVAL.md`)
+
 - **Total Labeled Cases**: 24 (12 Must-Block, 12 Must-Pass across Java & Python)
 - **Precision**: **100.0%** (0 false blocks on routine edits)
 - **Recall**: **100.0%** (Catches 100% of naive workaround removals)
 - **False-Positive Rate**: **0.0%**
+- **Accuracy**: **100.0%**
 - **Evaluation Runner**: `python backend/eval/run_eval.py`
 
 ---
@@ -106,23 +178,24 @@ Frontend will be accessible at `http://localhost:5173`.
 Run the comprehensive test suite:
 
 ```bash
-# Run backend tests
+# 1. Run backend invariant & engine tests
 python -m pytest tests/ -v
+python -m pytest backend/tests/test_whyline_engine.py
 
-# Run design token & contrast verification
+# 2. Run secret scan & security audit
+python scripts/scan_secrets.py --all
+
+# 3. Verify Gnani Speech live STT & TTS pipeline
+python scripts/probe_gnani.py
+python scripts/verify_voice_accuracy.py
+
+# 4. Verify design tokens & accessibility contrast
 python scripts/audit_design_system.py
 python scripts/verify_contrast_and_a11y.py
 
-# Build frontend production bundle
+# 5. Build frontend production bundle
 cd frontend && npm run build
 ```
-
----
-
-## 🔒 Security & Privacy
-
-- All sensitive keys (`GNANI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GITHUB_TOKEN`) are configured through `.env` and are strictly excluded from source control.
-- Deterministic sandbox fallbacks ensure full offline local development without external API exposure.
 
 ---
 

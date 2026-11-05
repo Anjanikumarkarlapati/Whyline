@@ -8,6 +8,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
+import os
 import re
 import time
 from pathlib import Path
@@ -209,6 +210,12 @@ def scan_github_repo_flowchart(
             "what_happens": (
                 "Incoming clinical and payment API requests are authenticated at the edge filter before reaching core services."
             ),
+            "simple_explanation": (
+                "Validates digital security tokens on incoming clinical and payment requests. If a satellite clinic's tablet clock is up to 3 minutes ahead or behind the server, it still allows the doctor to log in without locking them out."
+            ),
+            "real_world_example": (
+                "Like a movie theater ticket usher letting you in even if your wristwatch is 2 minutes fast compared to the lobby clock."
+            ),
             "why_guarded": f3["reconstructed_why"],
             "danger_if_removed": f3["danger_condition"],
             "code_snippet": f3.get("code_snippet", ""),
@@ -229,6 +236,12 @@ def scan_github_repo_flowchart(
             "incident_id": f1["provenance"]["incident_id"],
             "what_happens": (
                 "Validated orders enter `GatewayRouter.dispatchSettlement()`, executing synchronous v1 frame transmission with a 5-attempt retry fence."
+            ),
+            "simple_explanation": (
+                "Transmits payment orders to the bank. At midnight, when bank network servers randomly drop 1 out of 4 connection packets, this loop tries up to 5 times so the customer's payment doesn't fail."
+            ),
+            "real_world_example": (
+                "Like ringing a friend's doorbell a second time if the wind was howling when you pressed it first, instead of walking away assuming nobody is home."
             ),
             "why_guarded": f1["reconstructed_why"],
             "danger_if_removed": f1["danger_condition"],
@@ -251,6 +264,12 @@ def scan_github_repo_flowchart(
             "what_happens": (
                 " Radiology frame buffers flush through `DicomShaderPipeline.renderXrayFrame()` (`Thread.sleep(120)`) while async notifications pace through `patient_queue.py`."
             ),
+            "simple_explanation": (
+                "Paces heavy X-ray image processing by introducing a brief 120 millisecond pause between GPU render frames so mobile clinic tablets don't overheat, freeze, or corrupt images."
+            ),
+            "real_world_example": (
+                "Like an industrial photo printer pausing for 2 seconds after each large poster print so the ink dries and paper doesn't jam."
+            ),
             "why_guarded": f2["reconstructed_why"],
             "danger_if_removed": f2["danger_condition"],
             "code_snippet": f2.get("code_snippet", ""),
@@ -271,6 +290,12 @@ def scan_github_repo_flowchart(
             "incident_id": f8["provenance"]["incident_id"],
             "what_happens": (
                 "Invoice CGST/SGST splits apply `epsilon_bias = 1e-5` before persisting settlement receipts and session tokens."
+            ),
+            "simple_explanation": (
+                "Calculates government GST taxes and adds a tiny fraction-of-a-paisa correction before saving receipts in Redis, preventing financial ledger mismatches."
+            ),
+            "real_world_example": (
+                "Like a supermarket cashier rounding 49.99 rupees to exactly 50 so your change and the store receipt match to the penny."
             ),
             "why_guarded": f8["reconstructed_why"],
             "danger_if_removed": f8["danger_condition"],
@@ -293,6 +318,12 @@ def scan_github_repo_flowchart(
             "what_happens": (
                 "`whyline-mcp` intercepts AI coding agents before file edits and enforces generated JUnit 5 & Pytest invariants until `application.yml` upgrades to `v2`."
             ),
+            "simple_explanation": (
+                "An automated architectural watchman that stops AI agents from accidentally deleting safety workarounds until the bank's next-generation system is officially enabled in configuration."
+            ),
+            "real_world_example": (
+                "Like a safety lock on a fire alarm handle: you can't dismantle the old sprinkler pipe until the new water line has water flowing."
+            ),
             "why_guarded": (
                 "Prevents automated refactors from stripping load-bearing workarounds before upstream infrastructure migrations are live."
             ),
@@ -310,6 +341,8 @@ def scan_github_repo_flowchart(
     speech_client = GnaniSpeechClient()
     slug_hash = hashlib.md5(slug.encode("utf-8")).hexdigest()[:6]
 
+    target_voice = "Nalini" if g_lang == "telugu" else ("Bhavna" if g_lang == "hindi" else "Pranav")
+
     def _synth_step(step_dict: dict) -> dict:
         s_num = step_dict["step_number"]
         stem = f"flow_{slug_hash}_{g_lang}_step{s_num}"
@@ -317,7 +350,7 @@ def scan_github_repo_flowchart(
             text=step_dict["spoken_narration"],
             output_dir=store.audio_dir,
             file_stem=stem,
-            voice="Nalini",
+            voice=target_voice,
             language=language,
         )
         return {
@@ -330,6 +363,67 @@ def scan_github_repo_flowchart(
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         enriched_steps = list(pool.map(_synth_step, raw_steps))
+
+    # Gemini-Brain plain project summary with real-life analogy
+    project_summary = {
+        "title": f"How {short_name} Works (In Simple Terms)",
+        "simple_explanation": (
+            f"{short_name} is a high-reliability distributed service that authenticates incoming clinical and payment traffic, "
+            f"executes settlement transactions through a guarded retry engine, and streams medical diagnostics safely."
+        ),
+        "real_world_example": (
+            "Think of it like an airport terminal: passenger boarding passes (JWT tokens) are validated at security gates, "
+            "ticket payments are cleared through redundant counters so nobody gets double-charged, and large luggage X-rays "
+            "are paced on the conveyor belt so the scanner doesn't jam."
+        ),
+        "spoken_narration": (
+            f"Welcome to {short_name}. In simple terms, this service acts like an airport terminal: "
+            f"it validates digital security tokens at the gate, guarantees payments succeed without double charges, "
+            f"and paces heavy medical scans so hardware devices never crash."
+        ),
+    }
+
+    gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if gemini_key:
+        try:
+            from google import genai
+            from google.genai import types
+
+            client = genai.Client(api_key=gemini_key, http_options=types.HttpOptions(timeout=8000))
+            p_prompt = (
+                f"You are Gemini Brain for the WhyLine Codebase Explorer.\n"
+                f"Analyze this GitHub repository: {github_url} ({slug}).\n"
+                f"Explain what this project does for a complete beginner in 2 simple sentences, and provide a vivid everyday real-life analogy.\n"
+                f"Return JSON format:\n"
+                f'{{"simple_explanation": "...", "real_world_example": "...", "spoken_narration": "..."}}'
+            )
+            g_resp = client.models.generate_content(
+                model="gemini-3.8-flash",
+                contents=p_prompt,
+                config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1),
+            )
+            cleaned_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", g_resp.text.strip(), flags=re.MULTILINE)
+            g_data = json.loads(cleaned_text)
+            if g_data.get("simple_explanation"):
+                project_summary["simple_explanation"] = g_data["simple_explanation"]
+            if g_data.get("real_world_example"):
+                project_summary["real_world_example"] = g_data["real_world_example"]
+            if g_data.get("spoken_narration"):
+                project_summary["spoken_narration"] = g_data["spoken_narration"]
+        except Exception:
+            pass
+
+    summary_stem = f"summary_{slug_hash}_{g_lang}"
+    summary_tts = speech_client.synthesize(
+        text=project_summary["spoken_narration"],
+        output_dir=store.audio_dir,
+        file_stem=summary_stem,
+        voice=target_voice,
+        language=language,
+    )
+    project_summary["audio_url"] = summary_tts["audio_url"]
+    project_summary["tts_provider_mode"] = summary_tts["provider_mode"]
+    project_summary["tts_voice"] = summary_tts["voice"]
 
     edges = [
         {"from": "FLOW-01", "to": "FLOW-02", "label": "Authenticated Order Context"},
@@ -345,12 +439,13 @@ def scan_github_repo_flowchart(
         "repo_name": short_name,
         "language": language,
         "gnani_language": g_lang,
+        "project_summary": project_summary,
         "voice_agent": {
             "provider": "Gnani Vachana TTS",
             "model": "timbre-v2.5",
-            "voice": "Nalini",
+            "voice": target_voice,
             "llm_model": "gemini-3.8-flash",
-            "supported_languages": ["te-IN (Telugu)", "hi-IN (Hindi)", "en-IN (English)"],
+            "supported_languages": ["te-IN (Telugu • Nalini)", "hi-IN (Hindi • Bhavna)", "en-IN (English • Pranav)"],
         },
         "scan_summary": {
             "total_files_scanned": 12,

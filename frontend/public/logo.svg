@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="28" height="28">
+  <title>WhyLine</title>
+  <rect width="28" height="28" rx="6" fill="#545333"/>
+  <!-- fence pickets -->
+  <rect x="3"  y="9"  width="3.5" height="12" rx="0.8" fill="#FDFBD4" opacity="0.9"/>
+  <rect x="8"  y="7"  width="3.5" height="14" rx="0.8" fill="#FDFBD4" opacity="0.9"/>
+  <rect x="13" y="9"  width="3.5" height="12" rx="0.8" fill="#FDFBD4" opacity="0.9"/>
+  <!-- amber speaking picket -->
+  <rect x="18" y="7"  width="3.5" height="14" rx="0.8" fill="#D9A520"/>
+  <!-- rail -->
+  <rect x="2.5" y="18" width="23" height="2.5" rx="0.8" fill="#FDFBD4" opacity="0.55"/>
+  <!-- sound wave -->
+  <path d="M 23 10 Q 25.5 14 23 18" stroke="#D9A520" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+</svg>

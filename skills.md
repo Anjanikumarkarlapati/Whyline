@@ -18,6 +18,7 @@ All requested skill packages were installed via `npx skills add` into `.agents/s
 | **Google** | `google/skills` | `gemini-api`, `gemini-live-api`, `gemini-agents-api`, `gcloud`, etc. | Multimodal Gemini API, Live audio/video streaming, Agent Platform, and GCP infrastructure. |
 | **Addy Osmani** | `addyosmani/agent-skills` | `context-engineering` | Agent context curation, rules hierarchy, token budget management, and prompt engineering. |
 | | | `test-driven-development` | Red-Green-Refactor loop, bug reproduction (Prove-It Pattern), and test verification. |
+| **Swarm Intelligence** | `666ghj/MiroFish` | `mirofish` | Swarm simulation, multi-agent predictive modeling, GraphRAG knowledge graphs, and blast-radius forecasting. |
 
 ---
 
@@ -58,6 +59,11 @@ All requested skill packages were installed via `npx skills add` into `.agents/s
 - **`test-driven-development`** (`.agents/skills/test-driven-development/SKILL.md`)
   - *Trigger:* Use for implementing business logic, fixing bugs, or adding behavioral features.
   - *Focus:* Prove-It pattern (reproduce bug with a failing test first), Red-Green-Refactor, unit test assertions.
+
+### 2.6 MiroFish (Swarm Intelligence & Prediction Engine)
+- **`mirofish`** (`.agents/skills/mirofish/SKILL.md`)
+  - *Trigger:* Use when modeling multi-agent emergent behavior, developer team adoption friction, blast-radius regression forecasting, or counterfactual code and architectural simulation.
+  - *Focus:* Zep Cloud GraphRAG, OASIS agent persona generation, parallel simulation rounds, dynamic variable injection, and ReACT ReportAgent synthesis.
 
 ---
 

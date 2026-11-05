@@ -12,6 +12,7 @@ import {
 import { useI18n } from '../i18n';
 import StatusBadge from './StatusBadge';
 import { CodeBlock, FormattedText } from './CodeText';
+import AudioWaveform from './AudioWaveform';
 
 function getStrategyRiskMeta(tone, rank) {
   const normalized = String(tone || '').toUpperCase();
@@ -30,7 +31,7 @@ export default function AskRepoDrawer({
   initialFenceId = 'FENCE-001',
   autoPlayAudio = false,
 }) {
-  const { lang } = useI18n();
+  const { lang, voiceModel } = useI18n();
   const [query, setQuery] = useState(
     'How do we fix the double-charge bug in GatewayRouter.java without breaking the PR #212 midnight retry fence?'
   );
@@ -39,7 +40,21 @@ export default function AskRepoDrawer({
   const [loading, setLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState('/api/audio/fence-001_confirmed.wav');
   const [isPlaying, setIsPlaying] = useState(false);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(10);
+  const [selectedVoice, setSelectedVoice] = useState(() => (lang === 'te' ? 'Nalini' : lang === 'hi' ? 'Bhavna' : 'Pranav'));
   const [micNotice, setMicNotice] = useState(null);
+
+  // Automatically sync voice model when language is selected
+  useEffect(() => {
+    if (lang === 'te') {
+      setSelectedVoice('Nalini');
+    } else if (lang === 'hi') {
+      setSelectedVoice('Bhavna');
+    } else {
+      setSelectedVoice('Pranav');
+    }
+  }, [lang]);
 
   const [response, setResponse] = useState({
     spoken_reply:
@@ -105,16 +120,11 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
   const timerRef = useRef(null);
+  const prevVoiceStateRef = useRef(voiceState);
 
+  // Focus trap + restoration for Ask Drawer
   useEffect(() => {
-    if (!isOpen) {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-      setVoiceState('Idle');
-      return undefined;
-    }
+    if (!isOpen) return undefined;
 
     closeBtnRef.current?.focus();
 
@@ -122,7 +132,24 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
       if (e.key === 'Escape') {
         onClose?.();
       }
+      // Trap Tab inside drawer
+      if (e.key === 'Tab') {
+        const focusable = drawerRef.current?.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable || focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
+
     window.addEventListener('keydown', handleKeyDown);
 
     if (autoPlayAudio) {
@@ -138,6 +165,26 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, autoPlayAudio]);
 
+  // Announce voice state changes to screen readers
+  useEffect(() => {
+    if (prevVoiceStateRef.current === voiceState) return;
+    prevVoiceStateRef.current = voiceState;
+
+    const announcer = document.getElementById('voice-state-announcer');
+    if (!announcer) return;
+
+    const messages = {
+      Idle: 'Voice idle',
+      Listening: 'Listening. Speak your question.',
+      Thinking: 'Thinking. Processing your question.',
+      Speaking: 'Speaking. Playing audio response.',
+    };
+    announcer.textContent = '';
+    setTimeout(() => {
+      announcer.textContent = messages[voiceState] || voiceState;
+    }, 100);
+  }, [voiceState]);
+
   const handlePlayAudio = (url, textToSpeak = null) => {
     const targetUrl = url || audioUrl || '/api/audio/fence-001_confirmed.wav';
     setAudioUrl(targetUrl);
@@ -148,37 +195,62 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
       audioRef.current.src = targetUrl;
     }
 
-    audioRef.current.onended = () => {
-      setIsPlaying(false);
-      setVoiceState('Idle');
-    };
-    audioRef.current.onerror = () => {
-      setIsPlaying(false);
-      setVoiceState('Idle');
-    };
-
-    audioRef.current
-      .play()
-      .then(() => setIsPlaying(true))
-      .catch(() => {
-        setIsPlaying(false);
-        setVoiceState('Idle');
-      });
-
     const speechText = textToSpeak || response?.spoken_reply;
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window && speechText) {
-      try {
-        window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(speechText);
-        utter.lang = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
-        utter.onend = () => {
+
+    const playFallbackSpeech = () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window && speechText) {
+        try {
+          window.speechSynthesis.cancel();
+          const utter = new SpeechSynthesisUtterance(speechText);
+          utter.lang = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
+          setIsPlaying(true);
+          setVoiceState('Speaking');
+          utter.onend = () => {
+            setIsPlaying(false);
+            setVoiceState('Idle');
+          };
+          utter.onerror = () => {
+            setIsPlaying(false);
+            setVoiceState('Idle');
+          };
+          window.speechSynthesis.speak(utter);
+        } catch {
           setIsPlaying(false);
           setVoiceState('Idle');
-        };
-        window.speechSynthesis.speak(utter);
-      } catch {
-        // Ignore
+        }
+      } else {
+        setIsPlaying(false);
+        setVoiceState('Idle');
       }
+    };
+
+    if (url) {
+      audioRef.current.ontimeupdate = () => {
+        if (audioRef.current) setAudioCurrentTime(audioRef.current.currentTime);
+      };
+      audioRef.current.onloadedmetadata = () => {
+        if (audioRef.current && audioRef.current.duration) setAudioDuration(audioRef.current.duration);
+      };
+      audioRef.current.onended = () => {
+        setIsPlaying(false);
+        setVoiceState('Idle');
+        setAudioCurrentTime(0);
+      };
+      audioRef.current.onerror = () => {
+        playFallbackSpeech();
+      };
+
+      audioRef.current
+        .play()
+        .then(() => {
+          setIsPlaying(true);
+          setVoiceState('Speaking');
+        })
+        .catch(() => {
+          playFallbackSpeech();
+        });
+    } else if (speechText) {
+      playFallbackSpeech();
     }
   };
 
@@ -207,6 +279,7 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
           question: queryText || query,
           fence_id: initialFenceId,
           language: languageCode || (lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN'),
+          voice: selectedVoice,
           audio_base64: audioBase64 || null,
         }),
       });
@@ -299,14 +372,14 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
         }
       }}
     >
+      {/* ARIA live region for voice state announcements */}
+      <div id="voice-state-announcer" className="live-region-polite" aria-live="polite" />
       <aside ref={drawerRef} className="ask-drawer-panel glass-navbar">
         <div className="ask-drawer-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="drawer-header-flex">
             <ChatCircleText size={20} weight="regular" aria-hidden="true" />
             <div>
-              <h2 className="card-title" style={{ margin: 0 }}>
-                Ask Repo Co-Pilot
-              </h2>
+              <h2 className="card-title">Ask Repo Co-Pilot</h2>
               <span className="form-helper" aria-live="polite">
                 Context: {initialFenceId || 'Whole Repo'} • State: {voiceState}
               </span>
@@ -336,12 +409,11 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
             <label className="small-caps" htmlFor="copilot-input-drawer">
               Ask a Question (Voice or Text)
             </label>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <div className="chip-grid">
               <input
                 id="copilot-input-drawer"
                 type="text"
-                className="form-input"
-                style={{ flex: 1, minWidth: '200px' }}
+                className={`form-input copilot-input`}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Ask an architectural question about fences..."
@@ -373,11 +445,49 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
               </button>
             </div>
             {micNotice && (
-              <p className="form-helper" style={{ color: 'var(--warning)' }}>
+              <p className="form-helper text-warning-color">
                 {micNotice}
               </p>
             )}
+
+            {voiceState === 'Listening' && (
+              <AudioWaveform
+                isRecording={true}
+                recordingSeconds={recordingSeconds}
+                duration={10}
+                title="Capturing Spoken Query"
+                subtitle="Gnani Prisma v3.0 Acoustic Beamforming"
+                onTogglePlay={stopRecording}
+              />
+            )}
           </form>
+
+          {/* Top 3 Voice Selector synced with Language */}
+          <div className="chip-grid">
+            <span className="small-caps small-11 text-ink-muted">
+              Voice Model (Gnani Timbre):
+            </span>
+            {[
+              { id: 'Nalini', langKey: 'te', label: 'Nalini (Telugu • Crisp)' },
+              { id: 'Bhavna', langKey: 'hi', label: 'Bhavna (Hindi • Articulate)' },
+              { id: 'Pranav', langKey: 'en', label: 'Pranav (English • Authoritative)' },
+            ].map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                className={`filter-chip voice-chip ${selectedVoice === v.id ? 'active' : ''}`}
+                style={{
+                  border: selectedVoice === v.id ? '1px solid var(--accent)' : '1px solid var(--border-default)',
+                  backgroundColor: selectedVoice === v.id ? 'var(--accent-wash)' : 'transparent',
+                  fontWeight: selectedVoice === v.id ? '600' : '400',
+                }}
+                onClick={() => setSelectedVoice(v.id)}
+                title={`Select ${v.label} for speech synthesis`}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
 
           {/* Preset Chips */}
           <div className="chip-row">
@@ -422,39 +532,26 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
           </div>
 
           {/* Spoken/Written Answer Directly Beneath Input */}
-          <div
-            style={{
-              padding: '16px',
-              borderRadius: 'var(--radius-control)',
-              border: '1px solid var(--hairline)',
-              background: 'var(--canvas)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-              <span className="small-caps">Spoken &amp; Written Answer</span>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ minHeight: '36px', padding: '0 12px' }}
-                onClick={handleToggleAudio}
-              >
-                {isPlaying ? (
-                  <>
-                    <Pause size={14} weight="regular" aria-hidden="true" />
-                    <span>Pause WAV</span>
-                  </>
-                ) : (
-                  <>
-                    <Play size={14} weight="regular" aria-hidden="true" />
-                    <span>Play 16kHz WAV</span>
-                  </>
-                )}
-              </button>
+          <div className="answer-card" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <AudioWaveform
+              isPlaying={isPlaying}
+              currentTime={audioCurrentTime}
+              duration={audioDuration}
+              onTogglePlay={handleToggleAudio}
+              onSeek={(seekTime) => {
+                if (audioRef.current) {
+                  audioRef.current.currentTime = seekTime;
+                  setAudioCurrentTime(seekTime);
+                }
+              }}
+              title="Gnani Spoken Architecture Answer"
+              subtitle={`Voice: ${selectedVoice} • 16kHz Studio Audio Note`}
+            />
+
+            <div className="answer-header-flex">
+              <span className="small-caps">Verified Architectural Rationale</span>
             </div>
-            <p className="body-prose" style={{ color: 'var(--ink)' }}>
+            <p className="body-prose text-ink">
               <FormattedText text={response.spoken_reply} />
             </p>
           </div>
@@ -467,37 +564,29 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
           )}
 
           {/* 3 Ranked Strategy Items */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="strategy-actions-flex">
             <span className="small-caps">3 Ranked Architectural Strategies</span>
             {(response.strategies || []).map((strat) => {
               const risk = getStrategyRiskMeta(strat.status_tone, strat.rank);
               return (
                 <div
                   key={strat.rank}
-                  style={{
-                    padding: '16px',
-                    borderRadius: 'var(--radius-control)',
-                    border: '1px solid var(--hairline)',
-                    background: 'var(--surface)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                  }}
+                  className="strategy-card"
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span className="mono-metric" style={{ fontWeight: 500 }}>
+                  <div className="strategy-header-flex">
+                    <span className="mono-metric mono-weight-500">
                       Strategy 0{strat.rank}
                     </span>
                     <StatusBadge status={strat.status_tone} />
                   </div>
-                  <div style={{ fontWeight: 500, color: 'var(--ink)' }}>
+                  <div className="mono-weight-500 text-ink">
                     <FormattedText text={strat.title} />
                   </div>
-                  <p className="form-helper" style={{ color: 'var(--ink)' }}>
+                  <p className="form-helper text-ink">
                     <FormattedText text={strat.summary} />
                   </p>
-                  <div className="risk-meter" style={{ marginTop: '4px' }}>
-                    <span className="mono-metric" style={{ fontSize: '12px' }}>
+                  <div className="risk-meter-wrap">
+                    <span className="mono-metric small-12">
                       {risk.label} • {strat.provenance_badge}
                     </span>
                     <div className="risk-bar-track" aria-hidden="true">

@@ -241,7 +241,7 @@ class WhyLineStore:
             rrf_k=rrf_k,
         )
 
-    def ask_repo_copilot(self, question: str, language: str = "te-IN") -> dict:
+    def ask_repo_copilot(self, question: str, language: str = "te-IN", voice: str = "Shivani") -> dict:
         """Runs Hybrid RRF retrieval and multi-strategy briefing via HybridRagService."""
         vocab = extract_repository_vocabulary(self.repo_dir)
         return self.rag_service.ask_repo_copilot(
@@ -250,6 +250,7 @@ class WhyLineStore:
             repo_vocab=vocab,
             language=language,
             audio_dir=self.audio_dir,
+            voice=voice,
         )
 
 

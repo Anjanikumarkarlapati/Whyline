@@ -17,6 +17,7 @@ import {
 } from '@phosphor-icons/react';
 import { useI18n } from '../i18n';
 import AskRepoDrawer from './AskRepoDrawer';
+import Footer from './Footer';
 
 export default function Layout({ theme, onToggleTheme }) {
   const { lang, setLang, t } = useI18n();
@@ -29,9 +30,15 @@ export default function Layout({ theme, onToggleTheme }) {
   const triggerRef = useRef(null);
   const closeBtnRef = useRef(null);
   const menuRef = useRef(null);
+  const drawerRef = useRef(null);
+  const askDrawerTriggerRef = useRef(null);
+  const prevAskDrawerOpen = useRef(false);
 
+  // Mobile drawer: focus trap + focus restoration
   useEffect(() => {
     if (!drawerOpen) return undefined;
+
+    // Move focus to close button when drawer opens
     closeBtnRef.current?.focus();
 
     const handleKeyDown = (e) => {
@@ -39,10 +46,35 @@ export default function Layout({ theme, onToggleTheme }) {
         setDrawerOpen(false);
         triggerRef.current?.focus();
       }
+      // Trap Tab inside drawer
+      if (e.key === 'Tab') {
+        const focusable = drawerRef.current?.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable || focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [drawerOpen]);
+
+  // Restore focus to Ask Repo trigger when AskDrawer closes
+  useEffect(() => {
+    if (prevAskDrawerOpen.current && !askDrawerOpen) {
+      askDrawerTriggerRef.current?.focus();
+    }
+    prevAskDrawerOpen.current = askDrawerOpen;
+  }, [askDrawerOpen]);
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -83,7 +115,7 @@ export default function Layout({ theme, onToggleTheme }) {
       <header className="topbar glass-navbar">
         <div className="container topbar-inner">
           <NavLink to="/" className="brand-link" aria-label="WhyLine Studio Home">
-            <span className="brand-mark" aria-hidden="true">W</span>
+            <img src="/logo.svg" alt="" aria-hidden="true" className="brand-mark" width="28" height="28" />
             <span className="brand-wordmark">
               Why<span className="brand-wordmark-accent">Line</span>
             </span>
@@ -109,6 +141,7 @@ export default function Layout({ theme, onToggleTheme }) {
           <div className="topbar-controls" ref={menuRef}>
             {/* Single Prominent Action — Never Wraps */}
             <button
+              ref={askDrawerTriggerRef}
               type="button"
               className="btn btn-primary"
               onClick={() => setAskDrawerOpen(true)}
@@ -157,9 +190,9 @@ export default function Layout({ theme, onToggleTheme }) {
                     value={lang}
                     onChange={(e) => setLang(e.target.value)}
                   >
-                    <option value="en">English (EN)</option>
-                    <option value="te">తెలుగు (TE)</option>
-                    <option value="hi">हिंदी (HI)</option>
+                    <option value="en">English (EN • Pranav voice)</option>
+                    <option value="te">తెలుగు (Telugu • Nalini voice)</option>
+                    <option value="hi">हिंदी (Hindi • Bhavna voice)</option>
                   </select>
                 </div>
 
@@ -252,7 +285,7 @@ export default function Layout({ theme, onToggleTheme }) {
             }
           }}
         >
-          <aside id="mobile-slide-drawer" className="mobile-drawer">
+          <aside id="mobile-slide-drawer" className="mobile-drawer" ref={drawerRef}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span className="brand-wordmark">
@@ -300,6 +333,21 @@ export default function Layout({ theme, onToggleTheme }) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="form-group">
+                <label className="form-label" htmlFor="drawer-lang-select">
+                  {t('langLabel')}
+                </label>
+                <select
+                  id="drawer-lang-select"
+                  className="form-select"
+                  value={lang}
+                  onChange={(e) => setLang(e.target.value)}
+                >
+                  <option value="en">English (EN)</option>
+                  <option value="te">తెలుగు (Telugu)</option>
+                  <option value="hi">हिंदी (Hindi)</option>
+                </select>
+              </div>
               <button
                 type="button"
                 className="btn btn-secondary"
@@ -326,6 +374,12 @@ export default function Layout({ theme, onToggleTheme }) {
           <Outlet />
         </div>
       </main>
+
+      <Footer
+        theme={theme}
+        onToggleTheme={onToggleTheme}
+        onOpenAskDrawer={() => setAskDrawerOpen(true)}
+      />
 
       <AskRepoDrawer isOpen={askDrawerOpen} onClose={() => setAskDrawerOpen(false)} />
     </div>

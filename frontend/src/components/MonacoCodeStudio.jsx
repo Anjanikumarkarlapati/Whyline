@@ -3,13 +3,17 @@ import Editor from '@monaco-editor/react';
 import {
   ChatCircleText,
   FileCode,
+  Info,
   ShieldCheck,
   SpeakerHigh,
 } from '@phosphor-icons/react';
 import { defineMonacoThemes } from '../monacoTheme';
+import { useI18n } from '../i18n';
 import AskRepoDrawer from './AskRepoDrawer';
 import StatusBadge from './StatusBadge';
 import { FormattedText } from './CodeText';
+import AudioWaveform from './AudioWaveform';
+import { useKbPress } from '../hooks/useKbPress';
 
 const DEFAULT_GATEWAY_ROUTER_CODE = `package com.healthconnect.payments;
 
@@ -40,18 +44,32 @@ export default function MonacoCodeStudio({
   theme = 'light',
   onOpenAskDrawer,
 }) {
+  const { t } = useI18n();
   const [currentCode, setCurrentCode] = useState(code);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [autoPlayAudio, setAutoPlayAudio] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(9);
+  const audioRef = useRef(null);
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
+  const mouseDownDisposableRef = useRef(null);
 
   useEffect(() => {
     if (code) {
       setCurrentCode(code);
     }
   }, [code]);
+
+  useEffect(() => {
+    return () => {
+      if (mouseDownDisposableRef.current) {
+        mouseDownDisposableRef.current.dispose();
+        mouseDownDisposableRef.current = null;
+      }
+    };
+  }, []);
 
   const triggerAskDrawer = (fenceId = 'FENCE-001', playAudio = true) => {
     if (onOpenAskDrawer) {
@@ -63,11 +81,36 @@ export default function MonacoCodeStudio({
   };
 
   const handlePlayFenceAudio = () => {
-    setAudioPlaying(true);
-    const audio = new Audio('/api/audio/FENCE-001.wav');
-    audio.onended = () => setAudioPlaying(false);
-    audio.onerror = () => setAudioPlaying(false);
-    audio.play().catch(() => setAudioPlaying(false));
+    try {
+      if (audioPlaying && audioRef.current) {
+        audioRef.current.pause();
+        setAudioPlaying(false);
+        return;
+      }
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      const audio = new Audio('/api/audio/FENCE-001.wav');
+      audioRef.current = audio;
+      audio.ontimeupdate = () => setAudioCurrentTime(audio.currentTime);
+      audio.onloadedmetadata = () => {
+        if (audio.duration) setAudioDuration(audio.duration);
+      };
+      audio.onended = () => {
+        setAudioPlaying(false);
+        setAudioCurrentTime(0);
+      };
+      audio.onerror = () => setAudioPlaying(false);
+      audio.play().then(() => {
+        setAudioPlaying(true);
+      }).catch((err) => {
+        console.warn('Fence audio playback error:', err);
+        setAudioPlaying(false);
+      });
+    } catch (err) {
+      console.warn('Fence audio initialization error:', err);
+      setAudioPlaying(false);
+    }
   };
 
   const handleEditorWillMount = (monaco) => {
@@ -94,7 +137,11 @@ export default function MonacoCodeStudio({
       },
     ]);
 
-    editor.onMouseDown((e) => {
+    if (mouseDownDisposableRef.current) {
+      mouseDownDisposableRef.current.dispose();
+    }
+
+    mouseDownDisposableRef.current = editor.onMouseDown((e) => {
       const target = e.target;
       const lineNumber = target.position?.lineNumber;
       const isGutterTarget =
@@ -111,19 +158,91 @@ export default function MonacoCodeStudio({
 
   const editorThemeName = theme === 'dark' ? 'whyline-cream-dark' : 'whyline-cream-light';
 
+  // Keyboard 3D press-effect for studio buttons
+  const kbAskBanner = useKbPress(() => triggerAskDrawer('FENCE-001', true));
+  const kbAskPanel = useKbPress(() => triggerAskDrawer('FENCE-001', true));
+  const kbPlayAudio = useKbPress(handlePlayFenceAudio);
+
   return (
-    <div className="studio-split">
-      {/* Left: Code Editor with Gutter Marker */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+      {/* Friendly Developer Explanatory Callout */}
+      <aside
+        className="card"
+        style={{
+          padding: '16px 20px',
+          borderLeft: '4px solid var(--accent)',
+          background: 'var(--bg-surface)',
+        }}
+        aria-label="Developer Guide: Why this Code Studio exists"
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--accent-wash)',
+              color: 'var(--accent)',
+              flexShrink: 0,
+              marginTop: '2px',
+            }}
+          >
+            <Info size={18} weight="fill" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+              <span className="small-caps" style={{ fontWeight: 600, color: 'var(--accent)' }}>
+                {t('studioDevNoteTag')}
+              </span>
+              <span className="status-badge status-good" style={{ fontSize: '11px', padding: '1px 8px' }}>
+                {t('studioProtectedHeaderBadge')}
+              </span>
+            </div>
+            <h2 style={{ margin: '0 0 6px 0', fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
+              {t('studioDevNoteTitle')}
+            </h2>
+            <p style={{ margin: 0, fontSize: '13px', lineHeight: '21px', color: 'var(--text-secondary)' }}>
+              {t('studioDevNoteBody')}
+            </p>
+          </div>
+        </div>
+      </aside>
+
+      <div
+        className="studio-split"
+        role="group"
+        aria-label="Code studio split pane — Tab moves between editor and fence note panel"
+      >
       <div className="monaco-studio-wrapper">
+        <div className="fence-protection-banner">
+          <div className="banner-left">
+            <ShieldCheck size={18} weight="fill" aria-hidden="true" />
+            <span className="banner-text">{t('studioActiveGuard')}</span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary banner-btn"
+            onClick={() => triggerAskDrawer('FENCE-001', true)}
+            {...kbAskBanner}
+          >
+            <span>{t('studioAskCopilot')}</span>
+          </button>
+        </div>
+
         <div className="monaco-studio-toolbar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="studio-toolbar-flex">
             <FileCode size={16} weight="regular" aria-hidden="true" />
-            <span className="mono-metric" style={{ fontWeight: 500, color: 'var(--ink)' }}>
+            <span className="mono-metric studio-file-path">
               src/payments/GatewayRouter.java
             </span>
-            <span className="form-helper">• Lines 5–15 fenced</span>
+            <span className="mono-metric studio-java-info">
+              • {t('studioFencedLines')}
+            </span>
           </div>
-          <span className="mono-metric" style={{ color: 'var(--ink-muted)' }}>
+          <span className="mono-metric studio-java-info">
             Java 21 • UTF-8
           </span>
         </div>
@@ -133,6 +252,7 @@ export default function MonacoCodeStudio({
             height="460px"
             language="java"
             value={currentCode}
+            onChange={(newVal) => setCurrentCode(newVal || '')}
             theme={editorThemeName}
             beforeMount={handleEditorWillMount}
             onMount={handleEditorDidMount}
@@ -142,9 +262,10 @@ export default function MonacoCodeStudio({
               minimap: { enabled: false },
               scrollBeyondLastLine: false,
               readOnly: false,
-              fontFamily: "var(--font-mono), 'JetBrains Mono', monospace",
+              fontFamily: "var(--font-mono), 'DM Mono', monospace",
+              fontLigatures: false,
               fontSize: 13,
-              lineHeight: 20,
+              lineHeight: 22,
               renderLineHighlight: 'all',
               tabSize: 4,
             }}
@@ -152,93 +273,70 @@ export default function MonacoCodeStudio({
         </div>
       </div>
 
-      {/* Right: Calm Side Panel for the Fence Note, Audio Player, and Provenance */}
       <aside className="card" aria-label="Spoken Fence Note Panel">
         <div className="card-header">
           <div>
-            <span className="small-caps">Gutter Note • Lines 5–15</span>
-            <h2 className="card-title" style={{ marginTop: '4px' }}>
-              FENCE-001 • dispatchSettlement
-            </h2>
+            <span className="small-caps">{t('studioGutterNote')}</span>
+            <h2 className="card-title fence-note-title">FENCE-001 • dispatchSettlement</h2>
           </div>
           <StatusBadge status="VERIFIED_ACTIVE" />
         </div>
 
-        <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="card-body card-body-gap-16">
           <div>
-            <div className="small-caps">Recorded Reason (Why)</div>
-            <p className="body-prose" style={{ marginTop: '6px' }}>
+            <div className="small-caps">{t('studioRecordedReason')}</div>
+            <p className="body-prose recorded-reason-text">
               <FormattedText text="Hardcoded `int retryCount = 5; long timeoutMs = 4500;` absorbs Razorpay-Legacy v1 midnight settlement TCP packet drops until `gateway.version` transitions to `v2`." />
             </p>
           </div>
 
-          <div
-            style={{
-              padding: '16px',
-              borderRadius: 'var(--radius-control)',
-              border: '1px solid var(--hairline)',
-              background: 'var(--canvas)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-              <span className="small-caps">Spoken ADR Audio (16kHz WAV)</span>
-              <span className="mono-metric" aria-live="polite">
-                {audioPlaying ? 'Playing…' : '00:09 • te-IN'}
-              </span>
-            </div>
-            <p className="form-helper" style={{ fontStyle: 'italic', color: 'var(--ink)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <AudioWaveform
+              isPlaying={audioPlaying}
+              currentTime={audioCurrentTime}
+              duration={audioDuration}
+              onTogglePlay={handlePlayFenceAudio}
+              onSeek={(seekTime) => {
+                if (audioRef.current) {
+                  audioRef.current.currentTime = seekTime;
+                  setAudioCurrentTime(seekTime);
+                }
+              }}
+              title={t('studioSpokenAdrAudio')}
+              subtitle="PR #212 • @anjani (te-IN) • 16kHz Studio Audio"
+            />
+            <p className="form-helper audio-note-text" style={{ padding: '0 4px', margin: 0 }}>
               "Avunu, correct! GatewayRouter lo retryCount = 5 alage unchandi, endukante v1 midnight packet drop avtundi until application.yml lo gateway.version v2 ki marustaru."
             </p>
-            <div>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handlePlayFenceAudio}
-              >
-                <SpeakerHigh size={16} weight="regular" aria-hidden="true" />
-                <span>Play Audio Note</span>
-              </button>
-            </div>
           </div>
 
           <div>
-            <div className="small-caps">Provenance &amp; Expiry Rule</div>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-                marginTop: '8px',
-                fontSize: '13px',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--ink-muted)' }}>Origin</span>
-                <span className="mono-metric">PR #212 • INC-9921 • 9f3c2a1</span>
+            <div className="small-caps">{t('studioProvenanceExpiry')}</div>
+            <div className="provenance-grid">
+              <div className="provenance-row">
+                <span className="provenance-label">{t('studioOrigin')}</span>
+                <span className="provenance-value">PR #212 • INC-9921 • 9f3c2a1</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--ink-muted)' }}>Author</span>
-                <span className="mono-metric">@anjani (Verified Active)</span>
+              <div className="provenance-row">
+                <span className="provenance-label">{t('studioAuthor')}</span>
+                <span className="provenance-value">@anjani (Verified Active)</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--ink-muted)' }}>Expiry Condition</span>
-                <span className="mono-metric">gateway.version == 'v2'</span>
+              <div className="provenance-row">
+                <span className="provenance-label">{t('studioExpiryCondition')}</span>
+                <span className="provenance-value">gateway.version == 'v2'</span>
               </div>
             </div>
           </div>
 
-          <div style={{ paddingTop: '8px', borderTop: '1px solid var(--hairline)' }}>
+          <div className="card-divider">
             <button
               type="button"
-              className="btn btn-primary"
-              style={{ width: '100%' }}
+              className="btn btn-primary btn-full-width"
               onClick={() => triggerAskDrawer('FENCE-001', true)}
+              {...kbAskPanel}
             >
               <ChatCircleText size={16} weight="regular" aria-hidden="true" />
-              <span>Ask Co-Pilot About FENCE-001</span>
+              <span>{t('studioAskCopilot')}</span>
             </button>
           </div>
         </div>
@@ -252,6 +350,7 @@ export default function MonacoCodeStudio({
           autoPlayAudio={autoPlayAudio}
         />
       )}
+      </div>
     </div>
   );
 }

@@ -1,0 +1,915 @@
+/* WhyLine Studio Cream-and-Olive Design Tokens (F0)
+ * This file is imported FIRST in main.jsx — before any component CSS.
+ * One token name per concept. No new hues beyond the DESIGN.md palette.
+ * All fallbacks are mandatory.
+ */
+
+/* ==========================================================================
+   Palette (Cream-and-Olive from DESIGN.md)
+   ========================================================================== */
+
+/* Light mode: #FDFBD4, #FFFEF0, #F2F0CA, Dark: #1C1C12, #25251A, #2F2F22 */
+:root {
+  /* Backgrounds */
+  --bg-base: #FDFBD4;
+  --bg-surface: #FFFEF0;
+  --bg-raised: #F2F0CA;
+
+  /* Aliases used by styles.css (light mode) */
+  --canvas: var(--bg-base);
+  --surface: var(--bg-surface);
+  --surface-raised: var(--bg-raised);
+
+  /* Text */
+  --text-primary: #2A2919;
+  --text-secondary: #545333;
+
+  /* Aliases used by styles.css (light mode) */
+  --ink: var(--text-primary);
+  --ink-muted: var(--text-secondary);
+
+  /* Borders */
+  --border: #D9D7B6;
+  --border-default: #D9D7B6;
+  --border-strong: #878672;
+
+  /* Aliases used by styles.css (light mode) */
+  --hairline: var(--border-default);
+  --hairline-strong: var(--border-strong);
+
+  /* Accent / Action (Olive / Brown family) */
+  --accent: #545333;
+  --accent-hover: #3E3D25;
+  --accent-wash: #ECEAD0;
+  --on-accent: #FDFBD4;
+
+  /* Alias used by styles.css (light mode) */
+  --accent-contrast: var(--on-accent);
+
+  /* Status / Interaction */
+  --block: #878672;
+
+  /* Status colors (light mode — DESIGN.md) */
+  --danger: #B3261E;
+  --success: #545333;
+  --warning: #8F5A08;
+  --amber: #D9A520;
+  --info: #3B6E91;
+
+  /* Status tints (13% blend on surface) */
+  --danger-wash: color-mix(in srgb, var(--danger) 13%, var(--surface));
+  --danger-tint: color-mix(in srgb, var(--danger) 13%, var(--surface));
+  --success-tint: color-mix(in srgb, var(--success) 13%, var(--surface));
+  --warning-tint: color-mix(in srgb, var(--warning) 13%, var(--surface));
+  --info-tint: color-mix(in srgb, var(--info) 13%, var(--surface));
+
+  /* Status aliases */
+  --status-good: var(--success);
+  --status-warning: var(--warning);
+  --status-critical: var(--danger);
+  --status-info: var(--info);
+  --status-muted: #6B6A55;
+
+  /* Other aliases used by styles.css (light mode) */
+  --hero-ink: #2A2919;
+  --line: var(--border-default);
+  --muted: var(--text-secondary);
+
+  /* Radii (DESIGN.md) */
+  --radius-card: 24px;
+  --radius-control: 12px;
+  --radius-chip: 9999px;
+  --radius-slab: 16px;
+
+  /* Container */
+  --container-max: 1320px;
+
+  /* L2 Floating Glass Surface (78-86% opacity, DESIGN.md canonical 82%) */
+  --surface-glass: color-mix(in srgb, var(--bg-surface) 82%, transparent);
+}
+
+/* Dark mode (prefers-color-scheme: dark or [data-theme="dark"] / [data-mode="dark"]) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-base: #1C1C12;
+    --bg-surface: #25251A;
+    --bg-raised: #2F2F22;
+    --surface-glass: color-mix(in srgb, var(--bg-surface) 82%, transparent);
+    --text-primary: #FDFBD4;
+    --text-secondary: #D9D7B6;
+    --border: #3A3A2A;
+    --border-default: #3A3A2A;
+    --border-strong: #878672;
+    --accent: #D9D7B6;
+    --accent-hover: #FDFBD4;
+    --accent-wash: #343324;
+    --on-accent: #2A2919;
+    --block: #545333;
+    --danger: #E86A62;
+    --danger-wash: color-mix(in srgb, var(--danger) 13%, var(--surface));
+    --success: #D9D7B6;
+    --warning: #D9A520;
+    --info: #6BA3C9;
+    --status-good: var(--success);
+    --status-warning: var(--warning);
+    --status-critical: var(--danger);
+    --status-info: var(--info);
+    --status-muted: #A9A890;
+    --hero-ink: #141409;
+  }
+}
+
+[data-theme="dark"],
+[data-mode="dark"] {
+  --bg-base: #1C1C12;
+  --bg-surface: #25251A;
+  --bg-raised: #2F2F22;
+  --surface-glass: color-mix(in srgb, var(--bg-surface) 82%, transparent);
+  --text-primary: #FDFBD4;
+  --text-secondary: #D9D7B6;
+  --border: #3A3A2A;
+  --border-default: #3A3A2A;
+  --border-strong: #878672;
+  --accent: #D9D7B6;
+  --accent-hover: #FDFBD4;
+  --accent-wash: #343324;
+  --on-accent: #2A2919;
+  --block: #545333;
+  --danger: #E86A62;
+  --danger-wash: color-mix(in srgb, var(--danger) 13%, var(--surface));
+  --success: #D9D7B6;
+  --warning: #D9A520;
+  --amber: #D9A520;
+  --info: #6BA3C9;
+  --status-good: var(--success);
+  --status-warning: var(--warning);
+  --status-critical: var(--danger);
+  --status-info: var(--info);
+  --status-muted: #A9A890;
+  --hero-ink: #141409;
+}
+
+/* ==========================================================================
+   Elevation Tokens (four levels only, L0-L3)
+   ==========================================================================
+   Shadows and blur are ONLY via these tokens. No hard-coded shadows elsewhere.
+   Fallbacks are mandatory (see @supports, prefers-reduced-transparency, etc.).
+   ========================================================================== */
+
+/* L0 Canvas — flat page background, faint fixed radial ambient glow, no animation */
+.l0 {
+  position: relative;
+}
+
+/* Ambient glow pseudo-layer — fixed radial glow behind canvas content */
+.l0::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(
+    600px 600px at 50% 30%,
+    color-mix(in srgb, var(--accent-wash) 35%, transparent),
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+@supports not((backdrop-filter: blur(0))) {
+  .l0 { box-shadow: none; }
+}
+
+/* L1 Card — solid >=94% opaque, 1px border, 1px top inset highlight, soft two-layer shadow */
+.l1,
+.card,
+.stat-cell,
+.table-card {
+  border: 1px solid var(--border-default);
+  background-color: var(--bg-surface);
+  /* 1px top inset highlight (emboss bevel) */
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.55),
+    /* soft two-layer drop shadow */
+    0 1px 2px 0 rgba(0, 0, 0, 0.05),
+    0 1px 4px -1px rgba(0, 0, 0, 0.02);
+}
+
+/* L1 Card hover lift — subtle 3D depth */
+.l1:hover,
+.card:hover,
+.stat-cell:hover,
+.table-card:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.55),
+    0 4px 8px 0 rgba(0, 0, 0, 0.08),
+    0 1px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: transform 160ms ease-out, box-shadow 160ms ease-out;
+}
+
+[data-theme="dark"] .l1,
+[data-mode="dark"] .l1,
+[data-theme="dark"] .card,
+[data-mode="dark"] .card,
+[data-theme="dark"] .stat-cell,
+[data-mode="dark"] .stat-cell,
+[data-theme="dark"] .table-card,
+[data-mode="dark"] .table-card {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+    0 1px 3px 0 rgba(0, 0, 0, 0.35),
+    0 1px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .l1:hover,
+[data-mode="dark"] .l1:hover,
+[data-theme="dark"] .card:hover,
+[data-mode="dark"] .card:hover,
+[data-theme="dark"] .stat-cell:hover,
+[data-mode="dark"] .stat-cell:hover,
+[data-theme="dark"] .table-card:hover,
+[data-mode="dark"] .table-card:hover {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+    0 4px 12px 0 rgba(0, 0, 0, 0.45),
+    0 1px 4px -1px rgba(0, 0, 0, 0.25);
+}
+
+/* L2 Floating glass — only on topbar, account popover, drawers, modals, tooltips */
+.l2,
+.glass-navbar,
+.topbar.glass-navbar,
+.topbar,
+.account-popover.glass-navbar,
+.account-popover,
+.mobile-drawer,
+.ask-drawer-panel.glass-navbar,
+.ask-drawer-panel,
+.modal-dialog,
+.modal-content,
+.tooltip,
+[role="tooltip"],
+.recharts-default-tooltip,
+.audio-waveform-card,
+.site-footer,
+.site-footer.glass-navbar {
+  --_l2-surface: var(--surface-glass, color-mix(in srgb, var(--bg-surface) 82%, transparent));
+  --_l2-blur: blur(14px);
+  --_l2-saturate: saturate(140%);
+  border: 1px solid var(--border-default);
+  background-color: var(--_l2-surface);
+  /* Glass effect: blur + saturate */
+  backdrop-filter: var(--_l2-blur) var(--_l2-saturate);
+  -webkit-backdrop-filter: var(--_l2-blur) var(--_l2-saturate);
+  /* Inset top highlight for glass depth + soft floating shadow */
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.45),
+    0 8px 24px -4px rgba(0, 0, 0, 0.08),
+    0 2px 6px -1px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .l2,
+[data-mode="dark"] .l2,
+[data-theme="dark"] .glass-navbar,
+[data-mode="dark"] .glass-navbar,
+[data-theme="dark"] .topbar.glass-navbar,
+[data-mode="dark"] .topbar.glass-navbar,
+[data-theme="dark"] .topbar,
+[data-mode="dark"] .topbar,
+[data-theme="dark"] .account-popover.glass-navbar,
+[data-mode="dark"] .account-popover.glass-navbar,
+[data-theme="dark"] .account-popover,
+[data-mode="dark"] .account-popover,
+[data-theme="dark"] .mobile-drawer,
+[data-mode="dark"] .mobile-drawer,
+[data-theme="dark"] .ask-drawer-panel.glass-navbar,
+[data-mode="dark"] .ask-drawer-panel.glass-navbar,
+[data-theme="dark"] .ask-drawer-panel,
+[data-mode="dark"] .ask-drawer-panel,
+[data-theme="dark"] .modal-dialog,
+[data-mode="dark"] .modal-dialog,
+[data-theme="dark"] .modal-content,
+[data-mode="dark"] .modal-content,
+[data-theme="dark"] .tooltip,
+[data-mode="dark"] .tooltip,
+[data-theme="dark"] [role="tooltip"],
+[data-mode="dark"] [role="tooltip"],
+[data-theme="dark"] .recharts-default-tooltip,
+[data-mode="dark"] .recharts-default-tooltip,
+.audio-waveform-card,
+.site-footer,
+.site-footer.glass-navbar {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+    0 8px 24px -4px rgba(0, 0, 0, 0.35),
+    0 2px 6px -1px rgba(0, 0, 0, 0.2);
+}
+
+/* L3 Well (deboss) — inputs, selects, textarea, segmented track, risk-bar, code/diff */
+.l3,
+.form-input,
+.form-select,
+.form-textarea,
+.segmented-control,
+.risk-track,
+.risk-bar-track,
+.code-block-wrapper,
+.code-panel,
+.diff-container,
+.audio-waveform-track {
+  border: 1px solid var(--border-strong);
+  background-color: var(--bg-surface);
+  /* Inner shadow + 1px bottom catch-light (deboss bevel) */
+  box-shadow:
+    inset 0 2px 4px 0 rgba(0, 0, 0, 0.06),
+    0 1px 0 0 rgba(255, 255, 255, 0.5);
+}
+
+[data-theme="dark"] .l3,
+[data-mode="dark"] .l3,
+[data-theme="dark"] .form-input,
+[data-mode="dark"] .form-input,
+[data-theme="dark"] .form-select,
+[data-mode="dark"] .form-select,
+[data-theme="dark"] .form-textarea,
+[data-mode="dark"] .form-textarea,
+[data-theme="dark"] .segmented-control,
+[data-mode="dark"] .segmented-control,
+[data-theme="dark"] .risk-track,
+[data-mode="dark"] .risk-track,
+[data-theme="dark"] .risk-bar-track,
+[data-mode="dark"] .risk-bar-track,
+[data-theme="dark"] .code-block-wrapper,
+[data-mode="dark"] .code-block-wrapper,
+[data-theme="dark"] .code-panel,
+[data-mode="dark"] .code-panel,
+[data-theme="dark"] .diff-container,
+[data-mode="dark"] .diff-container,
+[data-theme="dark"] .audio-waveform-track,
+[data-mode="dark"] .audio-waveform-track {
+  box-shadow:
+    inset 0 2px 4px 0 rgba(0, 0, 0, 0.3),
+    0 1px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+/* ==========================================================================
+   Raised-cap controls (buttons, chips, active segment)
+   ==========================================================================
+   Top highlight + 2px bottom lip + 1px border. Hover lift 1px. Active sink 1px.
+   ========================================================================== */
+
+/* Raised button / chip: top highlight (inset bevel) + 2px bottom lip */
+.raised-cap,
+.btn:not(.btn-ghost),
+.segment-btn.active,
+.segmented-btn.active,
+.filter-chip.active {
+  border: 1px solid var(--border-default);
+  /* Top highlight bevel + subtle ground shadow */
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.6),
+    0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.btn-primary {
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.3),
+    0 1px 2px 0 rgba(0, 0, 0, 0.12);
+}
+
+.btn-danger {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--hairline));
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.35),
+    0 1px 2px 0 rgba(0, 0, 0, 0.08);
+}
+
+/* Hover lift 1px */
+.raised-cap:hover,
+.btn:not(.btn-ghost):hover:not(:disabled),
+.segment-btn.active:hover,
+.filter-chip.active:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.6),
+    0 2px 4px 0 rgba(0, 0, 0, 0.08);
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+}
+
+.btn-primary:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.35),
+    0 3px 6px 0 rgba(0, 0, 0, 0.16);
+}
+
+/* Active sink 1px */
+.raised-cap:active,
+.btn:not(.btn-ghost):active:not(:disabled),
+.segment-btn.active:active,
+.segmented-btn.active:active,
+.btn[data-pressing]:not(:disabled),
+.segmented-btn[data-pressing],
+.filter-chip[data-pressing],
+.filter-chip.active:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .raised-cap,
+[data-mode="dark"] .raised-cap,
+[data-theme="dark"] .btn-secondary,
+[data-mode="dark"] .btn-secondary,
+[data-theme="dark"] .segment-btn.active,
+[data-mode="dark"] .segment-btn.active,
+[data-theme="dark"] .filter-chip.active,
+[data-mode="dark"] .filter-chip.active {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+    0 1px 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .btn-primary,
+[data-mode="dark"] .btn-primary {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+    0 1px 3px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Voice pipeline stage transitions & pulsing animation */
+.pipeline-stage {
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease, transform 160ms ease-out;
+}
+
+.voice-active-stage {
+  animation: voiceActivePulse 1.8s infinite ease-in-out;
+}
+
+@keyframes voiceActivePulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.9;
+  }
+}
+
+/* ==========================================================================
+   Fallbacks (all mandatory)
+   ==========================================================================
+
+   1. @supports not(backdrop-filter) — solid L1 replaces L2 glass
+   2. prefers-reduced-transparency: reduce — solid surfaces, no glass
+   3. forced-colors: active / prefers-contrast: more — no shadows or blur;
+      borders and system colors only
+   4. prefers-reduced-motion: reduce — no transforms or animations; content
+      visible with scripting off
+   5. html[data-fx="lite"] — no blur, single-layer shadows; auto-enabled when
+      navigator.deviceMemory <= 4 or hardwareConcurrency <= 4;
+      Settings toggle "Visual effects: Full / Lite"
+   6. Max 3 blurred layers visible at once; never blur scrolling lists or Monaco
+   7. Focus ring: outline: 2px solid var(--accent), outline-offset: 2px
+      (outline, never box-shadow)
+   ========================================================================== */
+
+/* Fallback 1: @supports not(backdrop-filter) — when backdrop-filter not supported,
+   L2 glass becomes solid surface */
+@supports not((backdrop-filter: blur(14px))) {
+  .l2,
+  .glass-navbar,
+  .topbar.glass-navbar,
+  .topbar,
+  .account-popover.glass-navbar,
+  .account-popover,
+  .mobile-drawer,
+  .ask-drawer-panel.glass-navbar,
+  .ask-drawer-panel,
+  .modal-dialog,
+  .modal-content,
+  .tooltip,
+  .recharts-default-tooltip,
+.audio-waveform-card,
+.site-footer,
+.site-footer.glass-navbar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: var(--bg-surface) !important;
+    box-shadow: none !important;
+  }
+  .l0::before {
+    display: none;
+  }
+}
+
+/* Fallback 2: prefers-reduced-transparency */
+@media (prefers-reduced-transparency: reduce) {
+  .l2,
+  .glass-navbar,
+  .topbar.glass-navbar,
+  .topbar,
+  .account-popover.glass-navbar,
+  .account-popover,
+  .mobile-drawer,
+  .ask-drawer-panel.glass-navbar,
+  .ask-drawer-panel,
+  .modal-dialog,
+  .modal-content,
+  .tooltip,
+  .recharts-default-tooltip,
+.audio-waveform-card,
+.site-footer,
+.site-footer.glass-navbar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: var(--bg-surface) !important;
+    box-shadow: none !important;
+  }
+  .l0::before {
+    display: none;
+  }
+}
+
+/* Fallback 3: forced-colors / high-contrast — no shadows or blur */
+@media (forced-colors: active), (prefers-contrast: more) {
+  .l1,
+  .l2,
+  .l3,
+  .card,
+  .stat-cell,
+  .table-card,
+  .btn,
+  .form-input,
+  .form-select,
+  .form-textarea,
+  .raised-cap,
+  .glass-navbar,
+  .topbar.glass-navbar,
+  .topbar,
+  .account-popover.glass-navbar,
+  .account-popover,
+  .mobile-drawer,
+  .ask-drawer-panel.glass-navbar,
+  .ask-drawer-panel,
+  .modal-dialog,
+  .modal-content,
+  .tooltip,
+  .recharts-default-tooltip,
+.audio-waveform-card,
+.site-footer,
+.site-footer.glass-navbar {
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .l2,
+  .glass-navbar,
+  .topbar.glass-navbar,
+  .topbar,
+  .account-popover.glass-navbar,
+  .account-popover,
+  .mobile-drawer,
+  .ask-drawer-panel.glass-navbar,
+  .ask-drawer-panel,
+  .modal-dialog,
+  .modal-content,
+  .tooltip,
+  .recharts-default-tooltip,
+.audio-waveform-card,
+.site-footer,
+.site-footer.glass-navbar {
+    background-color: var(--bg-surface) !important;
+    border: 1px solid var(--border-default) !important;
+  }
+  .l0::before {
+    display: none;
+  }
+}
+
+/* Fallback 4: prefers-reduced-motion — no transforms or animations */
+@media (prefers-reduced-motion: reduce) {
+  .l1:hover,
+  .card:hover,
+  .stat-cell:hover,
+  .table-card:hover,
+  .raised-cap:hover,
+  .raised-cap:active,
+  .btn:hover,
+  .btn:active,
+  .filter-chip.active:hover,
+  .filter-chip.active:active,
+  .segment-btn.active:hover,
+  .segment-btn.active:active,
+  .pipeline-stage,
+  .voice-active-stage {
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+  .recording-dot {
+    animation: none !important;
+  }
+}
+
+/* Fallback 5: html[data-fx="lite"] — no blur, single-layer shadows */
+html[data-fx="lite"] .l2,
+html[data-fx="lite"] .glass-navbar,
+html[data-fx="lite"] .topbar.glass-navbar,
+html[data-fx="lite"] .topbar,
+html[data-fx="lite"] .account-popover.glass-navbar,
+html[data-fx="lite"] .account-popover,
+html[data-fx="lite"] .mobile-drawer,
+html[data-fx="lite"] .ask-drawer-panel.glass-navbar,
+html[data-fx="lite"] .ask-drawer-panel,
+html[data-fx="lite"] .modal-dialog,
+html[data-fx="lite"] .modal-content,
+html[data-fx="lite"] .tooltip,
+html[data-fx="lite"] .recharts-default-tooltip,
+.audio-waveform-card,
+.site-footer,
+.site-footer.glass-navbar {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: var(--bg-surface) !important;
+  box-shadow: none !important;
+}
+
+html[data-fx="lite"] .l1:hover,
+html[data-fx="lite"] .card:hover,
+html[data-fx="lite"] .stat-cell:hover,
+html[data-fx="lite"] .raised-cap:hover,
+html[data-fx="lite"] .btn:hover {
+  transform: none;
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.55),
+    0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+html[data-fx="lite"] .l0::before {
+  display: none;
+}
+
+/* Focus ring: outline, never box-shadow (DESIGN.md Fallback #7) */
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Typography Rules (F1 — documented for reference)
+   ==========================================================================
+
+   Fonts: Self-hosted WOFF2 via @fontsource — DM Sans (Latin UI), Crimson Text
+   (Latin display), DM Mono (mono), Noto Sans Devanagari + Noto Sans Telugu (UI,
+   variable), Noto Serif Devanagari + Noto Serif Telugu (display). Weights: 400 / 500
+   / 600 only. No faux italic or bold (font-synthesis: none). No text-transform on
+   Indic text.
+
+   Font stacks per role:
+   --font-sans: "DM Sans","Noto Sans Devanagari","Noto Sans Telugu",system-ui,sans-serif
+   --font-display: "Crimson Text","Noto Serif Devanagari","Noto Serif Telugu",Georgia,serif
+   --font-mono: "DM Mono","Noto Sans Devanagari","Noto Sans Telugu",ui-monospace,monospace
+
+   Script-aware line-heights via :lang():
+   - Body line-height: en 1.55, hi 1.7, te 1.8
+   - Headings: en 1.15, hi 1.35, te 1.45
+   - Captions >= 18px, te line-height 1.9
+
+   Indic face compensation: add @font-face rules for them with size-adjust (start 106%)
+   and tune visually.
+
+   hi/te: letter-spacing 0 and text-transform none (including eyebrow labels).
+
+   Globally: font-style: normal and font-synthesis: none (no faux italic or bold;
+   Indic scripts have no italics). Weights 400/500/600 only.
+
+   Never disable ligatures or OpenType features, and never use text-rendering:
+   optimizeSpeed (breaks conjuncts and half-forms).
+
+   text-wrap: balance on headings, pretty on paragraphs.
+   overflow-wrap: anywhere only on code/identifier chips.
+
+   Content rules:
+   - Keep technical terms and identifiers in Latin inside hi/te UI (PR, commit, fence,
+     retryCount, file paths); translate the explanation around them.
+   - Latin digits everywhere (Intl.NumberFormat with the -u-nu-latn extension);
+     Intl.DateTimeFormat for dates.
+   - All UI strings in locales/en.json, hi.json, te.json (ICU messages); no hard-coded text.
+   - Truncate and count text only with Intl.Segmenter (grapheme); never slice/substring
+     (breaks conjuncts and vowel signs).
+   - Normalize to NFC before comparing or searching.
+   - Sentence splitting (for the TTS queue) must treat the Hindi danda (।, ॥) as well as
+     . ? !.
+
+   Layout resilience: Hindi runs about 20-30% longer than English, Telugu about 30-40%.
+   No fixed-width buttons, pills or table columns; use min-width + wrapping.
+   Add a pseudo-locale (strings padded ~40%) to expose overflow in topbar, segmented
+   controls, KPI slabs, badges, table headers, drawers.
+
+   Loading: preload Latin plus only the active language's face; split by
+   unicode-range (devanagari U+0900-097F U+200C-200D U+A8E0-A8FF; telugu
+   U+0C00-0C7F U+200C-200D); font-display: swap with metric-matched fallbacks.
+   Await document.fonts.ready (and document.fonts.load for the active script) before
+   measuring text or laying out the flowchart.
+
+   Monaco: fontFamily from --font-mono, fontLigatures false, lineHeight 22.
+   Hindi/Telugu appears only in comments; voice notes live in the side panel, not in
+   the editor (non-monospace glyphs misalign the cursor).
+
+   /dev/typography route: dev-only route showing the type scale and test strings per script.
+   ========================================================================== */
+
+/* ==========================================================================
+   Font stacks — apply to body and headings
+   ========================================================================== */
+:root {
+  --font-sans: "DM Sans","Noto Sans Devanagari","Noto Sans Telugu",system-ui,sans-serif;
+  --font-display: "Crimson Text","Noto Serif Devanagari","Noto Serif Telugu",Georgia,serif;
+  --font-mono: "DM Mono","Noto Sans Devanagari","Noto Sans Telugu",ui-monospace,monospace;
+}
+
+/* ==========================================================================
+   Indic face compensation — size-adjust @font-face rules (start 106%)
+   ==========================================================================
+   Devanagari and Telugu glyphs run larger than Latin at the same em size.
+   size-adjust compensates so metrics are matched and layout doesn't shift
+   when the script face loads. Tune visually after first render.
+   ========================================================================== */
+
+/* Noto Sans Devanagari — size-adjust for UI text */
+@font-face {
+  font-family: "Noto Sans Devanagari";
+  src: local("Noto Sans Devanagari"),
+       local("NotoSansDevanagari"),
+       url("@fontsource/noto-sans-devanagari/files/noto-sans-devanagari-devanagari-400-normal.woff2") format("woff2"),
+       url("@fontsource/noto-sans-devanagari/files/noto-sans-devanagari-devanagari-400-normal.woff") format("woff");
+  unicode-range: U+0900-097F, U+200C-200D, U+A8E0-A8FF;
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 106%;
+}
+
+@font-face {
+  font-family: "Noto Sans Devanagari";
+  src: local("Noto Sans Devanagari"),
+       local("NotoSansDevanagari"),
+       url("@fontsource/noto-sans-devanagari/files/noto-sans-devanagari-devanagari-500-normal.woff2") format("woff2"),
+       url("@fontsource/noto-sans-devanagari/files/noto-sans-devanagari-devanagari-500-normal.woff") format("woff");
+  unicode-range: U+0900-097F, U+200C-200D, U+A8E0-A8FF;
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 106%;
+}
+
+@font-face {
+  font-family: "Noto Sans Devanagari";
+  src: local("Noto Sans Devanagari"),
+       local("NotoSansDevanagari"),
+       url("@fontsource/noto-sans-devanagari/files/noto-sans-devanagari-devanagari-600-normal.woff2") format("woff2"),
+       url("@fontsource/noto-sans-devanagari/files/noto-sans-devanagari-devanagari-600-normal.woff") format("woff");
+  unicode-range: U+0900-097F, U+200C-200D, U+A8E0-A8FF;
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 106%;
+}
+
+/* Noto Sans Telugu — size-adjust for UI text */
+@font-face {
+  font-family: "Noto Sans Telugu";
+  src: local("Noto Sans Telugu"),
+       local("NotoSansTelugu"),
+       url("@fontsource/noto-sans-telugu/files/noto-sans-telugu-telugu-400-normal.woff2") format("woff2"),
+       url("@fontsource/noto-sans-telugu/files/noto-sans-telugu-telugu-400-normal.woff") format("woff");
+  unicode-range: U+0C00-0C7F, U+200C-200D;
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 106%;
+}
+
+@font-face {
+  font-family: "Noto Sans Telugu";
+  src: local("Noto Sans Telugu"),
+       local("NotoSansTelugu"),
+       url("@fontsource/noto-sans-telugu/files/noto-sans-telugu-telugu-500-normal.woff2") format("woff2"),
+       url("@fontsource/noto-sans-telugu/files/noto-sans-telugu-telugu-500-normal.woff") format("woff");
+  unicode-range: U+0C00-0C7F, U+200C-200D;
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 106%;
+}
+
+@font-face {
+  font-family: "Noto Sans Telugu";
+  src: local("Noto Sans Telugu"),
+       local("NotoSansTelugu"),
+       url("@fontsource/noto-sans-telugu/files/noto-sans-telugu-telugu-600-normal.woff2") format("woff2"),
+       url("@fontsource/noto-sans-telugu/files/noto-sans-telugu-telugu-600-normal.woff") format("woff");
+  unicode-range: U+0C00-0C7F, U+200C-200D;
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 106%;
+}
+
+/* Noto Serif Devanagari — size-adjust for display text */
+@font-face {
+  font-family: "Noto Serif Devanagari";
+  src: local("Noto Serif Devanagari"),
+       local("NotoSerifDevanagari"),
+       url("@fontsource/noto-serif-devanagari/files/noto-serif-devanagari-devanagari-400-normal.woff2") format("woff2"),
+       url("@fontsource/noto-serif-devanagari/files/noto-serif-devanagari-devanagari-400-normal.woff") format("woff");
+  unicode-range: U+0900-097F, U+200C-200D, U+A8E0-A8FF;
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 106%;
+}
+
+/* Noto Serif Telugu — size-adjust for display text */
+@font-face {
+  font-family: "Noto Serif Telugu";
+  src: local("Noto Serif Telugu"),
+       local("NotoSerifTelugu"),
+       url("@fontsource/noto-serif-telugu/files/noto-serif-telugu-telugu-400-normal.woff2") format("woff2"),
+       url("@fontsource/noto-serif-telugu/files/noto-serif-telugu-telugu-400-normal.woff") format("woff");
+  unicode-range: U+0C00-0C7F, U+200C-200D;
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 106%;
+}
+
+/* Body typography */
+body {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  line-height: normal; /* script-aware via :lang() below */
+  font-style: normal;
+  font-synthesis: none;
+}
+
+/* Script-aware line heights via :lang() and html[lang] */
+:lang(en) body, html[lang="en"] body { line-height: 1.55; }
+:lang(hi) body, html[lang="hi"] body { line-height: 1.7; }
+:lang(te) body, html[lang="te"] body { line-height: 1.8; }
+
+:lang(en) h1, :lang(en) h2, :lang(en) h3, :lang(en) h4, :lang(en) h5, :lang(en) h6,
+html[lang="en"] h1, html[lang="en"] h2, html[lang="en"] h3, html[lang="en"] h4, html[lang="en"] h5, html[lang="en"] h6 { line-height: 1.15; }
+
+:lang(hi) h1, :lang(hi) h2, :lang(hi) h3, :lang(hi) h4, :lang(hi) h5, :lang(hi) h6,
+html[lang="hi"] h1, html[lang="hi"] h2, html[lang="hi"] h3, html[lang="hi"] h4, html[lang="hi"] h5, html[lang="hi"] h6 { line-height: 1.35; }
+
+:lang(te) h1, :lang(te) h2, :lang(te) h3, :lang(te) h4, :lang(te) h5, :lang(te) h6,
+html[lang="te"] h1, html[lang="te"] h2, html[lang="te"] h3, html[lang="te"] h4, html[lang="te"] h5, html[lang="te"] h6 { line-height: 1.45; }
+
+:lang(te) p, :lang(te) li, :lang(te) span, :lang(te) label,
+html[lang="te"] p, html[lang="te"] li, html[lang="te"] span, html[lang="te"] label { line-height: 1.8; }
+
+:lang(hi) p, :lang(hi) li, :lang(hi) span, :lang(hi) label,
+html[lang="hi"] p, html[lang="hi"] li, html[lang="hi"] span, html[lang="hi"] label { line-height: 1.7; }
+
+/* Captions */
+caption, :lang(en) caption, html[lang="en"] caption { line-height: 1.6; }
+:lang(hi) caption, html[lang="hi"] caption { line-height: 1.8; }
+:lang(te) caption, html[lang="te"] caption { line-height: 1.9; }
+
+/* ==========================================================================
+   Script-specific Indic rules (hi/te)
+   ==========================================================================
+   - letter-spacing: 0 (Indic scripts use conjuncts and vowel signs;
+     tracking breaks them)
+   - text-transform: none (no uppercase/lowercase in Devanagari/Telugu;
+     applies to eyebrow labels too)
+   ========================================================================== */
+:lang(hi),
+:lang(te),
+html[lang="hi"],
+html[lang="te"],
+:lang(hi) *,
+:lang(te) *,
+html[lang="hi"] *,
+html[lang="te"] * {
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+/* Never disable ligatures or OpenType features */
+html {
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* text-wrap preferences */
+.heading { text-wrap: balance; }
+.paragraph { text-wrap: pretty; }
+.code-chip { overflow-wrap: anywhere; }
+
+/* Focus ring already defined above in fallbacks */

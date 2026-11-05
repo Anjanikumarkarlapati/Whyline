@@ -61,30 +61,34 @@ def parse_unified_diff(diff_text: str) -> tuple[list[int], list[str], list[str],
 
     curr_orig_line = 0
     in_hunk = False
+    has_hunk = any(line.startswith("@@") for line in diff_text.splitlines())
 
     for line in diff_text.splitlines():
-        m = re.match(r"^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@", line)
-        if m:
-            orig_start = int(m.group(1))
-            new_start = int(m.group(3))
-            curr_orig_line = orig_start if orig_start > 0 else (new_start if new_start > 0 else 1)
-            in_hunk = True
-            continue
+        if has_hunk:
+            m = re.match(r"^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@", line)
+            if m:
+                orig_start = int(m.group(1))
+                new_start = int(m.group(3))
+                curr_orig_line = orig_start if orig_start > 0 else (new_start if new_start > 0 else 1)
+                in_hunk = True
+                continue
 
-        if not in_hunk:
-            continue
+            if not in_hunk:
+                continue
 
         if line.startswith("---") or line.startswith("+++"):
             continue
 
         if line.startswith("-"):
-            changed_lines.append(curr_orig_line)
+            if has_hunk:
+                changed_lines.append(curr_orig_line)
+                curr_orig_line += 1
             removed_lines.append(line[1:])
-            curr_orig_line += 1
         elif line.startswith("+"):
-            changed_lines.append(curr_orig_line)
+            if has_hunk:
+                changed_lines.append(curr_orig_line)
             added_lines.append(line[1:])
-        elif line.startswith(" ") or line == "":
+        elif (line.startswith(" ") or line == "") and has_hunk:
             curr_orig_line += 1
 
     changed_lines = sorted(list(set(changed_lines)))
@@ -167,6 +171,19 @@ class WhyLineMcpEngine:
 
         # Parse proposed diff if provided
         changed_lines, removed_lines, added_lines, is_whitespace_only, is_comment_only = parse_unified_diff(proposed_diff)
+        if not changed_lines and (removed_lines or added_lines):
+            target_disk = self.store.repo_dir / norm_target
+            if target_disk.exists():
+                try:
+                    file_lines = target_disk.read_text(encoding="utf-8", errors="ignore").splitlines()
+                    for idx, fl in enumerate(file_lines, start=1):
+                        fl_strip = fl.strip()
+                        for rl in removed_lines:
+                            if fl_strip and (fl_strip == rl.strip() or fl_strip.startswith(rl.strip())):
+                                changed_lines.append(idx)
+                    changed_lines = sorted(list(set(changed_lines)))
+                except Exception:
+                    pass
 
         # Expired fences are safe to edit/clean up
         if status == "EXPIRED_SAFE_TO_REMOVE":

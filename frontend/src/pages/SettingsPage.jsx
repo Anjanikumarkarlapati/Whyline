@@ -5,10 +5,30 @@ import StatusBadge from '../components/StatusBadge';
 import { FormattedText } from '../components/CodeText';
 
 export default function SettingsPage() {
-  const { lang, setLang, t } = useI18n();
+  const { lang, setLang, t, voiceModel } = useI18n();
   const [settings, setSettings] = useState(null);
   const [scorecard, setScorecard] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [fxMode, setFxMode] = useState(() => {
+    if (typeof document !== 'undefined') {
+      return document.documentElement.getAttribute('data-fx') === 'lite' ? 'lite' : 'full';
+    }
+    return 'full';
+  });
+
+  const handleFxChange = (newFx) => {
+    setFxMode(newFx);
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-fx', newFx);
+      try {
+        window.localStorage?.setItem('whyline-fx', newFx);
+      } catch {
+        // ignore
+      }
+    }
+    setToastMessage(`Visual effects set to ${newFx === 'lite' ? 'Lite (solid surfaces)' : 'Full (glassmorphism)'}.`);
+    setTimeout(() => setToastMessage(''), 3200);
+  };
 
   const loadSettings = async () => {
     try {
@@ -81,10 +101,36 @@ export default function SettingsPage() {
                 value={lang}
                 onChange={(e) => setLang(e.target.value)}
               >
-                <option value="en">English (EN)</option>
-                <option value="te">తెలుగు (Telugu)</option>
-                <option value="hi">हिंदी (Hindi)</option>
+                <option value="en">English (EN • Pranav voice model)</option>
+                <option value="te">తెలుగు (Telugu • Nalini voice model)</option>
+                <option value="hi">हिंदी (Hindi • Bhavna voice model)</option>
               </select>
+              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span className="small-caps" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                  Linked Voice Model:
+                </span>
+                <span className="status-badge status-good" style={{ fontSize: '11px', padding: '1px 8px' }}>
+                  {voiceModel?.name} ({voiceModel?.locale} • {voiceModel?.model})
+                </span>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="settings-fx-select">
+                Visual Effects Mode (DESIGN.md Fallback #5)
+              </label>
+              <select
+                id="settings-fx-select"
+                className="form-select"
+                value={fxMode}
+                onChange={(e) => handleFxChange(e.target.value)}
+              >
+                <option value="full">Full FX (L2 Floating Glass &amp; Ambient Glow)</option>
+                <option value="lite">Lite FX (Solid Surfaces &amp; Single-Layer Shadows)</option>
+              </select>
+              <p className="form-helper">
+                When set to Lite (or on devices with &le; 4GB RAM), backdrop-filter is disabled and surfaces remain solid.
+              </p>
             </div>
           </div>
         </article>
@@ -98,16 +144,16 @@ export default function SettingsPage() {
           <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
               <div className="small-caps">
-                Gnani Vachana Speech Stack (Prisma v2.5 STT + Timbre v2.5 TTS)
+                Gnani Vachana Speech Stack (Prisma v3.0 STT + Timbre v3.0 TTS)
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
                 <span className="mono-metric" style={{ color: 'var(--ink)' }}>
                   {settings?.providers?.gnani_vachana_speech?.mode ||
-                    'Sandbox + 16kHz WAV Synthesizer'}
+                    'Live API (Shivani, Avinash, Kalpana)'}
                 </span>
               </div>
               <p className="form-helper" style={{ marginTop: '4px' }}>
-                Rescores spoken Telugu/Hindi code-mixed utterances against AST symbol vocabulary.
+                Rescores spoken Telugu/Hindi code-mixed utterances against AST symbols. Supports top 3 neural voices: Shivani (Female), Avinash (Male), Kalpana (Female).
               </p>
             </div>
 

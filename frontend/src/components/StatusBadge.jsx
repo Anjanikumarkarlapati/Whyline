@@ -26,7 +26,7 @@ export default function StatusBadge({ status, hideIfDefault = false }) {
 
   if (norm === 'VERIFIED_ACTIVE' || norm === 'GOOD' || norm === 'ONLINE' || norm === 'ACTIVE') {
     if (hideIfDefault) {
-      return <span className="status-quiet">Active</span>;
+      return <span className="status-quiet">{t('statusVerifiedActive')}</span>;
     }
     return (
       <span className="status-badge status-good">
@@ -73,7 +73,7 @@ export default function StatusBadge({ status, hideIfDefault = false }) {
     return (
       <span className="status-badge status-critical">
         <WarningOctagon size={14} weight="regular" aria-hidden="true" />
-        <span>Blocked</span>
+        <span>{t('statusBlocked')}</span>
       </span>
     );
   }

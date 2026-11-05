@@ -9,7 +9,10 @@ import IncidentsAndMemoryPage from './pages/IncidentsAndMemoryPage';
 import VoiceCoPilotPage from './pages/VoiceCoPilotPage';
 import GitFlowchartPage from './pages/GitFlowchartPage';
 import SettingsPage from './pages/SettingsPage';
+import TypographyPage from './pages/TypographyPage';
 import MonacoCodeStudio from './components/MonacoCodeStudio';
+import ErrorBoundary from './components/ErrorBoundary';
+import RouteAnnouncer from './components/RouteAnnouncer';
 
 function getInitialTheme() {
   if (typeof window !== 'undefined') {
@@ -45,32 +48,38 @@ export default function App() {
 
   return (
     <I18nProvider>
+      {/* ARIA live region for route change announcements */}
+      <div id="route-announcer" className="route-announcer" aria-live="polite" />
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage theme={theme} onToggleTheme={toggleTheme} />} />
-          <Route element={<Layout theme={theme} onToggleTheme={toggleTheme} />}>
-            <Route path="/" element={<BriefingDashboard theme={theme} />} />
-            <Route path="/fences" element={<SpokenFencesPage />} />
-            <Route
-              path="/studio"
-              element={
-                <div className="page-stack">
-                  <section className="context-header">
-                    <div>
-                      <p className="context-meta">Code Studio • HealthConnect</p>
-                      <h1 className="page-title">Protected Source &amp; Fence Note</h1>
-                    </div>
-                  </section>
-                  <MonacoCodeStudio theme={theme} />
-                </div>
-              }
-            />
-            <Route path="/incidents" element={<IncidentsAndMemoryPage />} />
-            <Route path="/copilot" element={<VoiceCoPilotPage />} />
-            <Route path="/git" element={<GitFlowchartPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Route>
-        </Routes>
+        <ErrorBoundary>
+          <RouteAnnouncer />
+          <Routes>
+            <Route path="/login" element={<LoginPage theme={theme} onToggleTheme={toggleTheme} />} />
+            <Route element={<Layout theme={theme} onToggleTheme={toggleTheme} />}>
+              <Route path="/" element={<BriefingDashboard theme={theme} />} />
+              <Route path="/fences" element={<SpokenFencesPage />} />
+              <Route
+                path="/studio"
+                element={
+                  <div className="page-stack">
+                    <section className="context-header">
+                      <div>
+                        <p className="context-meta">Code Studio • HealthConnect</p>
+                        <h1 className="page-title">Protected Source &amp; Fence Note</h1>
+                      </div>
+                    </section>
+                    <MonacoCodeStudio theme={theme} />
+                  </div>
+                }
+              />
+              <Route path="/incidents" element={<IncidentsAndMemoryPage />} />
+              <Route path="/copilot" element={<VoiceCoPilotPage />} />
+              <Route path="/git" element={<GitFlowchartPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/dev/typography" element={<TypographyPage />} />
+            </Route>
+          </Routes>
+        </ErrorBoundary>
       </BrowserRouter>
     </I18nProvider>
   );

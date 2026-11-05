@@ -3,7 +3,7 @@ healthconnect:
   payment:
     gateway:
       provider: razorpay-legacy-edge
-      version: v1
+      version: "v1"
       idempotency_outbox_enabled: false
   imaging:
     adreno_driver_patch: v1.4-legacy

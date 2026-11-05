@@ -406,8 +406,10 @@ export default function BriefingDashboard({ theme = 'light' }) {
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'var(--surface-raised)',
-                    borderColor: 'var(--hairline-strong)',
+                    backgroundColor: 'var(--surface-glass)',
+                    backdropFilter: 'blur(14px) saturate(140%)',
+                    WebkitBackdropFilter: 'blur(14px) saturate(140%)',
+                    borderColor: 'var(--border-default)',
                     borderRadius: 'var(--radius-control)',
                     color: 'var(--ink)',
                     fontSize: '13px',

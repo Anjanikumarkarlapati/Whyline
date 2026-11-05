@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export const TRANSLATIONS = {
   en: {
@@ -24,6 +24,7 @@ export const TRANSLATIONS = {
     statusExpiredSafe: 'Expired — Safe',
     statusOnline: 'Online',
     statusStale: 'Stale',
+    statusBlocked: 'Blocked',
 
     // Briefing Dashboard (/)
     briefingContext: 'HealthConnect Repo • Live',
@@ -133,6 +134,45 @@ export const TRANSLATIONS = {
     labelRepoSelect: 'Repository',
     btnEnterStudio: 'Open Studio',
     artCaption: 'Architectural field notebook & studio microphone',
+
+    // Monaco Studio (/studio)
+    studioContext: 'Code Studio • HealthConnect',
+    studioTitle: 'Protected Source & Fence Note',
+    studioFencedLines: 'Lines 5–15 fenced',
+    studioActiveGuard: 'Active Invariant Guard: Lines 5–15 protected by FENCE-001 (PR #212)',
+    studioDevNoteTag: 'Developer Guide • Protected Code Visibility',
+    studioProtectedHeaderBadge: 'Guarded Source • Do Not Disturb',
+    studioDevNoteTitle: 'Why is this Code Studio in your project?',
+    studioDevNoteBody: "This studio is designed to give developers safe visibility into source code that must not be disturbed or altered casually. Critical business invariants (such as retry counts and timeout thresholds on lines 5–15) are guarded by AST fences. Use this page to inspect the code, listen to the author's spoken architectural decisions, and verify that changes won't break fragile legacy integrations before committing.",
+    studioGutterNote: 'Gutter Note • Lines 5–15',
+    studioRecordedReason: 'Recorded Reason (Why)',
+    studioSpokenAdrAudio: 'Spoken ADR Audio (16kHz WAV)',
+    studioPlayAudioNote: 'Play Audio Note',
+    studioPlaying: 'Playing…',
+    studioProvenanceExpiry: 'Provenance & Expiry Rule',
+    studioOrigin: 'Origin',
+    studioAuthor: 'Author',
+    studioExpiryCondition: 'Expiry Condition',
+    studioAskCopilot: 'Ask Co-Pilot About FENCE-001',
+
+    // Git Flowchart (/git)
+    gitFlowchartContext: 'Git scanner • step-by-step voice',
+    gitFlowchartTitle: 'Repository Flowchart',
+    btnScanExplain: 'Scan & Explain',
+    btnScanning: 'Scanning…',
+    btnPlayWalkthrough: 'Play walkthrough',
+    btnStop: 'Stop',
+
+    // Telemetry & Scorecard
+    scorecardTitle: 'Telemetry & Benchmark Scorecard',
+    scorecardProtectionRate: 'Protection Rate',
+    scorecardHardBlocked: 'Hard Blocked Edits',
+    scorecardHistoricalIntercepts: 'Historical Intercepts',
+    scorecardCrudFalsePositives: 'CRUD False Positives',
+
+    // Error Boundary
+    errorBoundaryTitle: 'Something went wrong in this component',
+    errorBoundaryReload: 'Reload Application',
   },
   te: {
     brandSub: 'కోడ్ గార్డ్',
@@ -156,6 +196,7 @@ export const TRANSLATIONS = {
     statusExpiredSafe: 'గడువు ముగిసింది',
     statusOnline: 'ఆన్‌లైన్',
     statusStale: 'పాతది',
+    statusBlocked: 'బ్లాక్ చేయబడింది',
 
     briefingContext: 'HealthConnect రిపో • లైవ్',
     briefingTitle: 'కోడ్‌బేస్ గార్డ్ & ఫెన్స్ బ్రీఫింగ్',
@@ -259,6 +300,45 @@ export const TRANSLATIONS = {
     labelRepoSelect: 'రిపోజిటరీ',
     btnEnterStudio: 'స్టూడియో తెరవండి',
     artCaption: 'ఇంజనీరింగ్ ఫీల్డ్ నోట్‌బుక్ & మైక్రోఫోన్',
+
+    // Monaco Studio (/studio)
+    studioContext: 'కోడ్ స్టూడియో • హెల్త్‌కనెక్ట్',
+    studioTitle: 'రక్షిత మూల కోడ్ & ఫెన్స్ నోట్',
+    studioFencedLines: 'లైన్లు 5–15 రక్షించబడ్డాయి',
+    studioActiveGuard: 'క్రియాశీల ఇన్‌వేరియంట్ గార్డ్: లైన్లు 5–15 FENCE-001 (PR #212) ద్వారా రక్షించబడింది',
+    studioDevNoteTag: 'డెవలపర్ గైడ్ • రక్షిత కోడ్ సమాచారం',
+    studioProtectedHeaderBadge: 'రక్షిత మూలం • మార్చవద్దు',
+    studioDevNoteTitle: 'ఈ కోడ్ స్టూడియో మీ ప్రాజెక్ట్‌లో ఎందుకు ఉంది?',
+    studioDevNoteBody: 'ఈ స్టూడియో ప్రాజెక్ట్‌లోని కీలకమైన ఇన్వేరియంట్ కోడ్‌ను సురక్షితంగా పరిశీలించడానికి ఉపయోగపడుతుంది, దీనిని కారణం లేకుండా మార్చకూడదు లేదా డిస్టర్బ్ చేయకూడదు. లైన్లు 5–15 వద్ద ఉన్న కోడ్ AST ఫెన్సెస్ ద్వారా రక్షించబడింది. కోడ్‌ను చూస్తూనే అసలు రచయిత ఎందుకు అలా రాశారో ఆడియో నోట్ ద్వారా విని అర్థం చేసుకోండి.',
+    studioGutterNote: 'గట్టర్ నోట్ • లైన్లు 5–15',
+    studioRecordedReason: 'నమోదు చేయబడిన కారణం (ఎందుకు)',
+    studioSpokenAdrAudio: 'స్పోకెన్ ADR ఆడియో (16kHz WAV)',
+    studioPlayAudioNote: 'ఆడియో నోట్ వినండి',
+    studioPlaying: 'ప్లే అవుతోంది…',
+    studioProvenanceExpiry: 'మూలం & గడువు నియమం',
+    studioOrigin: 'మూలం',
+    studioAuthor: 'రచయిత',
+    studioExpiryCondition: 'గడువు షరతు',
+    studioAskCopilot: 'FENCE-001 గురించి కో-పైలట్‌ను అడగండి',
+
+    // Git Flowchart (/git)
+    gitFlowchartContext: 'గిట్ స్కానర్ • దశలవారీ వాయిస్',
+    gitFlowchartTitle: 'రిపోజిటరీ ఫ్లోచార్ట్',
+    btnScanExplain: 'స్కాన్ చేసి వివరించండి',
+    btnScanning: 'స్కాన్ చేస్తోంది…',
+    btnPlayWalkthrough: 'వాక్‌త్రూ వినండి',
+    btnStop: 'ఆపండి',
+
+    // Telemetry & Scorecard
+    scorecardTitle: 'టెలిమెట్రీ & బెంచ్‌మార్క్ స్కోర్‌కార్డ్',
+    scorecardProtectionRate: 'రక్షణ రేటు',
+    scorecardHardBlocked: 'బ్లాక్ చేయబడిన ఎడిట్స్',
+    scorecardHistoricalIntercepts: 'చారిత్రక హెచ్చరికలు',
+    scorecardCrudFalsePositives: 'CRUD తప్పుడు హెచ్చరికలు',
+
+    // Error Boundary
+    errorBoundaryTitle: 'ఈ భాగంలో ఏదో తప్పు జరిగింది',
+    errorBoundaryReload: 'అనువర్తనాన్ని రీలోడ్ చేయండి',
   },
   hi: {
     brandSub: 'कोड गार्ड',
@@ -282,6 +362,7 @@ export const TRANSLATIONS = {
     statusExpiredSafe: 'समाप्त',
     statusOnline: 'ऑनलाइन',
     statusStale: 'पुराना',
+    statusBlocked: 'रोका गया',
 
     briefingContext: 'HealthConnect रिपो • लाइव',
     briefingTitle: 'कोडबेस गार्ड व फ़ेंस ब्रीफिंग',
@@ -385,6 +466,84 @@ export const TRANSLATIONS = {
     labelRepoSelect: 'रिपॉजिटरी',
     btnEnterStudio: 'स्टूडियो खोलें',
     artCaption: 'फ़ील्ड नोटबुक व माइक्रोफ़ोन',
+
+    // Monaco Studio (/studio)
+    studioContext: 'कोड स्टूडियो • हेल्थकनेक्ट',
+    studioTitle: 'संरक्षित स्रोत कोड और फ़ेंस नोट',
+    studioFencedLines: 'पंक्तियाँ 5–15 सुरक्षित',
+    studioActiveGuard: 'सक्रिय इनवेरिएंट गार्ड: पंक्तियाँ 5–15 FENCE-001 (PR #212) द्वारा सुरक्षित',
+    studioDevNoteTag: 'डेवलपर गाइड • सुरक्षित कोड विवरण',
+    studioProtectedHeaderBadge: 'संरक्षित स्रोत • छेड़छाड़ न करें',
+    studioDevNoteTitle: 'यह कोड स्टूडियो आपके प्रोजेक्ट में क्यों है?',
+    studioDevNoteBody: 'यह स्टूडियो डेवलपर्स को उन महत्वपूर्ण कोड फाइलों को सुरक्षित रूप से देखने की सुविधा देता है जिन्हें बिना सोचे-समझे नहीं बदला जाना चाहिए। संवेदनशील बिजनेस लॉजिक (पंक्तियाँ 5–15) AST बाड़ द्वारा सुरक्षित हैं। यहाँ आप कोड देख सकते हैं, लेखक का मूल ऑडियो स्पष्टीकरण सुन सकते हैं, और कमिट करने से पहले सुरक्षित रूप से जाँच सकते हैं।',
+    studioGutterNote: 'गटर नोट • पंक्तियाँ 5–15',
+    studioRecordedReason: 'दर्ज किया गया कारण (क्यों)',
+    studioSpokenAdrAudio: 'बोला गया ADR ऑडियो (16kHz WAV)',
+    studioPlayAudioNote: 'ऑडियो नोट सुनें',
+    studioPlaying: 'चल रहा है…',
+    studioProvenanceExpiry: 'उत्पत्ति और समाप्ति नियम',
+    studioOrigin: 'उत्पत्ति',
+    studioAuthor: 'लेखक',
+    studioExpiryCondition: 'समाप्ति शर्त',
+    studioAskCopilot: 'FENCE-001 के बारे में को-पायलट से पूछें',
+
+    // Git Flowchart (/git)
+    gitFlowchartContext: 'गिट स्कैनर • चरण-दर-चरण वॉइस',
+    gitFlowchartTitle: 'रिपॉजिटरी फ़्लोचार्ट',
+    btnScanExplain: 'स्कैन करें और समझाएं',
+    btnScanning: 'स्कैन हो रहा है…',
+    btnPlayWalkthrough: 'वॉकथ्रू सुनें',
+    btnStop: 'रोकें',
+
+    // Telemetry & Scorecard
+    scorecardTitle: 'टेलीमेट्री और बेंचमार्क स्कोरकार्ड',
+    scorecardProtectionRate: 'सुरक्षा दर',
+    scorecardHardBlocked: 'रोके गए संपादन',
+    scorecardHistoricalIntercepts: 'ऐतिहासिक इंटरसेप्ट्स',
+    scorecardCrudFalsePositives: 'CRUD फ़ाल्स पॉज़िटिव',
+
+    // Error Boundary
+    errorBoundaryTitle: 'इस घटक में कोई त्रुटि हुई',
+    errorBoundaryReload: 'ऐप को पुनः लोड करें',
+  },
+};
+
+export const DEFAULT_VOICE_PER_LANG = {
+  te: 'Nalini',
+  hi: 'Bhavna',
+  en: 'Pranav',
+};
+
+export const LANGUAGE_VOICE_MODELS = {
+  en: {
+    id: 'Pranav',
+    name: 'Pranav',
+    gender: 'Male',
+    style: 'Authoritative Indian English',
+    model: 'timbre-v2.5',
+    locale: 'en-IN',
+    sampleRate: '16kHz PCM',
+    badge: 'Gnani Timbre en-IN',
+  },
+  te: {
+    id: 'Nalini',
+    name: 'Nalini',
+    gender: 'Female',
+    style: 'Crisp Telugu Timbre',
+    model: 'timbre-v2.5',
+    locale: 'te-IN',
+    sampleRate: '16kHz PCM',
+    badge: 'Gnani Timbre te-IN',
+  },
+  hi: {
+    id: 'Bhavna',
+    name: 'Bhavna',
+    gender: 'Female',
+    style: 'Articulate Hindi Neural',
+    model: 'timbre-v2.5',
+    locale: 'hi-IN',
+    sampleRate: '16kHz PCM',
+    badge: 'Gnani Timbre hi-IN',
   },
 };
 
@@ -392,15 +551,57 @@ const I18nContext = createContext({
   lang: 'en',
   setLang: () => {},
   t: (key) => key,
+  voiceModel: LANGUAGE_VOICE_MODELS.en,
+  allVoiceModels: LANGUAGE_VOICE_MODELS,
 });
 
 export function I18nProvider({ children }) {
-  const [lang, setLang] = useState('en');
+  const [lang, setLangState] = useState(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = window.localStorage.getItem('whyline_lang');
+        if (saved && (saved === 'en' || saved === 'te' || saved === 'hi')) {
+          return saved;
+        }
+      }
+    } catch {
+      // Local storage unavailable
+    }
+    return 'en';
+  });
+
+  const setLang = (newLang) => {
+    setLangState(newLang);
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('whyline_lang', newLang);
+      }
+    } catch {
+      // Local storage unavailable
+    }
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = newLang;
+    }
+  };
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = lang;
+    }
+  }, [lang]);
+
   const t = (key) => {
     const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
     return dict[key] || TRANSLATIONS.en[key] || key;
   };
-  return React.createElement(I18nContext.Provider, { value: { lang, setLang, t } }, children);
+
+  const voiceModel = LANGUAGE_VOICE_MODELS[lang] || LANGUAGE_VOICE_MODELS.en;
+
+  return React.createElement(
+    I18nContext.Provider,
+    { value: { lang, setLang, t, voiceModel, allVoiceModels: LANGUAGE_VOICE_MODELS } },
+    children
+  );
 }
 
 export function useI18n() {

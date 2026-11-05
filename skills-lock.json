@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "mirofish": {
+      "source": "666ghj/MiroFish",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/mirofish/SKILL.md",
+      "computedHash": "da53313fbd69e03f5c75b2575c8e70205629f29497ef5fe8d4ab1ef8ab4079c2"
+    },
     "agent-platform-alert-configuration": {
       "source": "google/skills",
       "sourceType": "github",

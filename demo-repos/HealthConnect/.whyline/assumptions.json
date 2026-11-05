@@ -1,31 +1,7 @@
 [
   {
-    "id": "ASM-06",
-    "timestamp": "2026-11-01T16:46:55.068101+00:00",
-    "agent_name": "Claude Code",
-    "target_file": "src/main/java/com/healthconnect/auth/JwtClockSkewFilter.java",
-    "declared_assumptions": [
-      "Assumes NTP is active everywhere"
-    ],
-    "verdict": "CAUTION_UNVERIFIED_HISTORICAL",
-    "violated_fence_id": "FENCE-003",
-    "explanation": "Cautionary Intercept on `JwtClockSkewFilter.validateClinicToken(long tokenIssuedAtEpochSec, long serverNowEpochSec)` (FENCE-003): Original author @vikram-legacy has departed. Provenance: #149 / INC-7410. Require explicit human confirmation before modifying `clockSkewSeconds = 180`."
-  },
-  {
-    "id": "ASM-05",
-    "timestamp": "2026-11-01T16:46:54.986611+00:00",
-    "agent_name": "Cursor Agent",
-    "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
-    "declared_assumptions": [
-      "Assumes retryCount = 5 is redundant"
-    ],
-    "verdict": "REJECTED_BY_FENCE",
-    "violated_fence_id": "FENCE-001",
-    "explanation": "HARD INTERCEPT by Spoken Fence FENCE-001 [VERIFIED_ACTIVE] on `GatewayRouter.dispatchSettlement(String orderId, long amountPaise)` (AST Hash `979595178602b274`).\nConstraint: Preserve retryCount >= 5 and timeoutMs >= 4500 in GatewayRouter.dispatchSettlement() unless healthconnect.payment.gateway.version == 'v2' or an idempotency outbox key is present.\nDanger if removed: Reducing timeoutMs = 4500 while gateway.version == 'v1' drops every 4th midnight SYN packet (#212 / INC-9921), causing unrecovered settlement failures.\nProvenance: #212 \u2022 INC-9921 \u2022 Confirmed by @anjani."
-  },
-  {
     "id": "ASM-04",
-    "timestamp": "2026-11-01T16:37:18.729239+00:00",
+    "timestamp": "2026-11-05T14:51:55.534113+00:00",
     "agent_name": "Claude Code",
     "target_file": "src/main/java/com/healthconnect/auth/JwtClockSkewFilter.java",
     "declared_assumptions": [
@@ -37,7 +13,7 @@
   },
   {
     "id": "ASM-03",
-    "timestamp": "2026-11-01T16:37:18.666606+00:00",
+    "timestamp": "2026-11-05T14:51:55.089232+00:00",
     "agent_name": "Cursor Agent",
     "target_file": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
     "declared_assumptions": [
