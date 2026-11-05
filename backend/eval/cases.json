@@ -1,0 +1,218 @@
+[
+  {
+    "id": "CASE-01",
+    "description": "Whitespace-only indentation adjustment inside GatewayRouter.java",
+    "file_path": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "category": "whitespace-only",
+    "expected_label": "PASS",
+    "expected_decision": "ALLOW_EDIT",
+    "diff": "--- a/src/main/java/com/healthconnect/payments/GatewayRouter.java\n+++ b/src/main/java/com/healthconnect/payments/GatewayRouter.java\n@@ -5,5 +5,5 @@\n-    public PaymentReceipt dispatchSettlement(String orderId, long amountPaise) {\n-        int retryCount = 5;\n-        long timeoutMs = 4500;\n+        public PaymentReceipt dispatchSettlement(String orderId, long amountPaise) {\n+            int retryCount = 5;\n+            long timeoutMs = 4500;"
+  },
+  {
+    "id": "CASE-02",
+    "description": "Newline and trailing space cleanup in DicomShaderPipeline.java",
+    "file_path": "src/main/java/com/healthconnect/imaging/DicomShaderPipeline.java",
+    "category": "whitespace-only",
+    "expected_label": "PASS",
+    "expected_decision": "ALLOW_EDIT",
+    "diff": "--- a/src/main/java/com/healthconnect/imaging/DicomShaderPipeline.java\n+++ b/src/main/java/com/healthconnect/imaging/DicomShaderPipeline.java\n@@ -6,3 +6,4 @@\n         try {\n             Thread.sleep(120);\n+    \n         } catch (InterruptedException e) {"
+  },
+  {
+    "id": "CASE-03",
+    "description": "Adding Javadoc comment above dispatchSettlement in GatewayRouter.java",
+    "file_path": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "category": "comment-only",
+    "expected_label": "PASS",
+    "expected_decision": "ALLOW_EDIT",
+    "diff": "--- a/src/main/java/com/healthconnect/payments/GatewayRouter.java\n+++ b/src/main/java/com/healthconnect/payments/GatewayRouter.java\n@@ -4,2 +4,5 @@\n+    /**\n+     * Dispatches midnight batch settlements with resilient retry backing.\n+     */\n     public PaymentReceipt dispatchSettlement(String orderId, long amountPaise) {"
+  },
+  {
+    "id": "CASE-04",
+    "description": "Updating documentation header comment in patient_queue.py",
+    "file_path": "services/sync_worker/patient_queue.py",
+    "category": "comment-only",
+    "expected_label": "PASS",
+    "expected_decision": "ALLOW_EDIT",
+    "diff": "--- a/services/sync_worker/patient_queue.py\n+++ b/services/sync_worker/patient_queue.py\n@@ -1,3 +1,3 @@\n-# Patient Queue Sync Worker v1\n+# Patient Queue Sync Worker v1 - Production Monitored\n import time"
+  },
+  {
+    "id": "CASE-05",
+    "description": "Renaming local variable inside unmonitored PatientProfileService.java",
+    "file_path": "src/main/java/com/healthconnect/patient/PatientProfileService.java",
+    "category": "renamed-variable",
+    "expected_label": "PASS",
+    "expected_decision": "ALLOW_EDIT",
+    "diff": "--- a/src/main/java/com/healthconnect/patient/PatientProfileService.java\n+++ b/src/main/java/com/healthconnect/patient/PatientProfileService.java\n@@ -10,3 +10,3 @@\n-    String clientRef = lookup(id);\n-    return clientRef;\n+    String clientDescriptor = lookup(id);\n+    return clientDescriptor;"
+  },
+  {
+    "id": "CASE-06",
+    "description": "Renaming parameter in helper method outside fence lines in GatewayRouter.java",
+    "file_path": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "category": "renamed-variable",
+    "expected_label": "PASS",
+    "expected_decision": "ALLOW_EDIT",
+    "diff": "--- a/src/main/java/com/healthconnect/payments/GatewayRouter.java\n+++ b/src/main/java/com/healthconnect/payments/GatewayRouter.java\n@@ -45,3 +45,3 @@\n-    private boolean validateOutboxKey(String rawKey) {\n-        return rawKey != null && !rawKey.isEmpty();\n+    private boolean validateOutboxKey(String idempotencyKey) {\n+        return idempotencyKey != null && !idempotencyKey.isEmpty();"
+  },
+  {
+    "id": "CASE-07",
+    "description": "Moving helper method outside fence lines in GatewayRouter.java",
+    "file_path": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "category": "moved-code",
+    "expected_label": "PASS",
+    "expected_decision": "ALLOW_EDIT",
+    "diff": "--- a/src/main/java/com/healthconnect/payments/GatewayRouter.java\n+++ b/src/main/java/com/healthconnect/payments/GatewayRouter.java\n@@ -60,4 +60,0 @@\n-    private String formatIsoDate(long epochMs) {\n-        return java.time.Instant.ofEpochMilli(epochMs).toString();\n-    }\n@@ -25,0 +21,4 @@\n+    private String formatIsoDate(long epochMs) {\n+        return java.time.Instant.ofEpochMilli(epochMs).toString();\n+    }\n+"
+  },
+  {
+    "id": "CASE-08",
+    "description": "Relocating dispatchSettlement method with guarded invariant preserved intact",
+    "file_path": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "category": "moved-code",
+    "expected_label": "PASS",
+    "expected_decision": "ALLOW_EDIT",
+    "diff": "--- a/src/main/java/com/healthconnect/payments/GatewayRouter.java\n+++ b/src/main/java/com/healthconnect/payments/GatewayRouter.java\n@@ -5,11 +5,0 @@\n-    public PaymentReceipt dispatchSettlement(String orderId, long amountPaise) {\n-        int retryCount = 5;\n-        long timeoutMs = 4500;\n-        for (int attempt = 1; attempt <= retryCount; attempt++) {\n-            boolean delivered = sendV1Frame(orderId, amountPaise, timeoutMs);\n-            if (delivered) {\n-                return new PaymentReceipt(orderId, \"SETTLED\", attempt);\n-            }\n-        }\n-        throw new IllegalStateException(\"Settlement exhausted after \" + retryCount + \" attempts\");\n-    }\n@@ -80,0 +69,11 @@\n+    public PaymentReceipt dispatchSettlement(String orderId, long amountPaise) {\n+        int retryCount = 5;\n+        long timeoutMs = 4500;\n+        for (int attempt = 1; attempt <= retryCount; attempt++) {\n+            boolean delivered = sendV1Frame(orderId, amountPaise, timeoutMs);\n+            if (delivered) {\n+                return new PaymentReceipt(orderId, \"SETTLED\", attempt);\n+            }\n+        }\n+        throw new IllegalStateException(\"Settlement exhausted after \" + retryCount + \" attempts\");\n+    }\n"
+  },
+  {
+    "id": "CASE-09",
+    "description": "Editing completely unmonitored file DateHelper.java",
+    "file_path": "src/main/java/com/healthconnect/utils/DateHelper.java",
+    "category": "unrelated-file",
+    "expected_label": "PASS",
+    "expected_decision": "ALLOW_EDIT",
+    "diff": "--- a/src/main/java/com/healthconnect/utils/DateHelper.java\n+++ b/src/main/java/com/healthconnect/utils/DateHelper.java\n@@ -1,5 +1,6 @@\n package com.healthconnect.utils;\n \n public class DateHelper {\n+    public static final String IST_ZONE = \"Asia/Kolkata\";\n }"
+  },
+  {
+    "id": "CASE-10",
+    "description": "Adding new healthcheck endpoint at end of redis_session_store.py",
+    "file_path": "services/cache/redis_session_store.py",
+    "category": "unrelated-lines",
+    "expected_label": "PASS",
+    "expected_decision": "ALLOW_EDIT",
+    "diff": "--- a/services/cache/redis_session_store.py\n+++ b/services/cache/redis_session_store.py\n@@ -35,3 +35,6 @@\n+def ping_cache_cluster() -> bool:\n+    \"\"\"Health probe for Redis sentinel cluster.\"\"\"\n+    return True"
+  },
+  {
+    "id": "CASE-11",
+    "description": "Adding new metric gauge method at end of GatewayRouter.java",
+    "file_path": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "category": "unrelated-lines",
+    "expected_label": "PASS",
+    "expected_decision": "ALLOW_EDIT",
+    "diff": "--- a/src/main/java/com/healthconnect/payments/GatewayRouter.java\n+++ b/src/main/java/com/healthconnect/payments/GatewayRouter.java\n@@ -85,2 +85,5 @@\n+    public int getActiveOutboxDepth() {\n+        return 0;\n+    }\n }"
+  },
+  {
+    "id": "CASE-12",
+    "description": "Editing unit test file test_patient_queue.py",
+    "file_path": "tests/test_patient_queue.py",
+    "category": "unrelated-file",
+    "expected_label": "PASS",
+    "expected_decision": "ALLOW_EDIT",
+    "diff": "--- a/tests/test_patient_queue.py\n+++ b/tests/test_patient_queue.py\n@@ -1,3 +1,4 @@\n def test_patient_queue_drain():\n+    assert True\n     pass"
+  },
+  {
+    "id": "CASE-13",
+    "description": "Deleting guarded timeoutMs = 4500 in GatewayRouter.java",
+    "file_path": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "category": "invariant-deletion",
+    "expected_label": "BLOCK",
+    "expected_decision": "REJECT_EDIT",
+    "diff": "--- a/src/main/java/com/healthconnect/payments/GatewayRouter.java\n+++ b/src/main/java/com/healthconnect/payments/GatewayRouter.java\n@@ -6,3 +6,2 @@\n         int retryCount = 5;\n-        long timeoutMs = 4500;\n         for (int attempt = 1; attempt <= retryCount; attempt++) {"
+  },
+  {
+    "id": "CASE-14",
+    "description": "Deleting guarded retryCount = 5 in GatewayRouter.java",
+    "file_path": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "category": "invariant-deletion",
+    "expected_label": "BLOCK",
+    "expected_decision": "REJECT_EDIT",
+    "diff": "--- a/src/main/java/com/healthconnect/payments/GatewayRouter.java\n+++ b/src/main/java/com/healthconnect/payments/GatewayRouter.java\n@@ -5,3 +5,2 @@\n     public PaymentReceipt dispatchSettlement(String orderId, long amountPaise) {\n-        int retryCount = 5;\n         long timeoutMs = 4500;"
+  },
+  {
+    "id": "CASE-15",
+    "description": "Deleting guarded Thread.sleep(120) in DicomShaderPipeline.java",
+    "file_path": "src/main/java/com/healthconnect/imaging/DicomShaderPipeline.java",
+    "category": "invariant-deletion",
+    "expected_label": "BLOCK",
+    "expected_decision": "REJECT_EDIT",
+    "diff": "--- a/src/main/java/com/healthconnect/imaging/DicomShaderPipeline.java\n+++ b/src/main/java/com/healthconnect/imaging/DicomShaderPipeline.java\n@@ -6,4 +6,1 @@\n         try {\n-            Thread.sleep(120);\n         } catch (InterruptedException e) {"
+  },
+  {
+    "id": "CASE-16",
+    "description": "Deleting guarded time.sleep(2.5) in patient_queue.py",
+    "file_path": "services/sync_worker/patient_queue.py",
+    "category": "invariant-deletion",
+    "expected_label": "BLOCK",
+    "expected_decision": "REJECT_EDIT",
+    "diff": "--- a/services/sync_worker/patient_queue.py\n+++ b/services/sync_worker/patient_queue.py\n@@ -4,4 +4,2 @@\n def drain_queue(queue_batch: list[dict]) -> int:\n-    # Throttle batch dispatch\n-    time.sleep(2.5)\n     return len(queue_batch)"
+  },
+  {
+    "id": "CASE-17",
+    "description": "Deleting guarded swallowed exception handler in redis_session_store.py",
+    "file_path": "services/cache/redis_session_store.py",
+    "category": "invariant-deletion",
+    "expected_label": "BLOCK",
+    "expected_decision": "REJECT_EDIT",
+    "diff": "--- a/services/cache/redis_session_store.py\n+++ b/services/cache/redis_session_store.py\n@@ -6,4 +6,2 @@\n     try:\n         return cluster.get(session_key)\n-    except Exception:\n-        pass"
+  },
+  {
+    "id": "CASE-18",
+    "description": "Reducing timeoutMs = 4500 to 1000 in GatewayRouter.java",
+    "file_path": "src/main/java/com/healthconnect/payments/GatewayRouter.java",
+    "category": "invariant-modification",
+    "expected_label": "BLOCK",
+    "expected_decision": "REJECT_EDIT",
+    "diff": "--- a/src/main/java/com/healthconnect/payments/GatewayRouter.java\n+++ b/src/main/java/com/healthconnect/payments/GatewayRouter.java\n@@ -6,3 +6,3 @@\n         int retryCount = 5;\n-        long timeoutMs = 4500;\n+        long timeoutMs = 1000;\n         for (int attempt = 1; attempt <= retryCount; attempt++) {"
+  },
+  {
+    "id": "CASE-19",
+    "description": "Reducing Thread.sleep(120) to Thread.sleep(10) in DicomShaderPipeline.java",
+    "file_path": "src/main/java/com/healthconnect/imaging/DicomShaderPipeline.java",
+    "category": "invariant-modification",
+    "expected_label": "BLOCK",
+    "expected_decision": "REJECT_EDIT",
+    "diff": "--- a/src/main/java/com/healthconnect/imaging/DicomShaderPipeline.java\n+++ b/src/main/java/com/healthconnect/imaging/DicomShaderPipeline.java\n@@ -6,3 +6,3 @@\n         try {\n-            Thread.sleep(120);\n+            Thread.sleep(10);\n         } catch (InterruptedException e) {"
+  },
+  {
+    "id": "CASE-20",
+    "description": "Modifying retry_window = 7 to 1 in gst_rounding_engine.py",
+    "file_path": "services/billing/gst_rounding_engine.py",
+    "category": "invariant-modification",
+    "expected_label": "BLOCK",
+    "expected_decision": "WARN_AND_REQUIRE_CONFIRMATION",
+    "diff": "--- a/services/billing/gst_rounding_engine.py\n+++ b/services/billing/gst_rounding_engine.py\n@@ -3,3 +3,3 @@\n def calculate_tax_delta(amount: float) -> float:\n-    retry_window = 7\n+    retry_window = 1\n     return amount * 0.18"
+  },
+  {
+    "id": "CASE-21",
+    "description": "Changing verify = False to verify = True in prescription_parser.py",
+    "file_path": "services/ocr/prescription_parser.py",
+    "category": "invariant-modification",
+    "expected_label": "BLOCK",
+    "expected_decision": "REJECT_EDIT",
+    "diff": "--- a/services/ocr/prescription_parser.py\n+++ b/services/ocr/prescription_parser.py\n@@ -2,3 +2,3 @@\n def parse_ocr_payload(image_bytes: bytes) -> dict:\n-    verify = False\n+    verify = True\n     return {\"verified\": verify}"
+  },
+  {
+    "id": "CASE-22",
+    "description": "Modifying clockSkewSeconds = 180 to 5 in departed-author JwtClockSkewFilter.java",
+    "file_path": "src/main/java/com/healthconnect/auth/JwtClockSkewFilter.java",
+    "category": "historical-fence",
+    "expected_label": "BLOCK",
+    "expected_decision": "WARN_AND_REQUIRE_CONFIRMATION",
+    "diff": "--- a/src/main/java/com/healthconnect/auth/JwtClockSkewFilter.java\n+++ b/src/main/java/com/healthconnect/auth/JwtClockSkewFilter.java\n@@ -4,3 +4,3 @@\n     public boolean validateClinicToken(long tokenIssuedAtEpochSec, long serverNowEpochSec) {\n-        int clockSkewSeconds = 180;\n+        int clockSkewSeconds = 5;\n         return (serverNowEpochSec - tokenIssuedAtEpochSec) <= clockSkewSeconds;"
+  },
+  {
+    "id": "CASE-23",
+    "description": "Deleting TrustAllCerts SSL bypass in departed-author LegacyHl7SslClient.java",
+    "file_path": "src/main/java/com/healthconnect/hl7/LegacyHl7SslClient.java",
+    "category": "historical-fence",
+    "expected_label": "BLOCK",
+    "expected_decision": "WARN_AND_REQUIRE_CONFIRMATION",
+    "diff": "--- a/src/main/java/com/healthconnect/hl7/LegacyHl7SslClient.java\n+++ b/src/main/java/com/healthconnect/hl7/LegacyHl7SslClient.java\n@@ -6,4 +6,2 @@\n-        String sslContext = \"TrustAllCerts\";\n-        return initSocket(hostIp, sslContext);\n+        return initSocket(hostIp, \"StrictTLS\");"
+  },
+  {
+    "id": "CASE-24",
+    "description": "Deleting revert commit comment in webhook_dispatcher.py",
+    "file_path": "services/sync_worker/webhook_dispatcher.py",
+    "category": "revert-commit",
+    "expected_label": "BLOCK",
+    "expected_decision": "REJECT_EDIT",
+    "diff": "--- a/services/sync_worker/webhook_dispatcher.py\n+++ b/services/sync_worker/webhook_dispatcher.py\n@@ -1,4 +1,2 @@\n-# Revert \"perf(webhooks): batch ICU vital alerts with asyncio.gather\"\n def dispatch_webhook(payload: dict) -> None:\n     pass"
+  }
+]

@@ -80,12 +80,12 @@ def resolve_repo_path(repo_arg: str = "") -> Path:
 
     cwd = Path.cwd().resolve()
     for cur in [cwd, *cwd.parents]:
-        if (cur / ".whyline").exists():
-            return cur
-        if (cur / "demo" / "HealthConnect" / ".whyline").exists():
-            return (cur / "demo" / "HealthConnect").resolve()
         if (cur / "demo-repos" / "HealthConnect" / ".whyline").exists():
             return (cur / "demo-repos" / "HealthConnect").resolve()
+        if (cur / "demo" / "HealthConnect" / ".whyline").exists():
+            return (cur / "demo" / "HealthConnect").resolve()
+        if (cur / ".whyline").exists():
+            return cur
 
     root_dir = Path(__file__).resolve().parent.parent.parent
     if (root_dir / "demo" / "HealthConnect" / ".whyline").exists():
@@ -181,9 +181,9 @@ def execute_check_staged(repo_dir: Path, fallback_file: str | None = None) -> tu
                     if token not in current_content:
                         is_token_deleted = True
 
-            # Evaluate fence decision
+            # Evaluate fence decision using diff-aware check_fences
             chk = mcp.check_fences(norm_target, staged_diff)
-            if status in ("VERIFIED_ACTIVE", "PENDING_CONFIRMATION") or chk["decision"] == "REJECT_EDIT":
+            if chk["decision"] == "REJECT_EDIT":
                 violations.append((fence, norm_target, chk))
             elif chk["decision"] == "WARN_AND_REQUIRE_CONFIRMATION":
                 warnings.append((fence, norm_target, chk))
@@ -220,13 +220,65 @@ def execute_check_staged(repo_dir: Path, fallback_file: str | None = None) -> tu
     return 0, {"decision": "ALLOW_EDIT", "reason": "All staged files compliant with Spoken Fences."}
 
 
+def execute_check_diff(
+    engine: WhyLineMcpEngine, diff_input: str, explicit_file: str = ""
+) -> tuple[int, dict]:
+    """Inspects a unified diff against active Spoken Fences.
+    Accepts a diff file path, '-' for stdin, or inline diff string.
+    Returns:
+        (exit_code, result_dict)
+    """
+    diff_content = ""
+    target_file = explicit_file
+
+    if diff_input in ("-", "stdin"):
+        diff_content = sys.stdin.read()
+    elif diff_input and Path(diff_input).is_file():
+        diff_content = Path(diff_input).read_text(encoding="utf-8")
+        if not target_file:
+            for line in diff_content.splitlines():
+                if line.startswith("+++ b/"):
+                    target_file = line[6:].strip()
+                    break
+                elif line.startswith("+++ "):
+                    target_file = line[4:].strip()
+                    break
+                elif line.startswith("--- a/"):
+                    target_file = line[6:].strip()
+                    break
+    elif diff_input and ("---" in diff_input or "@@" in diff_input or "diff --git" in diff_input):
+        diff_content = diff_input
+        if not target_file:
+            for line in diff_content.splitlines():
+                if line.startswith("+++ b/"):
+                    target_file = line[6:].strip()
+                    break
+                elif line.startswith("--- a/"):
+                    target_file = line[6:].strip()
+                    break
+    else:
+        if not target_file:
+            target_file = diff_input
+
+    res = engine.check_fences(target_file, diff_content)
+    exit_code = 1 if res["decision"] == "REJECT_EDIT" else 0
+    return exit_code, res
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="WhyLine CLI & Hook Enforcer")
     parser.add_argument(
         "command",
-        choices=["scan", "check-edit", "check-staged", "pause", "resume", "benchmark", "install-hooks"],
+        choices=["check", "scan", "check-edit", "check-staged", "pause", "resume", "benchmark", "install-hooks"],
     )
-    parser.add_argument("--file", default="", help="Explicit file to check (optional)")
+    parser.add_argument(
+        "diff",
+        nargs="?",
+        default="",
+        help="Path to diff file, '-' for stdin, or inline diff string (used with 'check')",
+    )
+    parser.add_argument("--file", default="", help="Explicit target file to check (optional)")
+    parser.add_argument("--json", action="store_true", help="Output machine-readable JSON format")
     parser.add_argument("--branch", default="fix/payment-double-charge")
     parser.add_argument("--repo", default="")
     args = parser.parse_args()
@@ -235,7 +287,29 @@ def main() -> None:
     store = WhyLineStore(repo_dir)
     mcp = WhyLineMcpEngine(store)
 
-    if args.command == "scan":
+    if args.command == "check":
+        diff_arg = args.diff if args.diff else args.file
+        exit_code, res = execute_check_diff(mcp, diff_arg, explicit_file=args.file)
+        if args.json:
+            print(json.dumps(res, indent=2))
+        else:
+            dec = res["decision"]
+            if dec == "ALLOW_EDIT":
+                print(f"\033[92m[WhyLine Guard] ALLOW_EDIT (Confidence: {res.get('confidence', 1.0) * 100:.0f}%)\033[0m")
+                print(f"Reason: {res['reason']}")
+            elif dec == "WARN_AND_REQUIRE_CONFIRMATION":
+                print(f"\033[93m[WhyLine Guard] CAUTIONARY WARNING: {res['reason']}\033[0m")
+                if res.get("spoken_warning_url"):
+                    print(f"Spoken Warning: {res['spoken_warning_url']}")
+            else:
+                print(f"\033[91m[WhyLine Guard] HARD INTERCEPT: REJECT_EDIT\033[0m")
+                print(f"Reason: {res['reason']}")
+                if res.get("spoken_warning_url"):
+                    print(f"Spoken Warning: {res['spoken_warning_url']}")
+                if res.get("invariant_test_path"):
+                    print(f"Invariant Test: {res['invariant_test_path']}")
+        sys.exit(exit_code)
+    elif args.command == "scan":
         fences = store.ensure_initialized(force_rescan=True)
         print(json.dumps({"scanned_fences": len(fences)}, indent=2))
     elif args.command == "check-staged":

@@ -23,7 +23,7 @@ WhyLine Studio features an **architecture-studio aesthetic**:
 - **Design Tokens**: Warm canvas (`#F7F4EC`), crisp surface (`#FCFAF5`), deep ink (`#1B1A16`), and muted olive accents (`#4A4A2A`).
 - **Dark Mode**: High-contrast, calm dark theme (`#151510` canvas, `#1D1D16` surface, `#ECE8DA` ink).
 - **Accessibility**: 100% WCAG 2.2 AA compliant contrast ratios across all elements, `aria-live` voice indicators, and keyboard accessibility.
-- **Visual Design**: Strict 1200px container, zero decorative fluff, 44px min touch targets, and inline mono code rendering.
+- **Visual Design**: Strict 1320px container, zero decorative fluff, 44px min touch targets, and inline mono code rendering.
 
 ---
 
@@ -87,10 +87,17 @@ Frontend will be accessible at `http://localhost:5173`.
 - Ask questions about the codebase via speech or text.
 - Returns spoken briefings, recommended code patches, and 3 ranked architectural strategies with visual risk meters.
 
-### 5. Deterministic MCP Server (`mcp/whyline_mcp.py`)
-- Standard Model Context Protocol interface for AI coding agents:
-  - `check_diff`: Validates proposed diffs against AST fences and rejects edits breaking active invariants.
-  - `query_fences`: Exposes fences and historical reasons to the model's tool context.
+### 5. Deterministic MCP Server (`mcp/whyline_mcp.py`) & CLI Fallback
+- Standard Model Context Protocol interface for AI coding agents (`check_fences`, `verify_diff_against_fences`, `log_or_resume_context`, `get_fence_audio`).
+- CLI fallback for non-MCP environments: `whyline check <diff_file>` or `whyline check -` (reads unified diff from stdin).
+- Diff-aware guardrail: blocks only when the diff modifies fenced lines or violates invariant tokens, allowing whitespace, comments, renamed variables outside invariants, and safe code relocations.
+
+### 6. Guard Quality & Benchmark Evaluation (`EVAL.md`)
+- **Total Labeled Cases**: 24 (12 Must-Block, 12 Must-Pass across Java & Python)
+- **Precision**: **100.0%** (0 false blocks on routine edits)
+- **Recall**: **100.0%** (Catches 100% of naive workaround removals)
+- **False-Positive Rate**: **0.0%**
+- **Evaluation Runner**: `python backend/eval/run_eval.py`
 
 ---
 

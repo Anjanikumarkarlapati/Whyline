@@ -46,12 +46,12 @@ def resolve_repo_dir(custom_path: str | Path | None = None) -> Path:
 
     cwd = Path.cwd().resolve()
     for cur in [cwd, *cwd.parents]:
-        if (cur / ".whyline").exists():
-            return cur
-        if (cur / "demo" / "HealthConnect" / ".whyline").exists():
-            return (cur / "demo" / "HealthConnect").resolve()
         if (cur / "demo-repos" / "HealthConnect" / ".whyline").exists():
             return (cur / "demo-repos" / "HealthConnect").resolve()
+        if (cur / "demo" / "HealthConnect" / ".whyline").exists():
+            return (cur / "demo" / "HealthConnect").resolve()
+        if (cur / ".whyline").exists():
+            return cur
 
     workspace_root = Path(__file__).resolve().parent.parent
     if (workspace_root / "demo" / "HealthConnect" / ".whyline").exists():

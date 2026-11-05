@@ -11,9 +11,109 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import re
 
 from .gnani_speech import synthesize_timbre_audio
 from .store import WhyLineStore
+
+
+def normalize_canonical_path(path_str: str | None, repo_dir: Path | None = None) -> str:
+    """Canonical path normalization (BE-205).
+    Resolves backslashes, redundant slashes, dot/double-dot segments,
+    and strips absolute repo prefixes.
+    """
+    if not path_str:
+        return ""
+    p = str(path_str).strip().strip("'\"")
+    if not p or p in (".", "./", ".\\"):
+        return ""
+    p = p.replace("\\", "/")
+    if repo_dir:
+        try:
+            resolved_p = Path(p)
+            if resolved_p.is_absolute():
+                p = str(resolved_p.resolve().relative_to(repo_dir.resolve())).replace("\\", "/")
+        except Exception:
+            pass
+    parts: list[str] = []
+    for seg in p.split("/"):
+        if seg in ("", "."):
+            continue
+        elif seg == "..":
+            if parts:
+                parts.pop()
+        else:
+            parts.append(seg)
+    return "/".join(parts)
+
+
+def parse_unified_diff(diff_text: str) -> tuple[list[int], list[str], list[str], bool, bool]:
+    """Extracts changed line numbers, removed lines, added lines, and semantic metadata.
+    Returns:
+        (changed_lines, removed_lines, added_lines, is_whitespace_only, is_comment_only)
+    """
+    if not diff_text or not diff_text.strip():
+        return [], [], [], False, False
+
+    changed_lines: list[int] = []
+    removed_lines: list[str] = []
+    added_lines: list[str] = []
+
+    curr_orig_line = 0
+    in_hunk = False
+
+    for line in diff_text.splitlines():
+        m = re.match(r"^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@", line)
+        if m:
+            curr_orig_line = int(m.group(1))
+            in_hunk = True
+            continue
+
+        if not in_hunk:
+            continue
+
+        if line.startswith("---") or line.startswith("+++"):
+            continue
+
+        if line.startswith("-"):
+            changed_lines.append(curr_orig_line)
+            removed_lines.append(line[1:])
+            curr_orig_line += 1
+        elif line.startswith("+"):
+            changed_lines.append(curr_orig_line)
+            added_lines.append(line[1:])
+        elif line.startswith(" ") or line == "":
+            curr_orig_line += 1
+
+    changed_lines = sorted(list(set(changed_lines)))
+
+    # Evaluate whitespace-only
+    is_whitespace_only = False
+    if removed_lines or added_lines:
+        compact_removed = re.sub(r"\s+", "", "".join(removed_lines))
+        compact_added = re.sub(r"\s+", "", "".join(added_lines))
+        if compact_removed == compact_added:
+            is_whitespace_only = True
+
+    # Evaluate comment-only
+    is_comment_only = False
+    if not is_whitespace_only and (removed_lines or added_lines):
+        def _is_comment(l: str) -> bool:
+            s = l.strip()
+            return (
+                not s
+                or s.startswith("//")
+                or s.startswith("/*")
+                or s.startswith("*")
+                or s.startswith("*/")
+                or s.startswith("#")
+                or s.startswith('"""')
+                or s.startswith("'''")
+            )
+        if all(_is_comment(l) for l in removed_lines) and all(_is_comment(l) for l in added_lines):
+            is_comment_only = True
+
+    return changed_lines, removed_lines, added_lines, is_whitespace_only, is_comment_only
 
 
 class WhyLineMcpEngine:
@@ -21,51 +121,155 @@ class WhyLineMcpEngine:
         self.store = store
 
     def check_fences(self, file_path: str, proposed_diff: str = "") -> dict:
-        """Deterministic pre-edit / pre-commit check against Spoken Fences."""
-        norm_target = os.path.normpath(file_path).replace("\\", "/").strip("/").lower() if file_path else ""
-        if not norm_target or norm_target == ".":
+        """Deterministic pre-edit / pre-commit check against Spoken Fences (BE-205).
+        Diff-aware: blocks only when the diff changes fenced lines or violates the fence invariant.
+        Returns: {decision, fence_id, reason, changed_lines, confidence}
+        """
+        norm_target = normalize_canonical_path(file_path, self.store.repo_dir)
+        if not norm_target:
             return {
                 "decision": "ALLOW_EDIT",
+                "fence_id": None,
                 "reason": "Empty target path specified.",
+                "changed_lines": [],
+                "confidence": 1.0,
                 "fence": None,
             }
+
+        norm_target_lower = norm_target.lower()
         fences = self.store.get_fences()
         matched = []
         for f in fences:
-            f_norm = os.path.normpath(f["file_path"]).replace("\\", "/").strip("/").lower()
-            if f_norm.endswith(norm_target) or norm_target.endswith(f_norm) or Path(norm_target).name == Path(f_norm).name:
+            f_norm = normalize_canonical_path(f["file_path"], self.store.repo_dir).lower()
+            if (
+                f_norm == norm_target_lower
+                or f_norm.endswith("/" + norm_target_lower)
+                or norm_target_lower.endswith("/" + f_norm)
+                or Path(norm_target_lower).name == Path(f_norm).name
+            ):
                 matched.append(f)
+
         if not matched:
             return {
                 "decision": "ALLOW_EDIT",
+                "fence_id": None,
                 "reason": f"No Spoken Fence registered on `{norm_target}`.",
+                "changed_lines": [],
+                "confidence": 1.0,
                 "fence": None,
             }
 
         fence = matched[0]
+        fence_id = fence["id"]
         status = fence["status"]
 
+        # Parse proposed diff if provided
+        changed_lines, removed_lines, added_lines, is_whitespace_only, is_comment_only = parse_unified_diff(proposed_diff)
+
+        # Expired fences are safe to edit/clean up
         if status == "EXPIRED_SAFE_TO_REMOVE":
             return {
                 "decision": "ALLOW_EDIT",
+                "fence_id": fence_id,
                 "reason": (
-                    f"Spoken Fence {fence['id']} on `{fence['symbol_name']}` is EXPIRED_SAFE_TO_REMOVE "
-                    f"({fence['expiry_condition'].get('description')}). Safe to apply cleanup diff."
+                    f"Spoken Fence {fence_id} on `{fence['symbol_name']}` is EXPIRED_SAFE_TO_REMOVE "
+                    f"({fence.get('expiry_condition', {}).get('description')}). Safe to apply cleanup diff."
                 ),
+                "changed_lines": changed_lines,
+                "confidence": 1.0,
                 "fence": fence,
                 "cleanup_diff": fence.get("cleanup_diff"),
             }
 
+        # If a diff is provided, check for diff-specific bypasses (whitespace-only, comment-only, unrelated lines, moved code)
+        if proposed_diff and proposed_diff.strip():
+            # Check token presence in removed vs added lines first
+            token = fence.get("matched_token", "").strip()
+            token_compact = re.sub(r"\s+", "", token)
+            removed_str = "\n".join(removed_lines)
+            added_str = "\n".join(added_lines)
+            removed_compact = re.sub(r"\s+", "", removed_str)
+            added_compact = re.sub(r"\s+", "", added_str)
+
+            token_in_removed = bool(token and (token in removed_str or (token_compact and token_compact in removed_compact)))
+            token_in_added = bool(token and (token in added_str or (token_compact and token_compact in added_compact)))
+
+            # 1. Whitespace-only edit (token must not be deleted)
+            if is_whitespace_only and not (token_in_removed and not token_in_added):
+                return {
+                    "decision": "ALLOW_EDIT",
+                    "fence_id": fence_id,
+                    "reason": (
+                        f"Diff on `{norm_target}` consists of whitespace/formatting adjustments only. "
+                        f"Fence invariant `{fence.get('matched_token')}` preserved."
+                    ),
+                    "changed_lines": changed_lines,
+                    "confidence": 0.99,
+                    "fence": fence,
+                }
+
+            # 2. Comment-only edit (only if the guarded token itself was not deleted)
+            if is_comment_only and not token_in_removed:
+                return {
+                    "decision": "ALLOW_EDIT",
+                    "fence_id": fence_id,
+                    "reason": (
+                        f"Diff on `{norm_target}` consists of comment/documentation edits only. "
+                        f"Fence invariant `{fence.get('matched_token')}` preserved."
+                    ),
+                    "changed_lines": changed_lines,
+                    "confidence": 0.99,
+                    "fence": fence,
+                }
+
+            # Check line overlap
+            f_start = fence.get("start_line", 1)
+            f_end = fence.get("end_line", 999999)
+            fence_lines = set(range(f_start, f_end + 1))
+            overlaps_fence = any(l in fence_lines for l in changed_lines)
+
+            # Code moved with invariant intact:
+            if token_in_removed and token_in_added:
+                return {
+                    "decision": "ALLOW_EDIT",
+                    "fence_id": fence_id,
+                    "reason": (
+                        f"Code relocation detected: guarded invariant `{token}` was preserved intact "
+                        f"in `{norm_target}`."
+                    ),
+                    "changed_lines": changed_lines,
+                    "confidence": 0.95,
+                    "fence": fence,
+                }
+
+            # Edit touches lines outside fence range and does not delete token
+            if not overlaps_fence and not token_in_removed:
+                return {
+                    "decision": "ALLOW_EDIT",
+                    "fence_id": fence_id,
+                    "reason": (
+                        f"Proposed diff modifies lines {changed_lines}, which do not overlap guarded fence "
+                        f"lines [{f_start}-{f_end}] in `{norm_target}`. Invariant preserved."
+                    ),
+                    "changed_lines": changed_lines,
+                    "confidence": 0.95,
+                    "fence": fence,
+                }
+
+        # If we reach here, either proposed_diff is empty (file-level check) or diff modifies fenced lines / violates invariant
         if status == "UNVERIFIED_HISTORICAL":
             self._increment_intercept_counter(fence["id"], "WARN_AND_REQUIRE_CONFIRMATION")
             return {
                 "decision": "WARN_AND_REQUIRE_CONFIRMATION",
+                "fence_id": fence_id,
                 "reason": (
                     f"Cautionary Intercept on `{fence['symbol_name']}` ({fence['id']}): "
                     f"Original author {fence['author_handle']} has departed. "
                     f"Provenance: {fence['provenance']['pr_number']} / {fence['provenance']['incident_id']}. "
                     f"Require explicit human confirmation before modifying `{fence['matched_token']}`."
                 ),
+                "changed_lines": changed_lines,
+                "confidence": 0.90,
                 "fence": fence,
                 "spoken_warning_url": fence["audio_url"],
                 "invariant_test_path": fence["invariant_test_path"],
@@ -75,6 +279,7 @@ class WhyLineMcpEngine:
         self._increment_intercept_counter(fence["id"], "REJECT_EDIT")
         return {
             "decision": "REJECT_EDIT",
+            "fence_id": fence_id,
             "reason": (
                 f"HARD INTERCEPT by Spoken Fence {fence['id']} [{status}] on `{fence['symbol_name']}` "
                 f"(AST Hash `{fence['ast_signature_hash']}`).\n"
@@ -82,6 +287,8 @@ class WhyLineMcpEngine:
                 f"Danger if removed: {fence['danger_condition']}\n"
                 f"Provenance: {fence['provenance']['pr_number']} • {fence['provenance']['incident_id']} • Confirmed by {fence['author_handle']}."
             ),
+            "changed_lines": changed_lines,
+            "confidence": 1.0,
             "fence": fence,
             "spoken_warning_url": fence["audio_url"],
             "invariant_test_path": fence["invariant_test_path"],

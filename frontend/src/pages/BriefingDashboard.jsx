@@ -24,6 +24,7 @@ import StatusBadge from '../components/StatusBadge';
 import { FormattedText } from '../components/CodeText';
 import AskRepoDrawer from '../components/AskRepoDrawer';
 import RepoFlowchartExplorer from '../components/RepoFlowchartExplorer';
+import ScorecardWidget from '../components/ScorecardWidget';
 
 export default function BriefingDashboard({ theme = 'light' }) {
   const { lang, t } = useI18n();
@@ -53,58 +54,78 @@ export default function BriefingDashboard({ theme = 'light' }) {
   }, []);
 
   const handleScanRepo = async () => {
-    await fetch('/api/fences/scan', { method: 'POST' });
-    await loadBriefing();
-    setToastMsg('Repository rescan complete: 10 AST anomalies indexed.');
+    try {
+      const resp = await fetch('/api/fences/scan', { method: 'POST' });
+      if (!resp.ok) throw new Error('Rescan request failed');
+      await loadBriefing();
+      setToastMsg('Repository rescan complete: 10 AST anomalies indexed.');
+    } catch (err) {
+      setToastMsg(`Scan error: ${err.message || err}`);
+    }
   };
 
   const runDemoAct1 = async () => {
-    const resp = await fetch('/api/fences/FENCE-001/confirm', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        language: lang === 'hi' ? 'hi-IN' : 'te-IN',
-        author_handle: '@anjani',
-      }),
-    });
-    const res = await resp.json();
-    await loadBriefing();
-    if (res?.fence?.audio_url) {
-      const audio = new Audio(res.fence.audio_url);
-      audio.play().catch(() => {});
+    try {
+      const resp = await fetch('/api/fences/FENCE-001/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN',
+          author_handle: '@anjani',
+        }),
+      });
+      if (!resp.ok) throw new Error('Act 1 confirmation request failed');
+      const res = await resp.json();
+      await loadBriefing();
+      if (res?.fence?.audio_url) {
+        const audio = new Audio(res.fence.audio_url);
+        audio.play().catch(() => {});
+      }
+      setToastMsg('Step 1 complete: FENCE-001 confirmed via 10s voice note and JUnit invariant compiled.');
+    } catch (err) {
+      setToastMsg(`Act 1 error: ${err.message || err}`);
     }
-    setToastMsg('Step 1 complete: FENCE-001 confirmed via 10s voice note and JUnit invariant compiled.');
   };
 
   const runDemoAct2 = async () => {
-    const resp = await fetch('/api/fences/intercept-test', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        file_path: 'src/main/java/com/healthconnect/payments/GatewayRouter.java',
-        proposed_diff: '- int retryCount = 5;\n+ int retryCount = 1;',
-        agent_name: 'Claude Code / Cursor Agent',
-        declared_assumptions: ['Assumes retryCount = 5 is redundant legacy boilerplate'],
-      }),
-    });
-    const res = await resp.json();
-    await loadBriefing();
-    if (res?.fence_check?.spoken_warning_url) {
-      const audio = new Audio(res.fence_check.spoken_warning_url);
-      audio.play().catch(() => {});
+    try {
+      const resp = await fetch('/api/fences/intercept-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_path: 'src/main/java/com/healthconnect/payments/GatewayRouter.java',
+          proposed_diff: '- int retryCount = 5;\n+ int retryCount = 1;',
+          agent_name: 'Claude Code / Cursor Agent',
+          declared_assumptions: ['Assumes retryCount = 5 is redundant legacy boilerplate'],
+        }),
+      });
+      if (!resp.ok) throw new Error('Act 2 intercept test failed');
+      const res = await resp.json();
+      await loadBriefing();
+      if (res?.fence_check?.spoken_warning_url) {
+        const audio = new Audio(res.fence_check.spoken_warning_url);
+        audio.play().catch(() => {});
+      }
+      setToastMsg(`Step 2 complete: whyline-mcp returned ${res?.fence_check?.decision || 'REJECT_EDIT'} and played audio warning.`);
+    } catch (err) {
+      setToastMsg(`Act 2 error: ${err.message || err}`);
     }
-    setToastMsg(`Step 2 complete: whyline-mcp returned ${res?.fence_check?.decision || 'REJECT_EDIT'} and played audio warning.`);
   };
 
   const runDemoAct3 = async () => {
-    const resp = await fetch('/api/config/gateway-version', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ version: 'v2' }),
-    });
-    const res = await resp.json();
-    await loadBriefing();
-    setToastMsg(`Step 3 complete: gateway.version set to "${res.gateway_version}" in application.yml — FENCE-001 expired safely.`);
+    try {
+      const resp = await fetch('/api/config/gateway-version', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version: 'v2' }),
+      });
+      if (!resp.ok) throw new Error('Act 3 gateway cutover failed');
+      const res = await resp.json();
+      await loadBriefing();
+      setToastMsg(`Step 3 complete: gateway.version set to "${res.gateway_version}" in application.yml — FENCE-001 expired safely.`);
+    } catch (err) {
+      setToastMsg(`Act 3 error: ${err.message || err}`);
+    }
   };
 
   const kpis = data?.kpis || {
@@ -140,7 +161,7 @@ export default function BriefingDashboard({ theme = 'light' }) {
           <div className="context-meta">
             <span>HealthConnect</span>
             <span aria-hidden="true">/</span>
-            <time dateTime={fullIsoTimestamp} title={fullIsoTimestamp} style={{ cursor: 'help' }}>
+            <time dateTime={fullIsoTimestamp} title={fullIsoTimestamp} className="help-cursor">
               Updated 2 min ago
             </time>
             <span aria-hidden="true">/</span>
@@ -151,7 +172,7 @@ export default function BriefingDashboard({ theme = 'light' }) {
               ? `${attentionCount} fences need your attention.`
               : 'All 10 repository fences verified.'}
           </h1>
-          <p style={{ color: 'var(--ink-muted)', marginTop: '8px' }}>
+          <p className="body-prose briefing-subtitle">
             {t('briefingSubtitle')}
           </p>
         </div>
@@ -165,14 +186,13 @@ export default function BriefingDashboard({ theme = 'light' }) {
       {/* Toast Confirmation Banner */}
       {toastMsg && (
         <div className="toast-banner" role="status" aria-live="polite">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="toast-content-flex">
             <Check size={16} weight="regular" aria-hidden="true" />
             <span>{toastMsg}</span>
           </div>
           <button
             type="button"
-            className="btn btn-ghost"
-            style={{ minHeight: '32px', padding: '0 8px' }}
+            className="btn btn-ghost toast-dismiss-btn"
             onClick={() => setToastMsg(null)}
           >
             Dismiss
@@ -182,18 +202,18 @@ export default function BriefingDashboard({ theme = 'light' }) {
 
       {/* Calm Tinted Alert Banner (One Primary Action on View) */}
       <section className="urgent-banner" role="region" aria-label="Priority workaround alert">
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+        <div className="alert-content-flex">
           <WarningCircle
             size={20}
             weight="regular"
-            style={{ color: 'var(--warning)', flexShrink: 0, marginTop: '4px' }}
+            className="alert-icon"
             aria-hidden="true"
           />
           <div>
-            <h2 style={{ fontSize: '16px', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>
+            <h2 className="alert-title">
               {t('urgentAlertTitle')}
             </h2>
-            <p className="form-helper" style={{ marginTop: '4px', color: 'var(--ink)' }}>
+            <p className="form-helper alert-desc">
               <FormattedText text={t('urgentAlertDesc')} />
             </p>
           </div>
@@ -238,6 +258,9 @@ export default function BriefingDashboard({ theme = 'light' }) {
       {/* GitHub Repository Flowchart Scanner & Step-by-Step Multilingual Voice Agent */}
       <RepoFlowchartExplorer />
 
+      {/* Live Telemetry Scorecard */}
+      <ScorecardWidget scorecardData={data?.scorecard} />
+
       {/* Primary Operational Split: Needs Attention List (Left) + Compact 90s Demo Stepper (Right) */}
       <section className="operational-split">
         <article className="card">
@@ -250,7 +273,7 @@ export default function BriefingDashboard({ theme = 'light' }) {
           </div>
 
           {loading ? (
-            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="card-body card-body-gap-16">
               <div className="skeleton-line" />
               <div className="skeleton-line" />
             </div>
@@ -262,12 +285,12 @@ export default function BriefingDashboard({ theme = 'light' }) {
             <ul className="attention-list">
               {attentionFences.map((fence) => (
                 <li key={fence.id} className="attention-item">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span className="mono-metric" style={{ fontWeight: 600 }}>
+                  <div className="attention-item-flex">
+                    <div className="attention-item-meta">
+                      <span className="mono-metric attention-item-weight">
                         {fence.id}
                       </span>
-                      <span className="mono-metric" style={{ color: 'var(--ink-muted)' }}>
+                      <span className="mono-metric attention-item-muted">
                         {fence.symbol_name}
                       </span>
                       <StatusBadge status={fence.status} />
@@ -275,7 +298,7 @@ export default function BriefingDashboard({ theme = 'light' }) {
                     <p className="form-helper">
                       <FormattedText text={fence.reconstructed_why} />
                     </p>
-                    <span className="mono-metric" style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>
+                    <span className="mono-metric attention-item-file">
                       {fence.file_path} • {fence.provenance?.pr_number} ({fence.provenance?.incident_id})
                     </span>
                   </div>
@@ -304,10 +327,10 @@ export default function BriefingDashboard({ theme = 'light' }) {
 
           <ol className="stepper-list">
             <li className="stepper-item">
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              <div className="stepper-item-flex">
                 <span className="step-number" aria-hidden="true">1</span>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: '14px' }}>Confirm PR #212 in Telugu</div>
+                  <div className="stepper-item-title">Confirm PR #212 in Telugu</div>
                   <p className="form-helper">
                     Transcribe 10s voice note via Gnani Prisma v2.5 and compile JUnit invariant.
                   </p>
@@ -320,10 +343,10 @@ export default function BriefingDashboard({ theme = 'light' }) {
             </li>
 
             <li className="stepper-item">
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              <div className="stepper-item-flex">
                 <span className="step-number" aria-hidden="true">2</span>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: '14px' }}>Intercept naive agent edit</div>
+                  <div className="stepper-item-title">Intercept naive agent edit</div>
                   <p className="form-helper">
                     Simulate AI removing <code className="inline-code">retryCount = 5</code>; trigger <code className="inline-code">REJECT_EDIT</code>.
                   </p>
@@ -336,10 +359,10 @@ export default function BriefingDashboard({ theme = 'light' }) {
             </li>
 
             <li className="stepper-item">
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              <div className="stepper-item-flex">
                 <span className="step-number" aria-hidden="true">3</span>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: '14px' }}>Flip gateway.version to v2</div>
+                  <div className="stepper-item-title">Flip gateway.version to v2</div>
                   <p className="form-helper">
                     Update <code className="inline-code">application.yml</code> to expire FENCE-001 safely.
                   </p>
@@ -383,9 +406,9 @@ export default function BriefingDashboard({ theme = 'light' }) {
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'var(--surface)',
+                    backgroundColor: 'var(--surface-raised)',
                     borderColor: 'var(--hairline-strong)',
-                    borderRadius: '8px',
+                    borderRadius: 'var(--radius-control)',
                     color: 'var(--ink)',
                     fontSize: '13px',
                   }}
@@ -421,7 +444,7 @@ export default function BriefingDashboard({ theme = 'light' }) {
 
           <details className="collapsible-section">
             <summary>{t('chartSummaryToggle')}</summary>
-            <div className="table-wrap" style={{ marginTop: '12px' }}>
+            <div className="table-wrap chart-table-wrap">
               <table className="data-table">
                 <thead>
                   <tr>

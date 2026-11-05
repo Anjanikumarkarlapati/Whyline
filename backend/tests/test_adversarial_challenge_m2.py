@@ -256,16 +256,21 @@ def test_execute_check_staged_blocks_active_fence():
     store = WhyLineStore(HEALTHCONNECT_DIR)
     fences = store.get_fences()
     f001 = next(f for f in fences if f["id"] == "FENCE-001")
-    f001["status"] = "VERIFIED_ACTIVE"
-    store.save_fences(fences)
+    orig_status = f001["status"]
+    try:
+        f001["status"] = "VERIFIED_ACTIVE"
+        store.save_fences(fences)
 
-    exit_code, res = execute_check_staged(
-        HEALTHCONNECT_DIR,
-        fallback_file="src/main/java/com/healthconnect/payments/GatewayRouter.java"
-    )
-    assert exit_code == 1, f"Expected exit code 1 for active fence edit, got {exit_code}"
-    assert res["decision"] == "REJECT_EDIT"
-    assert res["violations_count"] >= 1
+        exit_code, res = execute_check_staged(
+            HEALTHCONNECT_DIR,
+            fallback_file="src/main/java/com/healthconnect/payments/GatewayRouter.java"
+        )
+        assert exit_code == 1, f"Expected exit code 1 for active fence edit, got {exit_code}"
+        assert res["decision"] == "REJECT_EDIT"
+        assert res["violations_count"] >= 1
+    finally:
+        f001["status"] = orig_status
+        store.save_fences(fences)
 
 
 def test_execute_check_staged_blocks_pending_confirmation_fence():
@@ -273,16 +278,21 @@ def test_execute_check_staged_blocks_pending_confirmation_fence():
     store = WhyLineStore(HEALTHCONNECT_DIR)
     fences = store.get_fences()
     f001 = next(f for f in fences if f["id"] == "FENCE-001")
-    f001["status"] = "PENDING_CONFIRMATION"
-    store.save_fences(fences)
+    orig_status = f001["status"]
+    try:
+        f001["status"] = "PENDING_CONFIRMATION"
+        store.save_fences(fences)
 
-    exit_code, res = execute_check_staged(
-        HEALTHCONNECT_DIR,
-        fallback_file="src/main/java/com/healthconnect/payments/GatewayRouter.java"
-    )
-    assert exit_code == 1, f"Expected exit code 1 for pending confirmation fence edit, got {exit_code}"
-    assert res["decision"] == "REJECT_EDIT"
-    assert res["violations_count"] >= 1
+        exit_code, res = execute_check_staged(
+            HEALTHCONNECT_DIR,
+            fallback_file="src/main/java/com/healthconnect/payments/GatewayRouter.java"
+        )
+        assert exit_code == 1, f"Expected exit code 1 for pending confirmation fence edit, got {exit_code}"
+        assert res["decision"] == "REJECT_EDIT"
+        assert res["violations_count"] >= 1
+    finally:
+        f001["status"] = orig_status
+        store.save_fences(fences)
 
 
 def test_execute_check_staged_allows_expired_fence_when_config_upgraded():
