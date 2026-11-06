@@ -30,7 +30,9 @@ export default function FenceTabPanel() {
   const [audioDuration, setAudioDuration] = useState(10);
   const [toastMessage, setToastMessage] = useState('');
   const [isRecordingNew, setIsRecordingNew] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const audioRef = useRef(null);
+  const recordTimerRef = useRef(null);
 
   const fileName = file.split('/').pop();
 
@@ -53,8 +55,31 @@ export default function FenceTabPanel() {
         audioRef.current.pause();
         audioRef.current = null;
       }
+      if (recordTimerRef.current) {
+        clearInterval(recordTimerRef.current);
+      }
     };
   }, []);
+
+  useEffect(() => {
+    if (!isRecordingNew) {
+      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+      return undefined;
+    }
+    setRecordingSeconds(0);
+    recordTimerRef.current = setInterval(() => {
+      setRecordingSeconds((prev) => {
+        if (prev >= 9) {
+          setIsRecordingNew(false);
+          return 10;
+        }
+        return prev + 1;
+      });
+    }, 1000);
+    return () => {
+      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+    };
+  }, [isRecordingNew]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -117,7 +142,21 @@ export default function FenceTabPanel() {
     }
   };
 
+  const handleToggleRecord = () => {
+    if (isRecordingNew) {
+      setIsRecordingNew(false);
+      showToast('10s voice sample captured. Ready to confirm and lock in AST ledger.');
+    } else {
+      if (isPlayingAudio && audioRef.current) {
+        audioRef.current.pause();
+        setIsPlayingAudio(false);
+      }
+      setIsRecordingNew(true);
+    }
+  };
+
   const handleConfirmByVoice = async () => {
+    setIsRecordingNew(false);
     if (!currentFence?.id) return;
     try {
       const resp = await fetch(`/api/fences/${currentFence.id}/confirm`, {
@@ -217,13 +256,18 @@ export default function FenceTabPanel() {
             )}
           </div>
 
-          {/* 36-bar Waveform Scrubber */}
+          {/* 36-bar Frosted-Glass & 3D Waveform Scrubber synced with live 10s recording */}
           <div className="card" style={{ padding: '14px', background: 'var(--bg-surface)' }}>
             <AudioWaveform
               isPlaying={isPlayingAudio}
+              isRecording={isRecordingNew}
+              recordingSeconds={recordingSeconds}
+              maxRecordingSeconds={10}
               currentTime={audioCurrentTime}
               duration={audioDuration}
               onTogglePlay={handleToggleAudio}
+              onToggleRecord={handleToggleRecord}
+              onFinishRecord={handleConfirmByVoice}
               onSeek={(seekTime) => {
                 if (audioRef.current) {
                   audioRef.current.currentTime = seekTime;
@@ -322,6 +366,42 @@ export default function FenceTabPanel() {
             <Microphone size={16} weight="regular" aria-hidden="true" />
             <span>Confirm via Gnani Prisma (10s Audio)</span>
           </button>
+
+          {rescoreLog.length > 0 && (
+            <div
+              className="card"
+              data-testid="fence-stt-rescore-log"
+              style={{
+                padding: '10px 12px',
+                background: 'var(--bg-surface)',
+                borderLeft: '4px solid var(--accent)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+              }}
+            >
+              <span className="small-caps" style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 700 }}>
+                Gnani Prisma v3.0 • AST Symbol Rescoring Applied
+              </span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {rescoreLog.map((item, idx) => (
+                  <span
+                    key={idx}
+                    className="mono-metric"
+                    style={{
+                      fontSize: '11px',
+                      padding: '2px 8px',
+                      borderRadius: '999px',
+                      background: 'var(--bg-raised)',
+                      border: '1px solid var(--border-default)',
+                    }}
+                  >
+                    "{item.spoken}" → <strong>{item.symbol}</strong>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Mitigation Metadata Accordion / Cards */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>

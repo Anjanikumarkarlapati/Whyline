@@ -684,7 +684,6 @@ export default function VoiceCoPilotPage() {
                           </h3>
                         </div>
                         <p className="body-prose" style={{ margin: 0, fontSize: '14px', lineHeight: 1.5 }}>
-                          💡{' '}
                           <FormattedText
                             text={
                               response.real_world_example ||

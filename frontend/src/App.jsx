@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { I18nProvider } from './i18n';
+import { WorkbenchProvider } from './context/WorkbenchContext';
 import Layout from './components/Layout';
-import BriefingDashboard from './pages/BriefingDashboard';
-import WorkbenchPage from './pages/WorkbenchPage';
-import MemoryPage from './pages/MemoryPage';
-import SettingsPage from './pages/SettingsPage';
-import TypographyPage from './pages/TypographyPage';
+import AskRepoPage from './pages/AskRepoPage';
+import AnswersPage from './pages/AnswersPage';
+import FlowchartsPage from './pages/FlowchartsPage';
 import LegacyRedirect from './components/LegacyRedirect';
 import ErrorBoundary from './components/ErrorBoundary';
 import RouteAnnouncer from './components/RouteAnnouncer';
@@ -45,33 +44,34 @@ export default function App() {
 
   return (
     <I18nProvider>
-      {/* ARIA live region for route change announcements */}
       <div id="route-announcer" className="route-announcer" aria-live="polite" aria-atomic="true" />
       <BrowserRouter>
         <ErrorBoundary>
-          <RouteAnnouncer />
-          <Routes>
-            <Route element={<Layout theme={theme} onToggleTheme={toggleTheme} />}>
-              {/* Target 4-Page Information Architecture */}
-              <Route path="/" element={<BriefingDashboard theme={theme} />} />
-              <Route path="/studio" element={<WorkbenchPage theme={theme} />} />
-              <Route path="/memory" element={<MemoryPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+          <WorkbenchProvider>
+            <RouteAnnouncer />
+            <Routes>
+              <Route element={<Layout theme={theme} onToggleTheme={toggleTheme} />}>
+                {/* 3 Beginner-Friendly Developer Pages */}
+                <Route path="/" element={<AskRepoPage />} />
+                <Route path="/ask" element={<AskRepoPage />} />
+                <Route path="/answers" element={<AnswersPage theme={theme} />} />
+                <Route path="/flowcharts" element={<FlowchartsPage />} />
 
-              {/* Legacy Redirects (Preserve query params and inject target defaults) */}
-              <Route path="/fences" element={<LegacyRedirect to="/studio" defaultParams={{ panel: 'fence' }} />} />
-              <Route path="/copilot" element={<LegacyRedirect to="/studio" defaultParams={{ panel: 'ask' }} />} />
-              <Route path="/git" element={<LegacyRedirect to="/memory" defaultParams={{ view: 'graph' }} />} />
-              <Route path="/incidents" element={<LegacyRedirect to="/memory" defaultParams={{ view: 'ledger' }} />} />
-              <Route path="/login" element={<LegacyRedirect to="/settings" />} />
+                {/* Legacy & Direct Compatibility Routes */}
+                <Route path="/studio" element={<AnswersPage theme={theme} />} />
+                <Route path="/copilot" element={<LegacyRedirect to="/" />} />
+                <Route path="/fences" element={<LegacyRedirect to="/answers" />} />
+                <Route path="/memory" element={<LegacyRedirect to="/flowcharts" />} />
+                <Route path="/git" element={<LegacyRedirect to="/flowcharts" />} />
+                <Route path="/incidents" element={<LegacyRedirect to="/flowcharts" />} />
+                <Route path="/settings" element={<LegacyRedirect to="/" />} />
+                <Route path="/login" element={<LegacyRedirect to="/" />} />
 
-              {/* Dev-only Route (Typography showcase) */}
-              {import.meta.env.DEV && <Route path="/dev/typography" element={<TypographyPage />} />}
-
-              {/* Catch-all fallback */}
-              <Route path="*" element={<LegacyRedirect to="/" />} />
-            </Route>
-          </Routes>
+                {/* Catch-all fallback */}
+                <Route path="*" element={<LegacyRedirect to="/" />} />
+              </Route>
+            </Routes>
+          </WorkbenchProvider>
         </ErrorBoundary>
       </BrowserRouter>
     </I18nProvider>

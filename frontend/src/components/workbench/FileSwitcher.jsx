@@ -71,7 +71,15 @@ export default function FileSwitcher() {
             color: 'var(--text-secondary)',
           }}
         >
-          {activeDoc.language === 'java' ? 'Java 21 • UTF-8' : 'YAML • UTF-8'}
+          {activeDoc.language === 'java'
+            ? 'Java 21 • UTF-8'
+            : activeDoc.language === 'typescript'
+              ? 'TypeScript • UTF-8'
+              : activeDoc.language === 'javascript'
+                ? 'JavaScript • UTF-8'
+                : activeDoc.language === 'python'
+                  ? 'Python 3 • UTF-8'
+                  : 'YAML • UTF-8'}
         </span>
 
         <span

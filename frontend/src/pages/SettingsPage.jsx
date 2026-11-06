@@ -232,11 +232,11 @@ export default function SettingsPage() {
               <p style={{ margin: '6px 0 0 0', fontSize: '13px', lineHeight: '1.4' }}>
                 {gatewayVersion === 'v2' ? (
                   <span style={{ color: 'var(--status-good, #545333)', fontWeight: 500 }}>
-                    ✓ FENCE-001 (GatewayRouter.java retryCount=5) has safely auto-expired. AI agents may clean up the workaround.
+                    FENCE-001 (GatewayRouter.java retryCount=5) has safely auto-expired. AI agents may clean up the workaround.
                   </span>
                 ) : (
                   <span style={{ color: 'var(--status-warning, #8F5A08)', fontWeight: 500 }}>
-                    ⚠ FENCE-001 is active. Naive agent edits to retryCount=5 will be rejected.
+                    Note: FENCE-001 is active. Naive agent edits to retryCount=5 will be rejected.
                   </span>
                 )}
               </p>

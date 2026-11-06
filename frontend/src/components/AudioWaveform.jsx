@@ -36,8 +36,11 @@ export default function AudioWaveform({
   recordingSeconds = 0,
   onSeek,
   onTogglePlay,
-  title = 'Voice ADR Waveform',
-  subtitle = '16kHz Gnani Timbre Audio Note',
+  onToggleRecord,
+  onFinishRecord,
+  maxRecordingSeconds = 10,
+  title = 'Voice Explanation',
+  subtitle = 'Clear Speech Audio',
   accentColor = 'var(--accent)',
   className = '',
 }) {
@@ -45,30 +48,39 @@ export default function AudioWaveform({
   const [hoverPercent, setHoverPercent] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [liveAmplitudes, setLiveAmplitudes] = useState(DEFAULT_BAR_HEIGHTS);
+  const [subTick, setSubTick] = useState(0);
 
-  // Animate waveform bars during active recording to simulate live microphone energy
+  // Animate waveform bars during active recording or playback to simulate live acoustic energy
   useEffect(() => {
-    if (!isRecording) {
+    if (!isRecording && !isPlaying) {
       setLiveAmplitudes(DEFAULT_BAR_HEIGHTS);
+      setSubTick(0);
       return;
     }
 
     const interval = setInterval(() => {
+      setSubTick((prev) => Math.min(0.92, prev + 0.09));
       setLiveAmplitudes((prev) =>
         prev.map((base, idx) => {
-          const jitter = Math.sin(Date.now() / 120 + idx * 0.7) * 22;
-          const energy = Math.random() * 20;
-          return Math.max(14, Math.min(100, Math.round(base * 0.6 + jitter + energy)));
+          const jitter = Math.sin(Date.now() / 115 + idx * 0.68) * 22;
+          const energy = isRecording ? Math.random() * 20 : Math.cos(Date.now() / 160 + idx * 0.45) * 12;
+          return Math.max(16, Math.min(98, Math.round(base * 0.68 + jitter + energy)));
         })
       );
     }, 90);
 
     return () => clearInterval(interval);
-  }, [isRecording]);
+  }, [isRecording, isPlaying]);
 
-  // Compute active playback percentage
-  const effectiveCurrent = isRecording ? recordingSeconds : currentTime;
-  const effectiveDuration = isRecording ? Math.max(duration, recordingSeconds || 1) : Math.max(duration || 1, 0.1);
+  useEffect(() => {
+    setSubTick(0);
+  }, [recordingSeconds]);
+
+  // Compute active playback or recording percentage
+  const effectiveCurrent = isRecording ? recordingSeconds + subTick : currentTime;
+  const effectiveDuration = isRecording
+    ? Math.max(maxRecordingSeconds, recordingSeconds || 1)
+    : Math.max(duration || 1, 0.1);
   const progressPercent = Math.min(100, Math.max(0, (effectiveCurrent / effectiveDuration) * 100));
 
   const calculatePercentFromEvent = useCallback((e) => {
@@ -131,9 +143,13 @@ export default function AudioWaveform({
         flexDirection: 'column',
         gap: '12px',
         padding: '16px 20px',
-        borderRadius: '16px',
-        border: '1px solid var(--border-default)',
-        background: 'var(--surface-glass, rgba(255, 254, 240, 0.85))',
+        borderRadius: '18px',
+        border: isRecording ? '1px solid var(--danger)' : '1px solid var(--border-default)',
+        background: 'var(--surface-glass, rgba(255, 254, 240, 0.84))',
+        backdropFilter: 'blur(16px) saturate(145%)',
+        WebkitBackdropFilter: 'blur(16px) saturate(145%)',
+        boxShadow:
+          'inset 0 1px 0 0 rgba(255, 255, 255, 0.65), inset 0 -1px 0 0 rgba(42, 41, 25, 0.08), 0 10px 26px -6px rgba(42, 41, 25, 0.12)',
       }}
     >
       {/* Waveform Header with Title & Telemetry */}
@@ -152,19 +168,20 @@ export default function AudioWaveform({
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '24px',
-              height: '24px',
+              width: '28px',
+              height: '28px',
               borderRadius: '9999px',
               backgroundColor: isRecording ? 'var(--danger-tint)' : 'var(--accent-wash)',
               color: isRecording ? 'var(--danger)' : 'var(--accent)',
+              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(0, 0, 0, 0.08)',
             }}
           >
             {isRecording ? (
-              <Microphone size={14} weight="fill" />
+              <Microphone size={15} weight="fill" />
             ) : isPlaying ? (
-              <SpeakerHigh size={14} weight="fill" />
+              <SpeakerHigh size={15} weight="fill" />
             ) : (
-              <Waveform size={14} weight="regular" />
+              <Waveform size={15} weight="bold" />
             )}
           </span>
           <div>
@@ -179,7 +196,7 @@ export default function AudioWaveform({
           </div>
         </div>
 
-        {/* Dynamic Timer Badge */}
+        {/* Dynamic Timer & Progress Badge */}
         <div
           style={{
             display: 'inline-flex',
@@ -189,16 +206,17 @@ export default function AudioWaveform({
             borderRadius: '9999px',
             backgroundColor: isRecording ? 'var(--danger-tint)' : 'var(--bg-raised)',
             border: isRecording ? '1px solid var(--danger)' : '1px solid var(--border-default)',
+            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.06)',
           }}
         >
           {isRecording && (
             <span
               style={{
-                width: '6px',
-                height: '6px',
+                width: '7px',
+                height: '7px',
                 borderRadius: '50%',
                 backgroundColor: 'var(--danger)',
-                animation: 'voiceActivePulse 1.2s infinite ease-in-out',
+                animation: 'voiceActivePulse 1.1s infinite ease-in-out',
               }}
             />
           )}
@@ -210,12 +228,14 @@ export default function AudioWaveform({
               color: isRecording ? 'var(--danger)' : 'var(--text-primary)',
             }}
           >
-            {formatTime(effectiveCurrent)} / {formatTime(effectiveDuration)}
+            {isRecording
+              ? `REC ${formatTime(recordingSeconds)} / ${formatTime(maxRecordingSeconds)} (${Math.round(progressPercent)}%)`
+              : `${formatTime(effectiveCurrent)} / ${formatTime(effectiveDuration)}`}
           </span>
         </div>
       </div>
 
-      {/* 3D Debossed Track Container with Interactive Waveform Bars */}
+      {/* 3D Debossed Track Container with Interactive 3D Embossed Waveform Bars */}
       <div
         ref={trackRef}
         role="slider"
@@ -236,29 +256,32 @@ export default function AudioWaveform({
         className="audio-waveform-track"
         style={{
           position: 'relative',
-          height: '68px',
-          borderRadius: '10px',
+          height: '72px',
+          borderRadius: '12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 8px',
+          padding: '0 10px',
           gap: '3px',
           cursor: isRecording ? 'default' : 'pointer',
           outline: 'none',
           userSelect: 'none',
           touchAction: 'none',
+          boxShadow:
+            'inset 0 2px 5px rgba(42, 41, 25, 0.14), inset 0 1px 2px rgba(42, 41, 25, 0.1), 0 1px 0 rgba(255, 255, 255, 0.65)',
         }}
       >
-        {/* Render Spectrum Bars */}
+        {/* Render 36 3D Embossed Spectrum Bars */}
         {liveAmplitudes.map((heightPercent, idx) => {
           const barFraction = (idx / (liveAmplitudes.length - 1)) * 100;
           const isPassed = barFraction <= progressPercent;
           const isHoverCandidate = hoverPercent != null && barFraction <= hoverPercent;
 
-          // Color calculation: speaking amber for recording energy, olive/accent for playback
           let barBg;
           if (isRecording) {
-            barBg = heightPercent > 50 ? 'var(--amber)' : 'var(--accent)';
+            barBg = isPassed
+              ? 'linear-gradient(180deg, var(--danger) 0%, var(--amber, #D9A520) 100%)'
+              : 'var(--border-strong)';
           } else if (isPassed) {
             barBg = accentColor || 'var(--accent)';
           } else if (isHoverCandidate) {
@@ -270,52 +293,65 @@ export default function AudioWaveform({
           return (
             <div
               key={idx}
+              onClick={(e) => {
+                if (isRecording) return;
+                e.stopPropagation();
+                const seekTime = (barFraction / 100) * effectiveDuration;
+                onSeek?.(seekTime);
+              }}
+              title={
+                isRecording
+                  ? `Recording progress: ${Math.round(progressPercent)}%`
+                  : `Scrub to ${formatTime((barFraction / 100) * effectiveDuration)}`
+              }
               style={{
                 flex: 1,
-                maxWidth: '6px',
-                minWidth: '2px',
+                maxWidth: '7px',
+                minWidth: '3px',
                 height: `${heightPercent}%`,
                 maxHeight: '86%',
-                backgroundColor: barBg,
+                background: barBg,
                 borderRadius: '9999px',
+                boxShadow: isPassed
+                  ? 'inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 1px 2px rgba(42, 41, 25, 0.18)'
+                  : 'inset 0 1px 0 rgba(255, 255, 255, 0.25)',
                 transition: isRecording
-                  ? 'height 80ms ease-out, background-color 120ms ease'
-                  : 'background-color 140ms ease, height 180ms ease',
+                  ? 'height 80ms ease-out, background 120ms ease'
+                  : 'background 140ms ease, height 180ms ease',
               }}
             />
           );
         })}
 
         {/* Scrubber Playhead Line */}
-        {!isRecording && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '4px',
+            bottom: '4px',
+            left: `${progressPercent}%`,
+            width: '2px',
+            backgroundColor: isRecording ? 'var(--danger)' : 'var(--amber)',
+            borderRadius: '2px',
+            pointerEvents: 'none',
+            transform: 'translateX(-50%)',
+            transition: isDragging ? 'none' : 'left 80ms linear',
+          }}
+        >
           <div
             style={{
               position: 'absolute',
-              top: '4px',
-              bottom: '4px',
-              left: `${progressPercent}%`,
-              width: '2px',
-              backgroundColor: 'var(--amber)',
-              borderRadius: '2px',
-              pointerEvents: 'none',
+              top: '-4px',
+              left: '50%',
               transform: 'translateX(-50%)',
-              transition: isDragging ? 'none' : 'left 80ms linear',
+              width: '9px',
+              height: '9px',
+              borderRadius: '50%',
+              backgroundColor: isRecording ? 'var(--danger)' : 'var(--amber)',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
             }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                top: '-4px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--amber)',
-              }}
-            />
-          </div>
-        )}
+          />
+        </div>
 
         {/* Hover Scrub Preview Tooltip */}
         {hoverPercent != null && !isRecording && (
@@ -341,7 +377,7 @@ export default function AudioWaveform({
         )}
       </div>
 
-      {/* Waveform Controls Bar: Buttons with 3D Raised-Cap Depth */}
+      {/* Waveform Controls Bar: Every Transport & Recording Action Directly Accessible */}
       <div
         style={{
           display: 'flex',
@@ -352,7 +388,7 @@ export default function AudioWaveform({
           paddingTop: '4px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Play/Pause Button */}
           <button
             type="button"
@@ -403,21 +439,54 @@ export default function AudioWaveform({
           >
             <ArrowClockwise size={14} weight="regular" />
           </button>
+
+          {/* Live 10s Voice Recording Toggle Button when handler is supplied */}
+          {onToggleRecord && (
+            <button
+              type="button"
+              className={`btn ${isRecording ? 'btn-danger' : 'btn-secondary'}`}
+              style={{
+                minHeight: '34px',
+                padding: '0 12px',
+                fontSize: '12px',
+                gap: '6px',
+              }}
+              onClick={onToggleRecord}
+              aria-label={isRecording ? 'Stop voice recording' : 'Record 10s voice note'}
+            >
+              <Microphone size={14} weight="fill" aria-hidden="true" />
+              <span>
+                {isRecording
+                  ? `Stop Recording (${recordingSeconds}s/${maxRecordingSeconds}s)`
+                  : 'Record 10s Voice'}
+              </span>
+            </button>
+          )}
+
+          {isRecording && onFinishRecord && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{
+                minHeight: '34px',
+                padding: '0 12px',
+                fontSize: '12px',
+                gap: '6px',
+              }}
+              onClick={onFinishRecord}
+            >
+              <span>Lock &amp; Confirm Now</span>
+            </button>
+          )}
         </div>
 
-        {/* Audio Quality & Codec Details */}
+        {/* Simple Audio Status */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span
             className="status-badge status-good"
             style={{ fontSize: '11px', padding: '1px 8px', minHeight: '22px' }}
           >
-            <span className="mono-metric">16kHz PCM • Linear16</span>
-          </span>
-          <span
-            className="status-badge status-info"
-            style={{ fontSize: '11px', padding: '1px 8px', minHeight: '22px' }}
-          >
-            <span>Gnani Timbre</span>
+            <span>Voice Player Ready</span>
           </span>
         </div>
       </div>

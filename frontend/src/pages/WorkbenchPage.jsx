@@ -14,7 +14,7 @@ import { useI18n } from '../i18n';
 
 function WorkbenchContent({ theme }) {
   const { t } = useI18n();
-  const { panel, setPanel } = useWorkbenchSelection();
+  const { panel, setPanel, repoContext } = useWorkbenchSelection();
 
   // Draggable split ratio persisted in localStorage (default: 60% editor / 40% panel)
   const [splitRatio, setSplitRatio] = useState(() => {
@@ -82,7 +82,9 @@ function WorkbenchContent({ theme }) {
       {/* Workbench Header */}
       <section className="context-header" style={{ marginBottom: '8px' }}>
         <div>
-          <p className="context-meta">{t('workbenchContext')}</p>
+          <p className="context-meta">
+            Workbench • {repoContext?.fullName || t('workbenchContext')}
+          </p>
           <h1 className="page-title">{t('workbenchTitle')}</h1>
         </div>
       </section>

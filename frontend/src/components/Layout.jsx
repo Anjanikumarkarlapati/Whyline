@@ -2,14 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   ChatCircleText,
-  ClockCounterClockwise,
   Code,
-  GearSix,
-  House,
+  GitBranch,
+  Graph,
   List,
   Moon,
   Sun,
-  UserCircle,
   X,
 } from '@phosphor-icons/react';
 import { useI18n } from '../i18n';
@@ -21,15 +19,30 @@ export default function Layout({ theme, onToggleTheme }) {
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sessionModalOpen, setSessionModalOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeRepoName, setActiveRepoName] = useState('HealthConnect/payment-gateway-v1');
 
   const triggerRef = useRef(null);
   const closeBtnRef = useRef(null);
-  const menuRef = useRef(null);
   const drawerRef = useRef(null);
-  const askBtnRef = useRef(null);
 
-  // Global Ctrl/Cmd+K shortcut to navigate to /studio?panel=ask
+  useEffect(() => {
+    fetch('/api/github/current')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.repo?.fullName) setActiveRepoName(data.repo.fullName);
+      })
+      .catch(() => {});
+
+    const handleRepoUpdated = (e) => {
+      if (e.detail?.repo?.fullName) {
+        setActiveRepoName(e.detail.repo.fullName);
+      }
+    };
+    window.addEventListener('whyline-repo-updated', handleRepoUpdated);
+    return () => window.removeEventListener('whyline-repo-updated', handleRepoUpdated);
+  }, []);
+
+  // Global Ctrl/Cmd+K shortcut to navigate to Ask Repo
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -42,7 +55,7 @@ export default function Layout({ theme, onToggleTheme }) {
           return;
         }
         e.preventDefault();
-        navigate('/studio?panel=ask');
+        navigate('/');
         setTimeout(() => {
           const askInput =
             document.getElementById('workbench-ask-input') ||
@@ -87,43 +100,12 @@ export default function Layout({ theme, onToggleTheme }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [drawerOpen]);
 
-  useEffect(() => {
-    if (!menuOpen) return undefined;
-    const handleClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setMenuOpen(false);
-      }
-    };
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setMenuOpen(false);
-      }
-    };
-    window.addEventListener('mousedown', handleClickOutside);
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [menuOpen]);
-
-  // Exactly 4 primary routes in the consolidated Information Architecture
+  // Exactly 3 beginner-friendly developer routes
   const navItems = [
-    { to: '/', label: t('navHome'), icon: House, end: true },
-    { to: '/studio', label: t('navWorkbench'), icon: Code },
-    { to: '/memory', label: t('navMemory'), icon: ClockCounterClockwise },
-    { to: '/settings', label: t('navSettings'), icon: GearSix },
+    { to: '/', label: 'Ask Repo', icon: ChatCircleText, end: true },
+    { to: '/answers', label: 'Answers', icon: Code },
+    { to: '/flowcharts', label: 'Flowcharts', icon: Graph },
   ];
-
-  const handleOpenAsk = () => {
-    navigate('/studio?panel=ask');
-    setTimeout(() => {
-      const askInput =
-        document.getElementById('workbench-ask-input') ||
-        document.querySelector('textarea, input[placeholder*="Ask"]');
-      askInput?.focus();
-    }, 120);
-  };
 
   return (
     <div className="app-shell">
@@ -132,14 +114,24 @@ export default function Layout({ theme, onToggleTheme }) {
       </a>
 
       <header className="topbar glass-navbar">
-        <div className="container topbar-inner">
-          <NavLink to="/" className="brand-link" aria-label="WhyLine Studio Home">
-            <img src="/logo.svg" alt="" aria-hidden="true" className="brand-mark" width="28" height="28" />
+        <div
+          className="container topbar-inner"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '32px' }}
+        >
+          {/* Zone 1: Single-line Brand Wordmark */}
+          <NavLink
+            to="/"
+            className="brand-link"
+            aria-label="WhyLine Home"
+            style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            <img src="/logo.svg" alt="" aria-hidden="true" className="brand-mark" width="26" height="26" />
             <span className="brand-wordmark">
               Why<span className="brand-wordmark-accent">Line</span>
             </span>
           </NavLink>
 
+          {/* Zone 2: 3 Clean Single-Line Navigation Links */}
           <nav className="desktop-nav" aria-label="Primary navigation">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -149,6 +141,7 @@ export default function Layout({ theme, onToggleTheme }) {
                   to={item.to}
                   end={item.end}
                   className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                  style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                 >
                   <Icon size={16} weight="regular" aria-hidden="true" />
                   <span>{item.label}</span>
@@ -157,136 +150,63 @@ export default function Layout({ theme, onToggleTheme }) {
             })}
           </nav>
 
-          <div className="topbar-controls" ref={menuRef}>
-            {/* Ask Repo Action with Ctrl+K shortcut badge */}
+          {/* Zone 3: Active GitHub Repo Switcher & Appearance Toggle */}
+          <div className="topbar-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             <button
-              ref={askBtnRef}
               type="button"
-              className="btn btn-primary"
-              onClick={handleOpenAsk}
-              aria-label="Open Ask Repo Co-Pilot (Shortcut: Ctrl+K)"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              data-testid="topbar-github-repo-btn"
+              className="btn btn-secondary"
+              onClick={() => setSessionModalOpen(true)}
+              aria-label="Change GitHub repository"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '12px',
+                padding: '0 12px',
+                whiteSpace: 'nowrap',
+              }}
             >
-              <ChatCircleText size={16} weight="regular" aria-hidden="true" />
-              <span>Ask Repo</span>
-              <kbd
-                className="shortcut-badge"
+              <GitBranch size={15} weight="bold" style={{ color: 'var(--accent)' }} aria-hidden="true" />
+              <span
+                className="mono-metric"
                 style={{
-                  fontSize: '10px',
-                  lineHeight: '1',
-                  padding: '2px 5px',
-                  borderRadius: '4px',
-                  background: 'rgba(255, 255, 255, 0.22)',
-                  fontFamily: 'DM Mono, monospace',
-                  letterSpacing: '0.02em',
+                  maxWidth: '190px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                Ctrl K
-              </kbd>
+                {activeRepoName}
+              </span>
             </button>
 
-            {/* Unified Account & Session Popover */}
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => setMenuOpen((prev) => !prev)}
-              aria-expanded={menuOpen}
-              aria-haspopup="menu"
-              aria-label="Account, theme, and language menu"
+              onClick={onToggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to Light mode' : 'Switch to Dark mode'}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '12px',
+                padding: '0 10px',
+                whiteSpace: 'nowrap',
+              }}
             >
-              <UserCircle size={18} weight="regular" aria-hidden="true" />
-              <span className="mono-metric">@anjani</span>
+              {theme === 'dark' ? (
+                <>
+                  <Sun size={15} weight="regular" aria-hidden="true" />
+                  <span>Light</span>
+                </>
+              ) : (
+                <>
+                  <Moon size={15} weight="regular" aria-hidden="true" />
+                  <span>Dark</span>
+                </>
+              )}
             </button>
-
-            {menuOpen && (
-              <div className="account-popover glass-navbar" role="region" aria-label="Account and studio settings">
-                <div style={{ paddingBottom: '12px', borderBottom: '1px solid var(--hairline)' }}>
-                  <div style={{ fontWeight: 600, fontSize: '14px' }}>Anjani Kumar</div>
-                  <div className="mono-metric" style={{ color: 'var(--ink-muted)', fontSize: '12px' }}>
-                    Lead SRE • anjani@healthconnect.in
-                  </div>
-                  <div style={{ marginTop: '4px' }}>
-                    <span className="status-badge status-good" style={{ fontSize: '11px', padding: '1px 6px' }}>
-                      HealthConnect Gateway v1
-                    </span>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="nav-lang-select">
-                    {t('langLabel')}
-                  </label>
-                  <select
-                    id="nav-lang-select"
-                    className="form-select"
-                    value={lang}
-                    onChange={(e) => setLang(e.target.value)}
-                  >
-                    <option value="en">English (EN • Pranav voice)</option>
-                    <option value="te">తెలుగు (Telugu • Nalini voice)</option>
-                    <option value="hi">हिंदी (Hindi • Bhavna voice)</option>
-                  </select>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span className="form-label">Appearance</span>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ minHeight: '34px', padding: '0 12px', fontSize: '12px' }}
-                    onClick={onToggleTheme}
-                  >
-                    {theme === 'dark' ? (
-                      <>
-                        <Sun size={15} weight="regular" aria-hidden="true" />
-                        <span>Light mode</span>
-                      </>
-                    ) : (
-                      <>
-                        <Moon size={15} weight="regular" aria-hidden="true" />
-                        <span>Dark mode</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <div
-                  style={{
-                    paddingTop: '12px',
-                    borderTop: '1px solid var(--hairline)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                  }}
-                >
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    style={{ justifyContent: 'flex-start', fontSize: '13px' }}
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setSessionModalOpen(true);
-                    }}
-                  >
-                    <UserCircle size={16} weight="regular" aria-hidden="true" />
-                    <span>Switch Session / Repo</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    style={{ justifyContent: 'flex-start', fontSize: '13px' }}
-                    onClick={() => {
-                      setMenuOpen(false);
-                      navigate('/settings');
-                    }}
-                  >
-                    <GearSix size={16} weight="regular" aria-hidden="true" />
-                    <span>{t('navSettings')}</span>
-                  </button>
-                </div>
-              </div>
-            )}
 
             <button
               ref={triggerRef}
@@ -308,7 +228,7 @@ export default function Layout({ theme, onToggleTheme }) {
           className="drawer-backdrop"
           role="dialog"
           aria-modal="true"
-          aria-label="Mobile navigation sheet"
+          aria-label="Mobile navigation menu"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setDrawerOpen(false);
@@ -358,7 +278,7 @@ export default function Layout({ theme, onToggleTheme }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div className="form-group">
                 <label className="form-label" htmlFor="drawer-lang-select">
-                  {t('langLabel')}
+                  Voice Language
                 </label>
                 <select
                   id="drawer-lang-select"
@@ -367,17 +287,13 @@ export default function Layout({ theme, onToggleTheme }) {
                   onChange={(e) => setLang(e.target.value)}
                 >
                   <option value="en">English (EN)</option>
-                  <option value="te">తెలుగు (Telugu)</option>
-                  <option value="hi">हिंदी (Hindi)</option>
+                  <option value="te">Telugu</option>
+                  <option value="hi">Hindi</option>
                 </select>
               </div>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={onToggleTheme}
-              >
+              <button type="button" className="btn btn-secondary" onClick={onToggleTheme}>
                 {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-                <span>{theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}</span>
+                <span>{theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
               </button>
               <button
                 type="button"
@@ -387,8 +303,8 @@ export default function Layout({ theme, onToggleTheme }) {
                   setSessionModalOpen(true);
                 }}
               >
-                <UserCircle size={16} weight="regular" aria-hidden="true" />
-                <span>Switch Session / Repo</span>
+                <GitBranch size={16} weight="regular" aria-hidden="true" />
+                <span>Change GitHub Repo</span>
               </button>
             </div>
           </aside>
@@ -401,16 +317,9 @@ export default function Layout({ theme, onToggleTheme }) {
         </div>
       </main>
 
-      <Footer
-        theme={theme}
-        onToggleTheme={onToggleTheme}
-        onOpenAskDrawer={handleOpenAsk}
-      />
+      <Footer theme={theme} onToggleTheme={onToggleTheme} />
 
-      <SessionModal
-        isOpen={sessionModalOpen}
-        onClose={() => setSessionModalOpen(false)}
-      />
+      <SessionModal isOpen={sessionModalOpen} onClose={() => setSessionModalOpen(false)} />
     </div>
   );
 }

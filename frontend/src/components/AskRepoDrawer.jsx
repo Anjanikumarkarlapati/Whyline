@@ -10,9 +10,14 @@ import {
   X,
 } from '@phosphor-icons/react';
 import { useI18n } from '../i18n';
+import {
+  getCachedVoiceResponse,
+  setCachedVoiceResponse,
+} from '../utils/voiceResponseCache';
 import StatusBadge from './StatusBadge';
 import { CodeBlock, FormattedText } from './CodeText';
 import AudioWaveform from './AudioWaveform';
+import VoiceLanguageDropdown from './VoiceLanguageDropdown';
 
 function getStrategyRiskMeta(tone, rank) {
   const normalized = String(tone || '').toUpperCase();
@@ -31,7 +36,7 @@ export default function AskRepoDrawer({
   initialFenceId = 'FENCE-001',
   autoPlayAudio = false,
 }) {
-  const { lang, voiceModel } = useI18n();
+  const { lang, setLang } = useI18n();
   const [query, setQuery] = useState(
     'How do we fix the double-charge bug in GatewayRouter.java without breaking the PR #212 midnight retry fence?'
   );
@@ -268,6 +273,33 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
   };
 
   const askRepo = async (queryText, languageCode, audioBase64 = null) => {
+    const q = (queryText || query || '').trim();
+    const targetLangCode =
+      languageCode || (lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN');
+
+    // Serve from in-memory + localStorage cache if no raw audio recording is being transcribed
+    if (!audioBase64 && q) {
+      const cached = getCachedVoiceResponse({
+        question: q,
+        language: targetLangCode,
+      });
+      if (cached && cached.response) {
+        const data = cached.response;
+        const replyText = cached.spokenReply || data.spoken_reply || data.spoken_answer || response.spoken_reply;
+        setResponse((prev) => ({
+          spoken_reply: replyText,
+          matched_code: data.matched_code || prev.matched_code,
+          best_solution: data.best_solution || prev.best_solution,
+          rrf_telemetry: data.rrf_telemetry || prev.rrf_telemetry,
+          strategies: data.strategies || prev.strategies,
+        }));
+        const replyUrl = cached.audioUrl || data.audio_url || '/api/audio/fence-001_confirmed.wav';
+        setAudioUrl(replyUrl);
+        handlePlayAudio(replyUrl, replyText);
+        return;
+      }
+    }
+
     setLoading(true);
     setVoiceState('Thinking');
     setMicNotice(null);
@@ -276,9 +308,9 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question: queryText || query,
+          question: q,
           fence_id: initialFenceId,
-          language: languageCode || (lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN'),
+          language: targetLangCode,
           voice: selectedVoice,
           audio_base64: audioBase64 || null,
         }),
@@ -293,6 +325,14 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
           rrf_telemetry: data.rrf_telemetry || prev.rrf_telemetry,
           strategies: data.strategies || prev.strategies,
         }));
+        setCachedVoiceResponse(
+          {
+            question: q,
+            language: targetLangCode,
+            voice: selectedVoice,
+          },
+          { response: data, sttTelemetry: data.stt_telemetry }
+        );
         if (data.audio_url) {
           setAudioUrl(data.audio_url);
           handlePlayAudio(data.audio_url, replyText);
@@ -406,9 +446,30 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
             }}
             style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}
           >
-            <label className="small-caps" htmlFor="copilot-input-drawer">
-              Ask a Question (Voice or Text)
-            </label>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '8px',
+              }}
+            >
+              <label className="small-caps" htmlFor="copilot-input-drawer" style={{ margin: 0 }}>
+                Ask a Question (Voice or Text)
+              </label>
+              <VoiceLanguageDropdown
+                id="drawer-ask-voice-lang-select"
+                value={lang}
+                disabled={loading}
+                compact={true}
+                onChange={(nextCode, option) => {
+                  setLang(nextCode);
+                  setSelectedVoice(option.voice);
+                  askRepo(query, option.locale);
+                }}
+              />
+            </div>
             <div className="chip-grid">
               <input
                 id="copilot-input-drawer"

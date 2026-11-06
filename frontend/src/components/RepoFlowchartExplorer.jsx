@@ -2,44 +2,33 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowsClockwise,
-  Brain,
   CheckCircle,
   Code,
   GitBranch,
   Graph,
-  Lightbulb,
   Pause,
   Play,
   SkipForward,
   SpeakerHigh,
 } from '@phosphor-icons/react';
+import { QUICK_GITHUB_REPOS, useWorkbenchSelection } from '../context/WorkbenchContext';
 import { useI18n } from '../i18n';
 import StatusBadge from './StatusBadge';
 import { CodeBlock, FormattedText } from './CodeText';
 import InteractiveFlowchartSvg from './InteractiveFlowchartSvg';
-import { useKbPress } from '../hooks/useKbPress';
-
-const DEMO_REPOS = [
-  {
-    label: 'healthconnect-india/payment-gateway-service',
-    url: 'https://github.com/healthconnect-india/payment-gateway-service',
-  },
-  {
-    label: 'whyline-labs/clinical-dicom-pipeline',
-    url: 'https://github.com/whyline-labs/clinical-dicom-pipeline',
-  },
-];
 
 export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber }) {
   const { lang, setLang } = useI18n();
+  const { repoContext, loadGitHubRepo } = useWorkbenchSelection();
+
   const [githubUrl, setGithubUrl] = useState(
-    'https://github.com/healthconnect-india/payment-gateway-service'
+    repoContext?.url || 'https://github.com/HealthConnect/payment-gateway-v1'
   );
   const [flowData, setFlowData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activeStepIdx, setActiveStepIdx] = useState(0);
   const [isWalkthroughPlaying, setIsWalkthroughPlaying] = useState(false);
-  const [voiceAgentStatus, setVoiceAgentStatus] = useState('Idle');
+  const [voiceAgentStatus, setVoiceAgentStatus] = useState('Ready');
   const [viewMode, setViewMode] = useState('steps'); // 'steps' | 'graph'
 
   const audioRef = useRef(null);
@@ -48,10 +37,17 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
 
   const langCode = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
 
+  useEffect(() => {
+    if (repoContext?.url && repoContext.url !== githubUrl) {
+      setGithubUrl(repoContext.url);
+      fetchFlowchartScan(repoContext.url, langCode, false);
+    }
+  }, [repoContext?.url]);
+
   const stopVoiceWalkthrough = () => {
     walkthroughActiveRef.current = false;
     setIsWalkthroughPlaying(false);
-    setVoiceAgentStatus('Idle');
+    setVoiceAgentStatus('Ready');
     if (walkthroughTimerRef.current) {
       clearTimeout(walkthroughTimerRef.current);
       walkthroughTimerRef.current = null;
@@ -71,7 +67,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
   const playProjectSummaryAudio = (projectSummary) => {
     if (!projectSummary) return;
     stopVoiceWalkthrough();
-    setVoiceAgentStatus(`Speaking Project Summary (${langCode} • Gnani Voice)`);
+    setVoiceAgentStatus(`Playing Overview (${langCode})`);
 
     if (projectSummary.audio_url) {
       if (!audioRef.current) {
@@ -101,7 +97,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
   const fetchFlowchartScan = async (targetUrl, targetLangCode, autoPlayWalkthrough = false) => {
     stopVoiceWalkthrough();
     setLoading(true);
-    setVoiceAgentStatus('Scanning Repo');
+    setVoiceAgentStatus('Building Flowchart...');
     try {
       const resp = await fetch('/api/repo/scan-flowchart', {
         method: 'POST',
@@ -122,7 +118,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
         startStepWalkthrough(json.steps, 0);
       }
     } catch {
-      setVoiceAgentStatus('Idle');
+      setVoiceAgentStatus('Ready');
     } finally {
       setLoading(false);
     }
@@ -161,7 +157,6 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
       }
     };
 
-    // Initial fallback timer in case audio fails to load or autoplay is blocked
     walkthroughTimerRef.current = setTimeout(finishOnce, 3500);
 
     if (stepObj.audio_url) {
@@ -179,9 +174,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
       };
       audioRef.current.onended = finishOnce;
       audioRef.current.onerror = finishOnce;
-      audioRef.current.play().catch(() => {
-        // Headless browser autoplay fallback handled by timer
-      });
+      audioRef.current.play().catch(() => {});
     }
   };
 
@@ -211,34 +204,21 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
 
   const steps = flowData?.steps || [];
   const currentStep = steps[activeStepIdx] || steps[0] || null;
-
-  // Keyboard 3D press-effect handlers for action buttons
-  const kbScan = useKbPress(() => fetchFlowchartScan(githubUrl, langCode, true));
-  const kbStop = useKbPress(stopVoiceWalkthrough);
-  const kbPlay = useKbPress(() => startStepWalkthrough(steps, 0));
-  const kbSpeakSummary = useKbPress(() => playProjectSummaryAudio(flowData?.project_summary));
-  const kbSpeakStep = useKbPress(() => playSingleStepAudio(currentStep));
-  const kbNextStep = useKbPress(() => {
-    const nextIdx = (activeStepIdx + 1) % steps.length;
-    setActiveStepIdx(nextIdx);
-    playSingleStepAudio(steps[nextIdx]);
-    if (onSelectStep) onSelectStep(steps[nextIdx]);
-  });
+  const prevStep = activeStepIdx > 0 ? steps[activeStepIdx - 1] : null;
+  const nextStep = activeStepIdx < steps.length - 1 ? steps[activeStepIdx + 1] : null;
 
   return (
-    <article className="card" aria-label="GitHub Repository Deep Scanner and Voice Flowchart">
+    <article className="card" aria-label="GitHub Repository Flowchart and Step-by-Step Guide">
       <div className="card-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <GitBranch size={18} weight="regular" aria-hidden="true" />
             <h2 className="card-title" style={{ margin: 0 }}>
-              GitHub Repository Flowchart Scanner &amp; Step-by-Step Voice Agent
+              How This Repository Works (Step-by-Step Flowchart)
             </h2>
           </div>
           <p className="form-helper" style={{ marginTop: '4px' }}>
-            Deep AST + Git blame scan rendered as an interactive part-wise flowchart with Gnani Vachana{' '}
-            <code className="inline-code">timbre-v2.5</code> &amp;{' '}
-            <code className="inline-code">gemini-3.8-flash</code> voice narration in Telugu, Hindi, and English.
+            See how a request enters the repository, how files connect to each other, and how data moves from start to finish.
           </p>
         </div>
 
@@ -247,7 +227,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
             <span className="status-badge status-good">
               <CheckCircle size={14} weight="fill" aria-hidden="true" />
               <span className="mono-metric">
-                {flowData.scan_latency_ms} ms • {flowData.gnani_language?.toUpperCase()} • Nalini
+                {steps.length} Steps Ready • {langCode}
               </span>
             </span>
           )}
@@ -259,20 +239,21 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
       </div>
 
       <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Row 1: GitHub Repo URL Input + Language Switcher + Scan Action */}
+        {/* Row 1: GitHub Repo URL Input + Scan Action + Voice Walkthrough */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            fetchFlowchartScan(githubUrl, langCode, true);
+            loadGitHubRepo(githubUrl);
+            fetchFlowchartScan(githubUrl, langCode, false);
           }}
-          style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}
+          style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}
         >
           <input
             id="github-repo-url-input"
-            type="url"
+            type="text"
             className="form-input"
-            style={{ flex: 1, minWidth: '260px', fontFamily: 'var(--font-mono)' }}
-            aria-label="GitHub Repository URL to scan"
+            style={{ flex: '1 1 260px', fontFamily: 'var(--font-mono)' }}
+            aria-label="GitHub Repository URL to explain"
             placeholder="https://github.com/owner/repository"
             value={githubUrl}
             onChange={(e) => setGithubUrl(e.target.value)}
@@ -283,10 +264,10 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
             type="submit"
             className="btn btn-primary"
             disabled={loading}
-            {...kbScan}
+            style={{ whiteSpace: 'nowrap' }}
           >
             <ArrowsClockwise size={16} weight="regular" aria-hidden="true" />
-            <span>{loading ? 'Scanning Repo…' : 'Scan GitHub Repo & Explain'}</span>
+            <span>{loading ? 'Building Flowchart...' : 'Load & Explain Repo'}</span>
           </button>
 
           {isWalkthroughPlaying ? (
@@ -295,10 +276,10 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
               type="button"
               className="btn btn-danger"
               onClick={stopVoiceWalkthrough}
-              {...kbStop}
+              style={{ whiteSpace: 'nowrap' }}
             >
               <Pause size={16} weight="regular" aria-hidden="true" />
-              <span>Stop Voice Agent</span>
+              <span>Stop Voice Walkthrough</span>
             </button>
           ) : (
             <button
@@ -307,15 +288,15 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
               className="btn btn-secondary"
               onClick={() => startStepWalkthrough(steps, 0)}
               disabled={!steps.length}
-              {...kbPlay}
+              style={{ whiteSpace: 'nowrap' }}
             >
               <Play size={16} weight="regular" aria-hidden="true" />
-              <span>Play Step-by-Step Voice Walkthrough</span>
+              <span>Play Full Voice Walkthrough</span>
             </button>
           )}
         </form>
 
-        {/* Row 2: Demo GitHub Repo Quick Links + Direct Voice Language Switcher (TE / HI / EN) */}
+        {/* Row 2: Sample GitHub Repo Buttons + Voice Language Switcher */}
         <div
           style={{
             display: 'flex',
@@ -325,14 +306,19 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
             gap: '12px',
           }}
         >
-          <div className="chip-row">
-            {DEMO_REPOS.map((demo) => (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+              Sample repos:
+            </span>
+            {QUICK_GITHUB_REPOS.map((demo) => (
               <button
                 key={demo.url}
                 type="button"
-                className="filter-chip"
+                className="btn btn-secondary"
+                style={{ minHeight: '28px', padding: '0 10px', fontSize: '12px', whiteSpace: 'nowrap' }}
                 onClick={() => {
                   setGithubUrl(demo.url);
+                  loadGitHubRepo(demo.url);
                   fetchFlowchartScan(demo.url, langCode, false);
                 }}
               >
@@ -341,11 +327,11 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
             ))}
           </div>
 
-          <div className="segmented-control" role="group" aria-label="Voice agent language">
+          <div className="segmented-control" role="group" aria-label="Voice explanation language">
             {[
-              { code: 'te', label: 'తెలుగు (Telugu)' },
-              { code: 'hi', label: 'हिंदी (Hindi)' },
-              { code: 'en', label: 'English (EN)' },
+              { code: 'en', label: 'English' },
+              { code: 'hi', label: 'Hindi' },
+              { code: 'te', label: 'Telugu' },
             ].map((item) => (
               <button
                 key={item.code}
@@ -353,6 +339,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                 type="button"
                 className={`segmented-btn ${lang === item.code ? 'active' : ''}`}
                 onClick={() => setLang(item.code)}
+                style={{ whiteSpace: 'nowrap' }}
               >
                 {item.label}
               </button>
@@ -360,15 +347,15 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
           </div>
         </div>
 
-        {/* Beginner Project Report Card (Gemini Brain Summary & Gnani Audio) */}
+        {/* Beginner Project Overview Card */}
         {flowData && (
           <div
             id="beginner-project-report-card"
             style={{
               padding: '16px 20px',
-              borderRadius: 'var(--radius-control)',
-              border: '1px solid var(--hairline-strong)',
-              backgroundColor: 'var(--surface-raised)',
+              borderRadius: '12px',
+              border: '1px solid var(--border-default)',
+              backgroundColor: 'var(--bg-raised)',
               display: 'flex',
               flexDirection: 'column',
               gap: '12px',
@@ -383,50 +370,45 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                 gap: '8px',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Brain size={18} weight="fill" style={{ color: 'var(--accent)' }} aria-hidden="true" />
-                <span className="small-caps" style={{ fontWeight: 600 }}>
-                  Beginner Project Report Card • Gemini API Reasoning
-                </span>
-              </div>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent)' }}>
+                About This Repository (In Simple English)
+              </span>
               <button
                 id="btn-speak-project-summary"
                 type="button"
                 className="btn btn-secondary"
-                style={{ minHeight: '32px', padding: '0 12px' }}
+                style={{ minHeight: '30px', padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                 onClick={() => playProjectSummaryAudio(flowData?.project_summary)}
-                {...kbSpeakSummary}
               >
                 <SpeakerHigh size={14} weight="regular" aria-hidden="true" />
-                <span>Speak Project Summary (Gnani Voice)</span>
+                <span>Listen to Overview</span>
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
               <div>
-                <span className="small-caps" style={{ fontSize: '11px', color: 'var(--ink-muted)' }}>
-                  What This Project Does (In Simple Terms)
-                </span>
-                <p className="body-prose" style={{ margin: '3px 0 0', fontWeight: 500, color: 'var(--ink)' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  What This Repository Does
+                </div>
+                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.55', color: 'var(--text-primary)' }}>
                   <FormattedText
                     text={
                       flowData?.project_summary?.simple_explanation ||
-                      'WhyLine acts as an architectural black box recorder and safety guardrail that scans code repositories to find historical bug fences and prevent repeat outages.'
+                      'This repository processes incoming requests, runs safety checks on the data, and returns a clean response.'
                     }
                   />
                 </p>
               </div>
 
               <div>
-                <span className="small-caps" style={{ fontSize: '11px', color: 'var(--ink-muted)' }}>
-                  How It Works (Real-Life Example)
-                </span>
-                <p className="body-prose" style={{ margin: '3px 0 0', color: 'var(--ink)' }}>
-                  💡{' '}
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Everyday Example
+                </div>
+                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.55', color: 'var(--text-primary)' }}>
                   <FormattedText
                     text={
                       flowData?.project_summary?.real_world_example ||
-                      "Think of Chesterton's fence: before removing an odd wooden fence across a mountain pass, you first discover why the town built it (to stop rockfalls), so you don't rebuild the exact disaster."
+                      'Before removing or changing an important check in the code, you first learn why the original developer added it so you do not bring back an old bug.'
                     }
                   />
                 </p>
@@ -435,37 +417,42 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
           </div>
         )}
 
-        {/* View Mode Toggle: Part-by-Part Cards vs Interactive SVG Graph */}
+        {/* View Mode Toggle: Step Cards vs Visual Diagram */}
         {steps.length > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-            <div className="segmented-control" role="group" aria-label="Flowchart view style">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Click Any Step Below to Hear Its Voice Explanation and See the Code:
+            </span>
+            <div className="segmented-control" role="group" aria-label="Flowchart display mode">
               <button
                 type="button"
                 className={`segmented-btn ${viewMode === 'steps' ? 'active' : ''}`}
                 onClick={() => setViewMode('steps')}
+                style={{ whiteSpace: 'nowrap' }}
               >
-                5-Stage Flowchart
+                Step-by-Step Cards
               </button>
               <button
                 type="button"
                 className={`segmented-btn ${viewMode === 'graph' ? 'active' : ''}`}
                 onClick={() => setViewMode('graph')}
+                style={{ whiteSpace: 'nowrap' }}
               >
                 <Graph size={14} weight="regular" style={{ marginRight: '4px' }} aria-hidden="true" />
-                SVG Graph
+                Visual Flow Diagram
               </button>
             </div>
           </div>
         )}
 
-        {/* Row 3: Interactive Visual Flowchart (Part-by-Part Node Pipeline or SVG Graph) */}
+        {/* Visual SVG Diagram Mode */}
         {steps.length > 0 && viewMode === 'graph' && (
           <div
             style={{
               padding: '20px',
-              borderRadius: 'var(--radius-control)',
-              border: '1px solid var(--hairline)',
-              background: 'var(--surface-raised)',
+              borderRadius: '12px',
+              border: '1px solid var(--border-default)',
+              background: 'var(--bg-raised)',
             }}
           >
             <InteractiveFlowchartSvg
@@ -502,18 +489,19 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
           </div>
         )}
 
+        {/* Connected 5-Step Flow Cards */}
         {steps.length > 0 && viewMode === 'steps' && (
           <div
             role="region"
-            aria-label="Repository execution and spoken fence flowchart"
+            aria-label="Repository request and data flow steps"
             style={{
-              padding: '20px',
-              borderRadius: 'var(--radius-control)',
-              border: '1px solid var(--hairline)',
-              background: 'var(--surface-raised)',
+              padding: '18px',
+              borderRadius: '12px',
+              border: '1px solid var(--border-default)',
+              background: 'var(--bg-raised)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '16px',
+              gap: '14px',
             }}
           >
             <div
@@ -525,27 +513,25 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                 gap: '8px',
               }}
             >
-              <span className="mono-metric" style={{ fontWeight: 500 }}>
-                Repo: {flowData?.repo_slug} • {flowData?.scan_summary?.ast_anomalies_found || 10} Guarded Fences •
-                Part {activeStepIdx + 1} of {steps.length}
+              <span className="mono-metric" style={{ fontWeight: 600, fontSize: '12px' }}>
+                Repository: {flowData?.repo_slug || repoContext?.fullName} • Viewing Step {activeStepIdx + 1} of {steps.length}
               </span>
               <div className="chip-row">
                 <button
                   id="btn-speak-current-step"
                   type="button"
                   className="btn btn-secondary"
-                  style={{ minHeight: '32px', padding: '0 12px' }}
+                  style={{ minHeight: '30px', padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                   onClick={() => playSingleStepAudio(currentStep)}
-                  {...kbSpeakStep}
                 >
                   <SpeakerHigh size={14} weight="regular" aria-hidden="true" />
-                  <span>Speak Part {activeStepIdx + 1}</span>
+                  <span>Play Step {activeStepIdx + 1} Audio</span>
                 </button>
                 <button
                   id="btn-next-flow-step"
                   type="button"
                   className="btn btn-secondary"
-                  style={{ minHeight: '32px', padding: '0 12px' }}
+                  style={{ minHeight: '30px', padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                   onClick={() => {
                     const nextIdx = (activeStepIdx + 1) % steps.length;
                     setActiveStepIdx(nextIdx);
@@ -554,15 +540,13 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                       onSelectStep(steps[nextIdx]);
                     }
                   }}
-                  {...kbNextStep}
                 >
                   <SkipForward size={14} weight="regular" aria-hidden="true" />
-                  <span>Next Part ({((activeStepIdx + 1) % steps.length) + 1}/{steps.length})</span>
+                  <span>Next Step ({((activeStepIdx + 1) % steps.length) + 1}/{steps.length})</span>
                 </button>
               </div>
             </div>
 
-            {/* Connected Flowchart Nodes */}
             <div
               style={{
                 display: 'grid',
@@ -587,29 +571,15 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                         onSelectStep(step);
                       }
                     }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e.currentTarget.setAttribute('data-pressing', '');
-                        stopVoiceWalkthrough();
-                        setActiveStepIdx(idx);
-                        playSingleStepAudio(step);
-                        if (onSelectStep) onSelectStep(step);
-                      }
-                    }}
-                    onKeyUp={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') e.currentTarget.removeAttribute('data-pressing');
-                    }}
-                    onBlur={(e) => e.currentTarget.removeAttribute('data-pressing')}
                     style={{
                       textAlign: 'left',
                       padding: '14px 16px',
-                      borderRadius: 'var(--radius-control)',
+                      borderRadius: '10px',
                       border: isActive
                         ? '2px solid var(--accent)'
-                        : '1px solid var(--hairline-strong)',
-                      background: isActive ? 'var(--canvas)' : 'var(--surface)',
-                      color: 'var(--ink)',
+                        : '1px solid var(--border-default)',
+                      background: isActive ? 'var(--bg-surface)' : 'var(--canvas)',
+                      color: 'var(--text-primary)',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
@@ -626,11 +596,11 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                         gap: '6px',
                       }}
                     >
-                      <span className="mono-metric" style={{ fontWeight: 600 }}>
+                      <span className="mono-metric" style={{ fontWeight: 700, color: 'var(--accent)' }}>
                         Step 0{step.step_number}
                       </span>
-                      <span className="mono-metric" style={{ fontSize: '11px', color: 'var(--ink-muted)' }}>
-                        {isActive ? 'ACTIVE PART' : isCompleted ? 'EXPLAINED' : step.fence_id}
+                      <span className="mono-metric" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                        {isActive ? 'Selected' : isCompleted ? 'Done' : step.phase}
                       </span>
                     </div>
 
@@ -640,16 +610,11 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
 
                     {step.simple_explanation && (
                       <p
-                        className="body-prose"
                         style={{
                           fontSize: '12px',
-                          color: 'var(--ink)',
+                          color: 'var(--text-secondary)',
                           margin: 0,
-                          lineHeight: 1.35,
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
+                          lineHeight: 1.4,
                         }}
                       >
                         {step.simple_explanation}
@@ -660,11 +625,11 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                       className="mono-metric"
                       style={{
                         fontSize: '11px',
-                        color: 'var(--ink-muted)',
+                        color: 'var(--text-secondary)',
                         overflowWrap: 'anywhere',
                       }}
                     >
-                      {step.symbol_name}
+                      File: {step.file_path?.split('/').pop() || step.symbol_name}
                     </div>
 
                     <div
@@ -687,15 +652,15 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
           </div>
         )}
 
-        {/* Row 4: Part-Wise Active Flowchart Step Detail & Synchronized Voice Explanation */}
+        {/* Selected Step Detail & File Connection Breakdown */}
         {currentStep && (
           <div
             id="active-flowchart-part-panel"
             style={{
               padding: '20px 24px',
-              borderRadius: 'var(--radius-card)',
-              border: '1px solid var(--hairline-strong)',
-              background: 'var(--canvas)',
+              borderRadius: '14px',
+              border: '1px solid var(--border-default)',
+              background: 'var(--bg-surface)',
               display: 'flex',
               flexDirection: 'column',
               gap: '16px',
@@ -709,28 +674,64 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                 justifyContent: 'space-between',
                 gap: '12px',
                 paddingBottom: '12px',
-                borderBottom: '1px solid var(--hairline)',
+                borderBottom: '1px solid var(--border-default)',
               }}
             >
               <div>
-                <div className="mono-metric" style={{ color: 'var(--ink-muted)' }}>
-                  {currentStep.phase} • {currentStep.fence_id} ({currentStep.pr_number} /{' '}
-                  {currentStep.incident_id})
+                <div className="mono-metric" style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
+                  Stage {currentStep.step_number} of {steps.length} • {currentStep.phase}
                 </div>
                 <h3 className="card-title" style={{ marginTop: '4px' }}>
-                  Part {currentStep.step_number}: {currentStep.title}
+                  Step {currentStep.step_number}: {currentStep.title}
                 </h3>
               </div>
               <StatusBadge status={currentStep.status} />
             </div>
 
-            {/* Voice Agent Step Narration Box */}
+            {/* File Connections Strip (Incoming -> Current File -> Outgoing) */}
+            <div
+              style={{
+                padding: '12px 16px',
+                borderRadius: '10px',
+                background: 'var(--bg-raised)',
+                border: '1px solid var(--border-default)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '10px',
+                fontSize: '12px',
+              }}
+            >
+              <div>
+                <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Receives data from: </span>
+                <span className="mono-metric">
+                  {prevStep ? prevStep.file_path?.split('/').pop() || prevStep.title : 'User / Client Request'}
+                </span>
+              </div>
+              <ArrowRight size={14} />
+              <div>
+                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Current File: </span>
+                <span className="mono-metric" style={{ fontWeight: 700 }}>
+                  {currentStep.file_path}
+                </span>
+              </div>
+              <ArrowRight size={14} />
+              <div>
+                <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Passes data to: </span>
+                <span className="mono-metric">
+                  {nextStep ? nextStep.file_path?.split('/').pop() || nextStep.title : 'Final Response / Output'}
+                </span>
+              </div>
+            </div>
+
+            {/* Voice Narration Transcript */}
             <div
               style={{
                 padding: '14px 18px',
-                borderRadius: 'var(--radius-control)',
-                border: '1px solid var(--hairline)',
-                background: 'var(--surface)',
+                borderRadius: '10px',
+                border: '1px solid var(--border-default)',
+                background: 'var(--bg-raised)',
               }}
             >
               <div
@@ -739,24 +740,32 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   marginBottom: '6px',
+                  flexWrap: 'wrap',
+                  gap: '8px',
                 }}
               >
-                <span className="mono-metric" style={{ color: 'var(--ink-muted)' }}>
-                  Gnani Vachana Voice Agent ({currentStep.tts_language || langCode} • timbre-v2.5 •{' '}
-                  {currentStep.tts_provider_mode || 'live'})
+                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)' }}>
+                  Spoken Explanation ({currentStep.tts_language || langCode})
                 </span>
-                <span className="mono-metric">{currentStep.audio_url}</span>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ minHeight: '26px', padding: '0 10px', fontSize: '11px' }}
+                  onClick={() => playSingleStepAudio(currentStep)}
+                >
+                  <SpeakerHigh size={13} />
+                  <span>Replay Step Audio</span>
+                </button>
               </div>
               <p
                 id="active-step-spoken-narration"
-                className="body-prose"
-                style={{ fontSize: '16px', color: 'var(--ink)' }}
+                style={{ margin: 0, fontSize: '15px', lineHeight: '1.6', color: 'var(--text-primary)' }}
               >
                 <FormattedText text={currentStep.spoken_narration} />
               </p>
             </div>
 
-            {/* Gemini Brain Simple Explanation & Real-Life Metaphor */}
+            {/* Simple Explanation & Real-World Example */}
             {(currentStep.simple_explanation || currentStep.real_world_example) && (
               <div
                 style={{
@@ -768,22 +777,19 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                 {currentStep.simple_explanation && (
                   <div
                     style={{
-                      padding: '12px 16px',
-                      borderRadius: 'var(--radius-control)',
-                      border: '1px solid var(--hairline)',
-                      background: 'var(--surface)',
+                      padding: '14px 16px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-default)',
+                      background: 'var(--bg-raised)',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '4px',
+                      gap: '6px',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Brain size={15} weight="fill" style={{ color: 'var(--accent)' }} aria-hidden="true" />
-                      <span className="small-caps" style={{ fontWeight: 600 }}>
-                        In Simple Terms (Gemini Brain)
-                      </span>
-                    </div>
-                    <p className="body-prose" style={{ margin: 0, fontSize: '14px', color: 'var(--ink)' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)' }}>
+                      In Simple Words
+                    </span>
+                    <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.5', color: 'var(--text-primary)' }}>
                       <FormattedText text={currentStep.simple_explanation} />
                     </p>
                   </div>
@@ -792,22 +798,19 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                 {currentStep.real_world_example && (
                   <div
                     style={{
-                      padding: '12px 16px',
-                      borderRadius: 'var(--radius-control)',
-                      border: '1px solid var(--hairline)',
-                      background: 'var(--surface)',
+                      padding: '14px 16px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-default)',
+                      background: 'var(--bg-raised)',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '4px',
+                      gap: '6px',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Lightbulb size={15} weight="fill" style={{ color: 'var(--warning)' }} aria-hidden="true" />
-                      <span className="small-caps" style={{ fontWeight: 600 }}>
-                        Real-Life Everyday Analogy
-                      </span>
-                    </div>
-                    <p className="body-prose" style={{ margin: 0, fontSize: '14px', color: 'var(--ink)' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                      Real-Life Comparison
+                    </span>
+                    <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.5', color: 'var(--text-primary)' }}>
                       <FormattedText text={currentStep.real_world_example} />
                     </p>
                   </div>
@@ -815,32 +818,32 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
               </div>
             )}
 
-            {/* Two-Column Part Breakdown: Architectural Flow & Guarded Source Snippet */}
+            {/* Two-Column Breakdown: What Happens & Code Snippet */}
             <div className="two-col-grid">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Code size={16} weight="regular" aria-hidden="true" />
-                  <span style={{ fontWeight: 600 }}>How this Flowchart Part Works</span>
+                  <span style={{ fontWeight: 700, fontSize: '14px' }}>What Happens in This File</span>
                 </div>
-                <p className="body-prose">
+                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.55' }}>
                   <FormattedText text={currentStep.what_happens} />
                 </p>
-                <p className="form-helper" style={{ color: 'var(--ink)' }}>
-                  <strong>Chesterton&apos;s Fence Why:</strong>{' '}
+                <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.5', color: 'var(--text-primary)' }}>
+                  <strong>Why It Is Written This Way:</strong>{' '}
                   <FormattedText text={currentStep.why_guarded} />
                 </p>
-                <p className="form-helper" style={{ color: 'var(--danger)' }}>
-                  <strong>Impact if removed:</strong>{' '}
+                <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.5', color: 'var(--danger)' }}>
+                  <strong>What Breaks If Removed:</strong>{' '}
                   <FormattedText text={currentStep.danger_if_removed} />
                 </p>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div className="mono-metric" style={{ color: 'var(--ink)' }}>
+                <div className="mono-metric" style={{ color: 'var(--text-primary)', fontSize: '12px' }}>
                   {currentStep.file_path} • {currentStep.symbol_name}
                 </div>
                 <CodeBlock
-                  label={`Guarded Token: ${currentStep.matched_token}`}
+                  label={`Key Code Line: ${currentStep.matched_token}`}
                   code={currentStep.code_snippet}
                 />
               </div>

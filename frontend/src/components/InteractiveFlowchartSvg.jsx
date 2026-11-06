@@ -226,7 +226,7 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
                   : 'flowchart-node-text-sub'
               }
             >
-              {active ? '● speaking' : done ? '✓ explained' : n.category}
+              {active ? 'Speaking now' : done ? 'Explained' : n.category}
             </text>
           </g>
         );

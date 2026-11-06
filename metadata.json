@@ -1,0 +1,10 @@
+{
+  "name": "WhyLine Studio",
+  "description": "Engineering Field-Report Studio and Spoken Fence Compiler with Frosted Glassmorphism, 3D Embossed Controls, and Interactive Voice ADR Waveforms.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
