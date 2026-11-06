@@ -21,6 +21,13 @@ export default function WorkbenchEditor({ theme = 'light' }) {
   const decorationsRef = useRef(null);
   const cursorListenerRef = useRef(null);
 
+  // Keep ref up to date to prevent stale closures in event listeners
+  const activeDocRef = useRef(activeDoc);
+  activeDocRef.current = activeDoc;
+
+  const currentLineRef = useRef(line);
+  currentLineRef.current = line;
+
   // Sync editor contents when active file changes
   useEffect(() => {
     setEditorCode(activeDoc.code);
@@ -38,13 +45,15 @@ export default function WorkbenchEditor({ theme = 'light' }) {
 
     applyFenceDecorations(editor, monaco, activeDoc);
 
-    // Track cursor/line selection
+    // Track cursor/line selection without column fighting
     cursorListenerRef.current = editor.onDidChangeCursorPosition((e) => {
       const newLine = e.position.lineNumber;
-      const matchingFence = activeDoc.fences?.find(
-        (f) => newLine >= f.startLine && newLine <= f.endLine
-      );
-      selectLine(newLine, matchingFence ? matchingFence.id : null);
+      if (newLine !== currentLineRef.current) {
+        const matchingFence = activeDocRef.current.fences?.find(
+          (f) => newLine >= f.startLine && newLine <= f.endLine
+        );
+        selectLine(newLine, matchingFence ? matchingFence.id : null);
+      }
     });
 
     // Reveal requested initial line
@@ -84,11 +93,13 @@ export default function WorkbenchEditor({ theme = 'light' }) {
     }
   }, [activeDoc]);
 
-  // Reveal line whenever line prop changes
+  // Reveal line only when line changes externally and preserve active column
   useEffect(() => {
-    if (editorRef.current && line) {
+    if (!editorRef.current || !line) return;
+    const currentPos = editorRef.current.getPosition();
+    if (currentPos && currentPos.lineNumber !== line) {
       editorRef.current.revealLineInCenter(line);
-      editorRef.current.setPosition({ lineNumber: line, column: 1 });
+      editorRef.current.setPosition({ lineNumber: line, column: currentPos.column || 1 });
     }
   }, [line]);
 

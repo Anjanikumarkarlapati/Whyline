@@ -8,7 +8,7 @@ const LANGS = [
   ['te-IN', 'తెలుగు'],
 ];
 
-export default function GitFlowchartPage({ onSelectNode, focusNodeId }) {
+export default function GitFlowchartPage({ onSelectNode, focusNodeId, hideHeader = false }) {
   const { lang: globalLang, setLang: setGlobalLang, t } = useI18n();
   const [target, setTarget] = useState('.');
   const [lang, setLang] = useState(
@@ -103,12 +103,14 @@ export default function GitFlowchartPage({ onSelectNode, focusNodeId }) {
 
   return (
     <div className="page-stack">
-      <section className="context-header">
-        <div>
-          <p className="context-meta">{t('gitFlowchartContext')}</p>
-          <h1 className="page-title">{t('gitFlowchartTitle')}</h1>
-        </div>
-      </section>
+      {!hideHeader && (
+        <section className="context-header">
+          <div>
+            <p className="context-meta">{t('gitFlowchartContext')}</p>
+            <h1 className="page-title">{t('gitFlowchartTitle')}</h1>
+          </div>
+        </section>
+      )}
 
       <section className="card card-padded" style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
         <input

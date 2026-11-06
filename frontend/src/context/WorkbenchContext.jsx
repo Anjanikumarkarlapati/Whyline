@@ -15,9 +15,10 @@ export function WorkbenchProvider({ children }) {
 
   const defaultFile = DEMO_FILES[0].path;
   const initialFile = urlFile || defaultFile;
-  const initialLine = urlLine ? parseInt(urlLine, 10) : DEMO_FILES[0].defaultLine;
+  const parsedLine = urlLine ? parseInt(urlLine, 10) : NaN;
+  const initialLine = Number.isInteger(parsedLine) && parsedLine > 0 ? parsedLine : DEMO_FILES[0].defaultLine;
   const initialPanel = urlPanel && ['fence', 'why', 'ask'].includes(urlPanel) ? urlPanel : 'fence';
-  const initialFence = urlFence || DEMO_FILES[0].fenceId;
+  const initialFence = urlFence !== null ? urlFence : DEMO_FILES[0].fenceId;
 
   const [file, setFileState] = useState(initialFile);
   const [line, setLineState] = useState(initialLine);
@@ -31,14 +32,14 @@ export function WorkbenchProvider({ children }) {
     }
     if (urlLine) {
       const parsed = parseInt(urlLine, 10);
-      if (!isNaN(parsed) && parsed !== line) {
+      if (Number.isInteger(parsed) && parsed > 0 && parsed !== line) {
         setLineState(parsed);
       }
     }
     if (urlPanel && ['fence', 'why', 'ask'].includes(urlPanel) && urlPanel !== panel) {
       setPanelState(urlPanel);
     }
-    if (urlFence !== undefined && urlFence !== fenceId) {
+    if (urlFence !== null && urlFence !== fenceId) {
       setFenceIdState(urlFence);
     }
   }, [urlFile, urlLine, urlPanel, urlFence]);
@@ -68,6 +69,7 @@ export function WorkbenchProvider({ children }) {
   };
 
   const selectLine = (newLine, newFenceId = null) => {
+    if (!Number.isInteger(newLine) || newLine <= 0) return;
     setLineState(newLine);
     setFenceIdState(newFenceId);
     updateParams(file, newLine, panel, newFenceId);
@@ -81,7 +83,7 @@ export function WorkbenchProvider({ children }) {
 
   const selectLocation = ({ file: f, line: l, fenceId: id, panel: p }) => {
     const nextF = f || file;
-    const nextL = l !== undefined ? l : line;
+    const nextL = Number.isInteger(l) && l > 0 ? l : line;
     const nextP = p || panel;
     const nextId = id !== undefined ? id : fenceId;
 

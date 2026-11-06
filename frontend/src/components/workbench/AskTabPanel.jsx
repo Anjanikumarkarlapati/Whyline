@@ -68,6 +68,16 @@ export default function AskTabPanel() {
     else setSelectedVoice('Pranav');
   }, [lang]);
 
+  // Clean up audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
   // Handle Voice Recording timer
   useEffect(() => {
     if (isRecording) {

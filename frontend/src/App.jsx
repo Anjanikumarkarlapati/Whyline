@@ -46,7 +46,7 @@ export default function App() {
   return (
     <I18nProvider>
       {/* ARIA live region for route change announcements */}
-      <div id="route-announcer" className="route-announcer" aria-live="polite" />
+      <div id="route-announcer" className="route-announcer" aria-live="polite" aria-atomic="true" />
       <BrowserRouter>
         <ErrorBoundary>
           <RouteAnnouncer />

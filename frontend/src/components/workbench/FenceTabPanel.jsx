@@ -48,6 +48,12 @@ export default function FenceTabPanel() {
 
   useEffect(() => {
     loadFences();
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
   }, []);
 
   const showToast = (msg) => {

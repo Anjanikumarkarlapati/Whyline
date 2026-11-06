@@ -75,13 +75,17 @@ export default function MemoryPage() {
       audioUrl: '/api/audio/FENCE-001.wav',
     });
     setDrawerOpen(true);
+    const updated = new URLSearchParams(searchParams);
+    updated.set('incident', inc.id);
+    setSearchParams(updated, { replace: true });
   };
 
   const handleSelectNode = (node) => {
+    const nodeId = node.id || 'NODE-001';
     setSelectedItem({
       type: 'node',
-      id: node.id || 'NODE-001',
-      title: node.label || `Node ${node.id}`,
+      id: nodeId,
+      title: node.label || `Node ${nodeId}`,
       service: 'HealthConnect Payment Gateway v1',
       linkedFenceId: 'FENCE-001',
       file: 'src/main/java/com/healthconnect/payments/GatewayRouter.java',
@@ -91,6 +95,17 @@ export default function MemoryPage() {
       audioUrl: '/api/audio/FENCE-001.wav',
     });
     setDrawerOpen(true);
+    const updated = new URLSearchParams(searchParams);
+    updated.set('focus', nodeId);
+    setSearchParams(updated, { replace: true });
+  };
+
+  const handleCloseDrawer = () => {
+    setDrawerOpen(false);
+    const updated = new URLSearchParams(searchParams);
+    updated.delete('incident');
+    updated.delete('focus');
+    setSearchParams(updated, { replace: true });
   };
 
   return (
@@ -150,18 +165,23 @@ export default function MemoryPage() {
 
       <div className="memory-view-content" style={{ minHeight: '500px' }}>
         {currentView === 'graph' ? (
-          <GitFlowchartPage onSelectNode={handleSelectNode} focusNodeId={focusParam} />
+          <GitFlowchartPage
+            onSelectNode={handleSelectNode}
+            focusNodeId={focusParam}
+            hideHeader={true}
+          />
         ) : (
           <IncidentsAndMemoryPage
             onSelectIncident={handleSelectIncident}
             highlightIncidentId={incidentParam}
+            hideHeader={true}
           />
         )}
       </div>
 
       <MemoryDetailDrawer
         isOpen={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={handleCloseDrawer}
         item={selectedItem}
       />
     </div>

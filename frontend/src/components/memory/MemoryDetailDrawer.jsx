@@ -21,21 +21,66 @@ import AudioWaveform from '../AudioWaveform';
 export default function MemoryDetailDrawer({ isOpen, onClose, item }) {
   const navigate = useNavigate();
   const closeBtnRef = useRef(null);
+  const drawerRef = useRef(null);
   const audioRef = useRef(null);
+  const prevTriggerRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(9);
 
+  // Focus trap & focus restoration
   useEffect(() => {
     if (isOpen) {
+      prevTriggerRef.current = document.activeElement;
       closeBtnRef.current?.focus();
+
       const handleKeyDown = (e) => {
-        if (e.key === 'Escape') onClose();
+        if (e.key === 'Escape') {
+          onClose();
+        }
+        if (e.key === 'Tab') {
+          const focusable = drawerRef.current?.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+          if (!focusable || focusable.length === 0) return;
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
       };
+
       window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+        if (prevTriggerRef.current && typeof prevTriggerRef.current.focus === 'function') {
+          prevTriggerRef.current.focus();
+        }
+      };
     }
   }, [isOpen, onClose]);
+
+  // Cleanup audio on unmount or drawer close
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen && audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen || !item) return null;
 
@@ -94,6 +139,7 @@ export default function MemoryDetailDrawer({ isOpen, onClose, item }) {
       }}
     >
       <aside
+        ref={drawerRef}
         className="memory-slide-drawer"
         style={{
           width: '100%',

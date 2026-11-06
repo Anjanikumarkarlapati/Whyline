@@ -33,6 +33,14 @@ export default function Layout({ theme, onToggleTheme }) {
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        const activeEl = document.activeElement;
+        if (
+          activeEl?.closest('.monaco-editor') ||
+          activeEl?.tagName === 'INPUT' ||
+          activeEl?.tagName === 'TEXTAREA'
+        ) {
+          return;
+        }
         e.preventDefault();
         navigate('/studio?panel=ask');
         setTimeout(() => {
@@ -191,7 +199,7 @@ export default function Layout({ theme, onToggleTheme }) {
             </button>
 
             {menuOpen && (
-              <div className="account-popover glass-navbar" role="menu" aria-label="Account and studio settings">
+              <div className="account-popover glass-navbar" role="region" aria-label="Account and studio settings">
                 <div style={{ paddingBottom: '12px', borderBottom: '1px solid var(--hairline)' }}>
                   <div style={{ fontWeight: 600, fontSize: '14px' }}>Anjani Kumar</div>
                   <div className="mono-metric" style={{ color: 'var(--ink-muted)', fontSize: '12px' }}>

@@ -23,7 +23,6 @@ import {
 import { useI18n } from '../i18n';
 import StatusBadge from '../components/StatusBadge';
 import { FormattedText } from '../components/CodeText';
-import AskRepoDrawer from '../components/AskRepoDrawer';
 import RepoFlowchartExplorer from '../components/RepoFlowchartExplorer';
 import ScorecardWidget from '../components/ScorecardWidget';
 
@@ -33,9 +32,7 @@ export default function BriefingDashboard({ theme = 'light' }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toastMsg, setToastMsg] = useState(null);
-  const [askDrawerOpen, setAskDrawerOpen] = useState(false);
-  const [selectedFenceId, setSelectedFenceId] = useState('FENCE-001');
-  const [drawerAutoPlay, setDrawerAutoPlay] = useState(false);
+
   const [selectedAnomalyType, setSelectedAnomalyType] = useState('ALL');
 
   const loadBriefing = async () => {
@@ -530,12 +527,7 @@ export default function BriefingDashboard({ theme = 'light' }) {
         </div>
       </article>
 
-      <AskRepoDrawer
-        isOpen={askDrawerOpen}
-        onClose={() => setAskDrawerOpen(false)}
-        initialFenceId={selectedFenceId}
-        autoPlayAudio={drawerAutoPlay}
-      />
+
     </div>
   );
 }

@@ -11,7 +11,7 @@ import { useI18n } from '../i18n';
 import StatusBadge from '../components/StatusBadge';
 import { FormattedText } from '../components/CodeText';
 
-export default function IncidentsAndMemoryPage({ onSelectIncident, highlightIncidentId }) {
+export default function IncidentsAndMemoryPage({ onSelectIncident, highlightIncidentId, hideHeader = false }) {
   const { lang, t } = useI18n();
   const [incidents, setIncidents] = useState([]);
   const [checkpoints, setCheckpoints] = useState([]);
@@ -118,12 +118,14 @@ export default function IncidentsAndMemoryPage({ onSelectIncident, highlightInci
 
   return (
     <div className="page-stack">
-      <section className="context-header">
-        <div>
-          <p className="context-meta">{t('incidentsContext')}</p>
-          <h1 className="page-title">{t('incidentsTitle')}</h1>
-        </div>
-      </section>
+      {!hideHeader && (
+        <section className="context-header">
+          <div>
+            <p className="context-meta">{t('incidentsContext')}</p>
+            <h1 className="page-title">{t('incidentsTitle')}</h1>
+          </div>
+        </section>
+      )}
 
       {/* Two-Column Layout: Incident Form Left, Branch Checkpoints Right */}
       <section className="two-col-grid">
@@ -199,8 +201,17 @@ export default function IncidentsAndMemoryPage({ onSelectIncident, highlightInci
                     return (
                     <div
                       key={`${inc.id}-${inc.resolved_at}`}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Open details for incident ${inc.id}: ${inc.title}`}
                       className={`attention-row ${isHighlighted ? 'highlighted-row' : ''}`}
                       onClick={() => onSelectIncident && onSelectIncident(inc)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onSelectIncident && onSelectIncident(inc);
+                        }
+                      }}
                       style={{
                         flexDirection: 'column',
                         alignItems: 'flex-start',

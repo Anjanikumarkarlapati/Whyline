@@ -3,7 +3,6 @@ import {
   ChatCircleText,
   ClockCounterClockwise,
   Code,
-  DotsThreeVertical,
   ShieldCheck,
 } from '@phosphor-icons/react';
 import { WorkbenchProvider, useWorkbenchSelection } from '../context/WorkbenchContext';
@@ -40,10 +39,10 @@ function WorkbenchContent({ theme }) {
   useEffect(() => {
     if (!isDragging) return;
 
-    const handleMouseMove = (e) => {
+    const handleMove = (clientX) => {
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
-      const rawRatio = (e.clientX - rect.left) / rect.width;
+      const rawRatio = (clientX - rect.left) / rect.width;
       // Clamp between 45% (0.45) editor and 70% (0.70) editor (min panel 30%)
       const clamped = Math.min(Math.max(rawRatio, 0.45), 0.7);
       setSplitRatio(clamped);
@@ -54,15 +53,24 @@ function WorkbenchContent({ theme }) {
       }
     };
 
-    const handleMouseUp = () => {
-      setIsDragging(false);
+    const handleMouseMove = (e) => handleMove(e.clientX);
+    const handleTouchMove = (e) => {
+      if (e.touches && e.touches[0]) {
+        handleMove(e.touches[0].clientX);
+      }
     };
+
+    const handleMouseUp = () => setIsDragging(false);
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('touchend', handleMouseUp);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleMouseUp);
     };
   }, [isDragging]);
 
@@ -110,11 +118,31 @@ function WorkbenchContent({ theme }) {
         <div
           className="workbench-divider-handle"
           role="separator"
+          tabIndex={0}
+          aria-orientation="vertical"
           aria-valuenow={Math.round(splitRatio * 100)}
           aria-valuemin={45}
           aria-valuemax={70}
-          aria-label="Resize editor and context panel"
+          aria-label="Resize editor and context panel (Use Left/Right arrow keys)"
           onMouseDown={() => setIsDragging(true)}
+          onTouchStart={() => setIsDragging(true)}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowLeft') {
+              e.preventDefault();
+              const next = Math.max(splitRatio - 0.05, 0.45);
+              setSplitRatio(next);
+              try {
+                localStorage.setItem('whyline-split-ratio', String(next));
+              } catch {}
+            } else if (e.key === 'ArrowRight') {
+              e.preventDefault();
+              const next = Math.min(splitRatio + 0.05, 0.7);
+              setSplitRatio(next);
+              try {
+                localStorage.setItem('whyline-split-ratio', String(next));
+              } catch {}
+            }
+          }}
           style={{
             width: '16px',
             cursor: 'col-resize',
@@ -170,8 +198,10 @@ function WorkbenchContent({ theme }) {
             }}
           >
             <button
+              id="tab-fence"
               type="button"
               role="tab"
+              aria-controls="tabpanel-fence"
               aria-selected={panel === 'fence'}
               className={`btn ${panel === 'fence' ? 'btn-primary' : 'btn-ghost'}`}
               style={{
@@ -189,8 +219,10 @@ function WorkbenchContent({ theme }) {
             </button>
 
             <button
+              id="tab-why"
               type="button"
               role="tab"
+              aria-controls="tabpanel-why"
               aria-selected={panel === 'why'}
               className={`btn ${panel === 'why' ? 'btn-primary' : 'btn-ghost'}`}
               style={{
@@ -208,8 +240,10 @@ function WorkbenchContent({ theme }) {
             </button>
 
             <button
+              id="tab-ask"
               type="button"
               role="tab"
+              aria-controls="tabpanel-ask"
               aria-selected={panel === 'ask'}
               className={`btn ${panel === 'ask' ? 'btn-primary' : 'btn-ghost'}`}
               style={{
@@ -228,7 +262,13 @@ function WorkbenchContent({ theme }) {
           </div>
 
           {/* Active Tab Panel Content */}
-          <div className="workbench-tab-content" style={{ flex: 1, minHeight: '400px' }}>
+          <div
+            role="tabpanel"
+            id={`tabpanel-${panel}`}
+            aria-labelledby={`tab-${panel}`}
+            className="workbench-tab-content"
+            style={{ flex: 1, minHeight: '400px' }}
+          >
             {panel === 'fence' && <FenceTabPanel />}
             {panel === 'why' && <WhyTabPanel />}
             {panel === 'ask' && <AskTabPanel />}

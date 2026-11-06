@@ -8,29 +8,32 @@ import { useLocation } from 'react-router-dom';
  */
 export default function RouteAnnouncer() {
   const location = useLocation();
+
   useEffect(() => {
     const announcer = document.getElementById('route-announcer');
     if (!announcer) return;
 
     const pathNames = {
-      '/': 'Briefing Dashboard',
+      '/': 'Home Briefing Dashboard',
+      '/studio': 'Code Workbench and Spoken Fences',
+      '/memory': 'Memory and Provenance',
+      '/settings': 'Studio Settings and Model Configuration',
       '/fences': 'Spoken Fences Ledger',
-      '/studio': 'Protected Source and Fence Note',
       '/incidents': 'Incidents and Dead End Memory',
       '/copilot': 'Voice Co Pilot',
       '/git': 'Repository Flowchart',
-      '/settings': 'Studio and Model Settings',
       '/dev/typography': 'Dev Typography Verification',
-      '/login': 'Login',
+      '/login': 'Login and Session',
     };
 
     const message = pathNames[location.pathname] || 'Page changed';
     announcer.textContent = '';
-    // Reset then set so screen readers re-announce even on same path
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       announcer.textContent = message;
     }, 100);
-  }, [location]);
+
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
 
   return null;
 }

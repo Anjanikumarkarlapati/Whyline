@@ -6,6 +6,7 @@ import {
   GitBranch,
   GitCommit,
   GitPullRequest,
+  Info,
   ShieldCheck,
   ShieldWarning,
   WarningOctagon,
@@ -21,6 +22,7 @@ export default function WhyTabPanel() {
   const isGatewayRouter = fileName.includes('GatewayRouter');
   const isDicom = fileName.includes('DicomShaderPipeline');
   const isJwt = fileName.includes('JwtClockSkewFilter');
+  const hasFences = isGatewayRouter || isDicom || isJwt || (activeDoc.fences && activeDoc.fences.length > 0);
 
   // Context metadata derived from file and line
   const commitSha = isGatewayRouter ? '17c074a' : isDicom ? '8f2d1e0' : '3b9c4f1';
@@ -87,193 +89,231 @@ export default function WhyTabPanel() {
         )}
       </div>
 
-      <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-        WhyLine reconstructs the unwritten why for this line from git blame, pull request reviews, and resolved incident post-mortems:
-      </p>
-
-      {/* Vertical Timeline */}
-      <div
-        className="why-timeline"
-        style={{
-          position: 'relative',
-          paddingLeft: '28px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '20px',
-        }}
-      >
-        {/* Timeline connector vertical hairline */}
+      {!hasFences ? (
         <div
+          className="empty-why-state card"
           style={{
-            position: 'absolute',
-            left: '11px',
-            top: '8px',
-            bottom: '8px',
-            width: '2px',
-            background: 'var(--border-default)',
+            padding: '32px 20px',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '12px',
+            background: 'var(--bg-surface)',
           }}
-          aria-hidden="true"
-        />
-
-        {/* Node 1: Git Commit */}
-        <div className="timeline-item" style={{ position: 'relative' }}>
+        >
           <div
             style={{
-              position: 'absolute',
-              left: '-28px',
-              top: '2px',
-              width: '24px',
-              height: '24px',
+              width: '44px',
+              height: '44px',
               borderRadius: '50%',
-              background: 'var(--bg-surface)',
-              border: '2px solid var(--accent)',
+              background: 'var(--bg-raised)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--accent)',
+              color: 'var(--text-secondary)',
             }}
           >
-            <GitCommit size={14} weight="bold" />
+            <Info size={22} weight="regular" />
           </div>
-
-          <div className="card" style={{ padding: '14px', background: 'var(--bg-surface)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <span className="mono-metric" style={{ fontWeight: 700, color: 'var(--accent)', fontSize: '12px' }}>
-                Commit {commitSha}
-              </span>
-              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>@anjani • 2026-11-01</span>
-            </div>
-            <p style={{ margin: '0 0 10px 0', fontSize: '13px', lineHeight: '1.4' }}>
-              "{commitMsg}"
-            </p>
-            <Link
-              to={`/memory?view=graph&focus=${fenceId || 'FENCE-001'}`}
-              className="btn btn-secondary"
-              style={{ minHeight: '30px', padding: '0 10px', fontSize: '12px' }}
-            >
-              <GitBranch size={14} />
-              <span>Inspect in Git Graph</span>
-              <ArrowRight size={12} />
-            </Link>
-          </div>
+          <h3 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 600 }}>
+            Standard Repository Configuration
+          </h3>
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '36ch' }}>
+            No historical incident post-mortems or spoken fences are registered for {fileName}. Configuration files can be modified directly.
+          </p>
         </div>
+      ) : (
+        <>
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+            WhyLine reconstructs the unwritten why for this line from git blame, pull request reviews, and resolved incident post-mortems:
+          </p>
 
-        {/* Node 2: Pull Request */}
-        <div className="timeline-item" style={{ position: 'relative' }}>
+          {/* Vertical Timeline */}
           <div
+            className="why-timeline"
             style={{
-              position: 'absolute',
-              left: '-28px',
-              top: '2px',
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              background: 'var(--bg-surface)',
-              border: '2px solid var(--accent)',
+              position: 'relative',
+              paddingLeft: '28px',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--accent)',
+              flexDirection: 'column',
+              gap: '20px',
             }}
           >
-            <GitPullRequest size={14} weight="bold" />
-          </div>
+            {/* Timeline connector vertical hairline */}
+            <div
+              style={{
+                position: 'absolute',
+                left: '11px',
+                top: '8px',
+                bottom: '8px',
+                width: '2px',
+                background: 'var(--border-default)',
+              }}
+              aria-hidden="true"
+            />
 
-          <div className="card" style={{ padding: '14px', background: 'var(--bg-surface)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <span className="mono-metric" style={{ fontWeight: 700, color: 'var(--accent)', fontSize: '12px' }}>
-                {prNum}
-              </span>
-              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Approved by @srinivas-principal</span>
+            {/* Node 1: Git Commit */}
+            <div className="timeline-item" style={{ position: 'relative' }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '-28px',
+                  top: '2px',
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: 'var(--bg-surface)',
+                  border: '2px solid var(--accent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--accent)',
+                }}
+              >
+                <GitCommit size={14} weight="bold" />
+              </div>
+
+              <div className="card" style={{ padding: '14px', background: 'var(--bg-surface)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span className="mono-metric" style={{ fontWeight: 700, color: 'var(--accent)', fontSize: '12px' }}>
+                    Commit {commitSha}
+                  </span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>@anjani • 2026-11-01</span>
+                </div>
+                <p style={{ margin: '0 0 10px 0', fontSize: '13px', lineHeight: '1.4' }}>
+                  "{commitMsg}"
+                </p>
+                <Link
+                  to={`/memory?view=graph&focus=${fenceId || 'FENCE-001'}`}
+                  className="btn btn-secondary"
+                  style={{ minHeight: '30px', padding: '0 10px', fontSize: '12px' }}
+                >
+                  <GitBranch size={14} />
+                  <span>Inspect in Git Graph</span>
+                  <ArrowRight size={12} />
+                </Link>
+              </div>
             </div>
-            <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.4' }}>
-              Requires <code>retryCount &gt;= 5</code> and <code>timeoutMs &gt;= 4500</code> until upstream gateway version transitions to v2.
-            </p>
-          </div>
-        </div>
 
-        {/* Node 3: Linked Incident */}
-        <div className="timeline-item" style={{ position: 'relative' }}>
-          <div
-            style={{
-              position: 'absolute',
-              left: '-28px',
-              top: '2px',
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              background: 'var(--bg-surface)',
-              border: '2px solid var(--status-critical, #B3261E)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--status-critical, #B3261E)',
-            }}
-          >
-            <WarningOctagon size={14} weight="fill" />
-          </div>
+            {/* Node 2: Pull Request */}
+            <div className="timeline-item" style={{ position: 'relative' }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '-28px',
+                  top: '2px',
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: 'var(--bg-surface)',
+                  border: '2px solid var(--accent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--accent)',
+                }}
+              >
+                <GitPullRequest size={14} weight="bold" />
+              </div>
 
-          <div className="card" style={{ padding: '14px', background: 'var(--bg-surface)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <span className="mono-metric" style={{ fontWeight: 700, color: 'var(--status-critical, #B3261E)', fontSize: '12px' }}>
-                {incidentId}
-              </span>
-              <span className="status-badge status-good" style={{ fontSize: '10px', padding: '1px 6px' }}>
-                Resolved &amp; Fenced
-              </span>
+              <div className="card" style={{ padding: '14px', background: 'var(--bg-surface)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span className="mono-metric" style={{ fontWeight: 700, color: 'var(--accent)', fontSize: '12px' }}>
+                    {prNum}
+                  </span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Approved by @srinivas-principal</span>
+                </div>
+                <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.4' }}>
+                  Requires <code>retryCount &gt;= 5</code> and <code>timeoutMs &gt;= 4500</code> until upstream gateway version transitions to v2.
+                </p>
+              </div>
             </div>
-            <p style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: 600 }}>
-              {incidentTitle}
-            </p>
-            <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-              Root cause: Upstream edge proxy TCP resets without backoff under midnight batch load.
-            </p>
-            <Link
-              to={`/memory?view=ledger&incident=${incidentId}`}
-              className="btn btn-secondary"
-              style={{ minHeight: '30px', padding: '0 10px', fontSize: '12px' }}
-            >
-              <ClockCounterClockwise size={14} />
-              <span>Open Incident Post-Mortem</span>
-              <ArrowRight size={12} />
-            </Link>
-          </div>
-        </div>
 
-        {/* Node 4: AST Guardrail Flag */}
-        <div className="timeline-item" style={{ position: 'relative' }}>
-          <div
-            style={{
-              position: 'absolute',
-              left: '-28px',
-              top: '2px',
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              background: 'var(--bg-surface)',
-              border: '2px solid var(--accent)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--accent)',
-            }}
-          >
-            <ShieldCheck size={14} weight="fill" />
-          </div>
+            {/* Node 3: Linked Incident */}
+            <div className="timeline-item" style={{ position: 'relative' }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '-28px',
+                  top: '2px',
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: 'var(--bg-surface)',
+                  border: '2px solid var(--status-critical, #B3261E)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--status-critical, #B3261E)',
+                }}
+              >
+                <WarningOctagon size={14} weight="fill" />
+              </div>
 
-          <div className="card" style={{ padding: '14px', background: 'var(--bg-surface)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <span className="mono-metric" style={{ fontWeight: 600, fontSize: '12px', color: 'var(--accent)' }}>
-                {anomalyType}
-              </span>
-              <span className="mono-metric" style={{ fontSize: '11px' }}>Normalized Hash 9b73fc25</span>
+              <div className="card" style={{ padding: '14px', background: 'var(--bg-surface)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span className="mono-metric" style={{ fontWeight: 700, color: 'var(--status-critical, #B3261E)', fontSize: '12px' }}>
+                    {incidentId}
+                  </span>
+                  <span className="status-badge status-good" style={{ fontSize: '10px', padding: '1px 6px' }}>
+                    Resolved &amp; Fenced
+                  </span>
+                </div>
+                <p style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: 600 }}>
+                  {incidentTitle}
+                </p>
+                <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                  Root cause: Upstream edge proxy TCP resets without backoff under midnight batch load.
+                </p>
+                <Link
+                  to={`/memory?view=ledger&incident=${incidentId}`}
+                  className="btn btn-secondary"
+                  style={{ minHeight: '30px', padding: '0 10px', fontSize: '12px' }}
+                >
+                  <ClockCounterClockwise size={14} />
+                  <span>Open Incident Post-Mortem</span>
+                  <ArrowRight size={12} />
+                </Link>
+              </div>
             </div>
-            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-              Matched Token: <code>{anomalyToken}</code>
-            </p>
+
+            {/* Node 4: AST Guardrail Flag */}
+            <div className="timeline-item" style={{ position: 'relative' }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '-28px',
+                  top: '2px',
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: 'var(--bg-surface)',
+                  border: '2px solid var(--accent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--accent)',
+                }}
+              >
+                <ShieldCheck size={14} weight="fill" />
+              </div>
+
+              <div className="card" style={{ padding: '14px', background: 'var(--bg-surface)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span className="mono-metric" style={{ fontWeight: 600, fontSize: '12px', color: 'var(--accent)' }}>
+                    {anomalyType}
+                  </span>
+                  <span className="mono-metric" style={{ fontSize: '11px' }}>Normalized Hash 9b73fc25</span>
+                </div>
+                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  Matched Token: <code>{anomalyToken}</code>
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
