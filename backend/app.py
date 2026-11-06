@@ -391,6 +391,8 @@ class GnaniTtsRequest(BaseModel):
     text: str
     language: str = "en-IN"
     voice: str = "Nalini"
+    sample_rate: int = 16000
+    enhance: bool = True
 
 
 @app.post("/api/copilot/ask")
@@ -510,7 +512,7 @@ class TTSRequest(BaseModel):
 _TTS_RATE_LIMIT: dict[str, list[float]] = {}
 _TTS_RATE_LOCK = threading.Lock()
 ALLOWED_LANGUAGES = {"telugu", "hindi", "english", "te-in", "hi-in", "en-in", "te", "hi", "en"}
-ALLOWED_VOICES = {"Nalini", "Bhavna", "Pranav"}
+ALLOWED_VOICES = {"Nalini", "Bhavna", "Pranav", "Shivani", "Avinash", "Kalpana", "Lakshmi", "Shubham"}
 
 
 def _check_tts_rate_limit(client_ip: str, limit: int = 60, window_secs: float = 60.0) -> None:
@@ -594,6 +596,8 @@ async def synthesize_tts_endpoint(req: TTSRequest, request: Request) -> dict:
         file_stem=stem,
         language=norm_lang,
         voice=clean_voice,
+        sample_rate=req.sample_rate,
+        enhance=req.enhance,
     )
 
     return {

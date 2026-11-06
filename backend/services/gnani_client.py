@@ -152,6 +152,27 @@ PHONETIC_AST_MAP: list[tuple[str, str]] = [
 ]
 
 
+def clarify_spoken_text(text: str) -> str:
+    """Preprocesses technical identifiers, camelCase terms, and abbreviations
+    into clear, natural phonemes for high-fidelity speech synthesis."""
+    if not text:
+        return ""
+    s = text
+    s = re.sub(r"(\w+)\.java\b", r"\1 dot java", s, flags=re.IGNORECASE)
+    s = re.sub(r"(\w+)\.yml\b", r"\1 dot yaml", s, flags=re.IGNORECASE)
+    s = re.sub(r"(\w+)\.yaml\b", r"\1 dot yaml", s, flags=re.IGNORECASE)
+    s = re.sub(r"(\w+)\.py\b", r"\1 dot py", s, flags=re.IGNORECASE)
+    s = re.sub(r"(\w+)\.ts\b", r"\1 dot typescript", s, flags=re.IGNORECASE)
+    s = re.sub(r"(\w+)\.json\b", r"\1 dot json", s, flags=re.IGNORECASE)
+    s = re.sub(r"\bv(\d+)\b", r"version \1", s, flags=re.IGNORECASE)
+    s = re.sub(r"(\d+)\s*ms\b", r"\1 milliseconds", s, flags=re.IGNORECASE)
+    s = re.sub(r"\btimeoutMs\b", "timeout milliseconds", s, flags=re.IGNORECASE)
+    s = re.sub(r"\bretryCount\b", "retry count", s, flags=re.IGNORECASE)
+    s = re.sub(r"\bGatewayRouter\b", "Gateway Router", s, flags=re.IGNORECASE)
+    s = re.sub(r"([a-z])([A-Z])", r"\1 \2", s)
+    return s
+
+
 class GnaniSpeechClient:
     """Enterprise client for Gnani Vachana Speech Stack: Prisma v2.5 STT & Timbre v2.5 TTS."""
 
@@ -417,21 +438,80 @@ class GnaniSpeechClient:
         }
 
     @staticmethod
-    def _wrap_pcm_as_wav(raw_pcm: bytes, sample_rate: int = 16000) -> bytes:
+    def _wrap_pcm_as_wav(raw_pcm: bytes, sample_rate: int = 16000, enhance: bool = True) -> bytes:
+        """Wraps raw 16-bit linear PCM into a WAV container with anti-aliasing filtering,
+        rumble elimination (75Hz high-pass), 3.5kHz vocal presence EQ, and peak normalization."""
         even_len = len(raw_pcm) - (len(raw_pcm) % 2)
         pcm_data = raw_pcm[:even_len]
-        # Gnani Vachana timbre-v2.5 raw stream outputs 48kHz 16-bit mono PCM; downsample 3:1 to 16kHz
-        if sample_rate == 16000 and even_len >= 4800:
-            total_samples = even_len // 2
-            samples_48k = struct.unpack(f"<{total_samples}h", pcm_data)
-            samples_16k = samples_48k[::3]
-            pcm_data = struct.pack(f"<{len(samples_16k)}h", *samples_16k)
+        if even_len < 480:
+            buf = io.BytesIO()
+            with wave.open(buf, "wb") as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(sample_rate)
+                wf.writeframes(pcm_data)
+            return buf.getvalue()
+
+        try:
+            import numpy as np
+            from scipy import signal
+
+            samples_int16 = np.frombuffer(pcm_data, dtype=np.int16)
+            samples = samples_int16.astype(np.float32) / 32768.0
+
+            if enhance:
+                # 1. 75Hz high-pass filter: eliminates DC bias, sub-bass mud, and mic rumble
+                b_hp, a_hp = signal.butter(2, 75.0 / 24000.0, btype="highpass")
+                samples = signal.lfilter(b_hp, a_hp, samples)
+
+                # 2. Vocal presence EQ: +2.5dB at 3500Hz (Q=1.2) for speech intelligibility & consonant clarity
+                w0 = 2.0 * np.pi * 3500.0 / 48000.0
+                alpha = np.sin(w0) / (2.0 * 1.2)
+                A = 10.0 ** (2.5 / 40.0)
+                b0 = 1.0 + alpha * A
+                b1 = -2.0 * np.cos(w0)
+                b2 = 1.0 - alpha * A
+                a0 = 1.0 + alpha / A
+                a1 = -2.0 * np.cos(w0)
+                a2 = 1.0 - alpha / A
+                samples = signal.lfilter(
+                    np.array([b0 / a0, b1 / a0, b2 / a0], dtype=np.float32),
+                    np.array([1.0, a1 / a0, a2 / a0], dtype=np.float32),
+                    samples,
+                )
+
+                # 3. Peak normalization to -1.0 dBFS (0.90 max amplitude) with soft limiting
+                peak = float(np.max(np.abs(samples)))
+                if peak > 0.02:
+                    samples = (samples / peak) * 0.90
+
+            # 4. Polyphase anti-aliasing resampling (prevents metallic foldover distortion)
+            if sample_rate == 16000 and len(samples) >= 480:
+                samples = signal.resample_poly(samples, 1, 3)
+            elif sample_rate == 24000 and len(samples) >= 480:
+                samples = signal.resample_poly(samples, 1, 2)
+
+            out_int16 = (np.clip(samples, -1.0, 1.0) * 32767.0).astype(np.int16)
+            pcm_out = out_int16.tobytes()
+        except Exception:
+            if sample_rate == 16000 and even_len >= 4800:
+                total_samples = even_len // 2
+                samples_48k = struct.unpack(f"<{total_samples}h", pcm_data)
+                # 3-tap moving average anti-aliasing before 3:1 decimation
+                samples_16k = [
+                    (samples_48k[i] + samples_48k[min(i + 1, total_samples - 1)] + samples_48k[min(i + 2, total_samples - 1)]) // 3
+                    for i in range(0, total_samples, 3)
+                ]
+                pcm_out = struct.pack(f"<{len(samples_16k)}h", *samples_16k)
+            else:
+                pcm_out = pcm_data
+
         buf = io.BytesIO()
         with wave.open(buf, "wb") as wf:
             wf.setnchannels(1)
             wf.setsampwidth(2)
             wf.setframerate(sample_rate)
-            wf.writeframes(pcm_data)
+            wf.writeframes(pcm_out)
         return buf.getvalue()
 
     def synthesize(
@@ -443,31 +523,55 @@ class GnaniSpeechClient:
         language: str = "en-IN",
         speaker_embedding: str | None = None,
         force_live: bool = False,
+        sample_rate: int = 16000,
+        model: str | None = None,
+        enhance: bool = True,
     ) -> dict:
-        """Synthesizes 16kHz linear_pcm WAV speech via Timbre v2.5 (model="timbre-v2.5", voices "Nalini"/"Bhavna"/"Pranav"),
-        or falls back to local pleasant 16kHz WAV generation when offline.
+        """Synthesizes high-fidelity speech via Gnani Timbre (timbre-v3.0 or timbre-v2.5)
+        with DSP voice enhancement (anti-aliasing, rumble elimination, presence EQ, normalization).
+        Falls back to local pleasant WAV generation when offline.
         """
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         wav_path = output_dir / f"{file_stem}.wav"
         gnani_lang = normalize_gnani_language(language)
-        clean_text = (text or "WhyLine Spoken Fence audio cue.").strip()[:420]
-        v2_voices = {"Nalini", "Bhavna", "Pranav"}
-        active_voice = voice if voice in v2_voices else "Nalini"
-        cache_key = hashlib.sha256(f"{active_voice}:{gnani_lang}:{clean_text}".encode("utf-8")).hexdigest()[:20]
+
+        v3_voices = {"Shivani", "Avinash", "Kalpana", "Lakshmi", "Shubham", "Prakash", "Devansh"}
+        v2_voices = {"Nalini", "Bhavna", "Pranav", "Yashvi", "Urmila", "Jwala", "Chitra", "Ambuja", "Deepak", "Roop"}
+
+        # Auto-select model based on voice characteristics if not explicitly forced
+        if model:
+            active_model = model
+        elif voice in v3_voices:
+            active_model = "timbre-v3.0"
+        else:
+            active_model = "timbre-v2.5"
+
+        if voice in v3_voices or voice in v2_voices:
+            active_voice = voice
+        else:
+            active_voice = "Shivani" if active_model == "timbre-v3.0" else "Nalini"
+
+        raw_input_text = (text or "WhyLine Spoken Fence audio cue.").strip()[:420]
+        # Phonetic pronunciation enhancement for code identifiers and technical tokens
+        clean_text = clarify_spoken_text(raw_input_text) if enhance else raw_input_text
+
+        cache_key = hashlib.sha256(
+            f"{active_model}:{active_voice}:{gnani_lang}:{clean_text}:{sample_rate}:{enhance}".encode("utf-8")
+        ).hexdigest()[:20]
 
         cached_bytes = _cache_get(cache_key)
-
         if cached_bytes is not None:
             _safe_write_wav(wav_path, cached_bytes)
             return {
-                "model": "timbre-v2.5",
+                "model": active_model,
                 "voice": active_voice,
-                "sample_rate": 16000,
-                "provider_mode": "gnani-timbre-v2.5-live-cached",
+                "sample_rate": sample_rate,
+                "provider_mode": f"gnani-{active_model}-live-cached",
                 "language": language,
                 "gnani_language": gnani_lang,
                 "spoken_text": text,
+                "clarity_enhanced": enhance,
                 "wav_path": wav_path.as_posix(),
                 "audio_url": f"/api/audio/{wav_path.name}",
             }
@@ -477,15 +581,15 @@ class GnaniSpeechClient:
             and "test_live" not in os.getenv("PYTEST_CURRENT_TEST", "")
         )
         use_live = bool(self.api_key) and (force_live or not in_pytest)
-        provider_mode = "gnani-timbre-v2.5-live" if use_live else "gnani-timbre-v2.5-sandbox"
+        provider_mode = f"gnani-{active_model}-live" if use_live else f"gnani-{active_model}-sandbox"
 
         if use_live:
             payload_dict: dict = {
-                "model": "timbre-v2.5",
+                "model": active_model,
                 "voice": active_voice,
                 "text": clean_text,
                 "language": gnani_lang,
-                "sample_rate": 16000,
+                "sample_rate": sample_rate,
                 "format": "wav",
             }
             if speaker_embedding:
@@ -533,45 +637,52 @@ class GnaniSpeechClient:
                     content_type = resp.headers.get("Content-Type", "")
                     if raw_bytes.startswith(b"RIFF"):
                         wav_bytes = raw_bytes
-                    elif "application/octet-stream" in content_type or (len(raw_bytes) > 64 and not raw_bytes.startswith(b"{") and not raw_bytes.startswith(b"<")):
-                        wav_bytes = self._wrap_pcm_as_wav(raw_bytes, sample_rate=16000)
+                    elif "application/octet-stream" in content_type or (
+                        len(raw_bytes) > 64 and not raw_bytes.startswith(b"{") and not raw_bytes.startswith(b"<")
+                    ):
+                        wav_bytes = self._wrap_pcm_as_wav(raw_bytes, sample_rate=sample_rate, enhance=enhance)
                     elif raw_bytes.startswith(b"{"):
                         try:
                             data = json.loads(raw_bytes.decode("utf-8"))
                             audio_b64 = data.get("audio_base64", "")
                             if audio_b64:
                                 decoded = base64.b64decode(audio_b64)
-                                wav_bytes = decoded if decoded.startswith(b"RIFF") else self._wrap_pcm_as_wav(decoded, 16000)
+                                wav_bytes = (
+                                    decoded
+                                    if decoded.startswith(b"RIFF")
+                                    else self._wrap_pcm_as_wav(decoded, sample_rate=sample_rate, enhance=enhance)
+                                )
                             else:
                                 raise ValueError("No audio_base64 in response")
                         except Exception:
-                            self.generate_local_wav(wav_path, text, sample_rate=16000)
+                            self.generate_local_wav(wav_path, text, sample_rate=sample_rate)
                             wav_bytes = wav_path.read_bytes()
-                            provider_mode = "gnani-timbre-v2.5-fallback"
+                            provider_mode = f"gnani-{active_model}-fallback"
                     else:
-                        self.generate_local_wav(wav_path, text, sample_rate=16000)
+                        self.generate_local_wav(wav_path, text, sample_rate=sample_rate)
                         wav_bytes = wav_path.read_bytes()
-                        provider_mode = "gnani-timbre-v2.5-fallback"
+                        provider_mode = f"gnani-{active_model}-fallback"
 
                     _safe_write_wav(wav_path, wav_bytes)
                     _cache_put(cache_key, wav_bytes)
                 else:
-                    provider_mode = "gnani-timbre-v2.5-fallback"
-                    self.generate_local_wav(wav_path, text, sample_rate=16000)
+                    provider_mode = f"gnani-{active_model}-fallback"
+                    self.generate_local_wav(wav_path, text, sample_rate=sample_rate)
             except Exception:
-                provider_mode = "gnani-timbre-v2.5-fallback"
-                self.generate_local_wav(wav_path, text, sample_rate=16000)
+                provider_mode = f"gnani-{active_model}-fallback"
+                self.generate_local_wav(wav_path, text, sample_rate=sample_rate)
         else:
-            self.generate_local_wav(wav_path, text, sample_rate=16000)
+            self.generate_local_wav(wav_path, text, sample_rate=sample_rate)
 
         return {
-            "model": "timbre-v2.5",
+            "model": active_model,
             "voice": active_voice,
-            "sample_rate": 16000,
+            "sample_rate": sample_rate,
             "provider_mode": provider_mode,
             "language": language,
             "gnani_language": gnani_lang,
             "spoken_text": text,
+            "clarity_enhanced": enhance,
             "wav_path": wav_path.as_posix(),
             "audio_url": f"/api/audio/{wav_path.name}",
         }

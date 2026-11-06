@@ -12,6 +12,7 @@ from backend.services.gnani_client import (
     GNANI_TTS_REST_URL,
     PHONETIC_AST_MAP,
     GnaniSpeechClient,
+    clarify_spoken_text,
 )
 
 _DEFAULT_CLIENT = GnaniSpeechClient()
@@ -51,6 +52,9 @@ def synthesize_timbre_audio(
     language: str = "te-IN",
     speaker_embedding: str | None = None,
     voice: str = "Nalini",
+    sample_rate: int = 16000,
+    model: str | None = None,
+    enhance: bool = True,
 ) -> dict:
     """Synthesizes 16kHz WAV speech via Gnani Timbre v2.5 TTS (`timbre-v2.5`),
     or generates a local 16kHz WAV file when offline so playback never fails.
@@ -62,6 +66,9 @@ def synthesize_timbre_audio(
         voice=voice,
         language=language,
         speaker_embedding=speaker_embedding,
+        sample_rate=sample_rate,
+        model=model,
+        enhance=enhance,
     )
 
 
@@ -75,4 +82,5 @@ __all__ = [
     "transcribe_voice_confirmation",
     "synthesize_timbre_audio",
     "_generate_chime_wav",
+    "clarify_spoken_text",
 ]
