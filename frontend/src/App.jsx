@@ -2,15 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { I18nProvider } from './i18n';
 import Layout from './components/Layout';
-import LoginPage from './pages/LoginPage';
 import BriefingDashboard from './pages/BriefingDashboard';
-import SpokenFencesPage from './pages/SpokenFencesPage';
-import IncidentsAndMemoryPage from './pages/IncidentsAndMemoryPage';
-import VoiceCoPilotPage from './pages/VoiceCoPilotPage';
-import GitFlowchartPage from './pages/GitFlowchartPage';
+import WorkbenchPage from './pages/WorkbenchPage';
+import MemoryPage from './pages/MemoryPage';
 import SettingsPage from './pages/SettingsPage';
 import TypographyPage from './pages/TypographyPage';
-import MonacoCodeStudio from './components/MonacoCodeStudio';
+import LegacyRedirect from './components/LegacyRedirect';
 import ErrorBoundary from './components/ErrorBoundary';
 import RouteAnnouncer from './components/RouteAnnouncer';
 
@@ -54,29 +51,25 @@ export default function App() {
         <ErrorBoundary>
           <RouteAnnouncer />
           <Routes>
-            <Route path="/login" element={<LoginPage theme={theme} onToggleTheme={toggleTheme} />} />
             <Route element={<Layout theme={theme} onToggleTheme={toggleTheme} />}>
+              {/* Target 4-Page Information Architecture */}
               <Route path="/" element={<BriefingDashboard theme={theme} />} />
-              <Route path="/fences" element={<SpokenFencesPage />} />
-              <Route
-                path="/studio"
-                element={
-                  <div className="page-stack">
-                    <section className="context-header">
-                      <div>
-                        <p className="context-meta">Code Studio • HealthConnect</p>
-                        <h1 className="page-title">Protected Source &amp; Fence Note</h1>
-                      </div>
-                    </section>
-                    <MonacoCodeStudio theme={theme} />
-                  </div>
-                }
-              />
-              <Route path="/incidents" element={<IncidentsAndMemoryPage />} />
-              <Route path="/copilot" element={<VoiceCoPilotPage />} />
-              <Route path="/git" element={<GitFlowchartPage />} />
+              <Route path="/studio" element={<WorkbenchPage theme={theme} />} />
+              <Route path="/memory" element={<MemoryPage />} />
               <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/dev/typography" element={<TypographyPage />} />
+
+              {/* Legacy Redirects (Preserve query params and inject target defaults) */}
+              <Route path="/fences" element={<LegacyRedirect to="/studio" defaultParams={{ panel: 'fence' }} />} />
+              <Route path="/copilot" element={<LegacyRedirect to="/studio" defaultParams={{ panel: 'ask' }} />} />
+              <Route path="/git" element={<LegacyRedirect to="/memory" defaultParams={{ view: 'graph' }} />} />
+              <Route path="/incidents" element={<LegacyRedirect to="/memory" defaultParams={{ view: 'ledger' }} />} />
+              <Route path="/login" element={<LegacyRedirect to="/settings" />} />
+
+              {/* Dev-only Route (Typography showcase) */}
+              {import.meta.env.DEV && <Route path="/dev/typography" element={<TypographyPage />} />}
+
+              {/* Catch-all fallback */}
+              <Route path="*" element={<LegacyRedirect to="/" />} />
             </Route>
           </Routes>
         </ErrorBoundary>

@@ -5,8 +5,10 @@ import {
   ChatCircleText,
   CheckCircle,
   Code,
+  ClockCounterClockwise,
   FileText,
   GearSix,
+  House,
   Moon,
   ShieldCheck,
   Sun,
@@ -84,20 +86,16 @@ export default function Footer({ theme, onToggleTheme, onOpenAskDrawer }) {
             </span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               <NavLink to="/" className="btn btn-secondary" style={{ minHeight: '34px', padding: '0 12px', fontSize: '12px' }}>
-                <FileText size={14} />
-                <span>{t('navBriefing')}</span>
-              </NavLink>
-              <NavLink to="/fences" className="btn btn-secondary" style={{ minHeight: '34px', padding: '0 12px', fontSize: '12px' }}>
-                <ShieldCheck size={14} />
-                <span>{t('navFences')}</span>
+                <House size={14} />
+                <span>{t('navHome')}</span>
               </NavLink>
               <NavLink to="/studio" className="btn btn-secondary" style={{ minHeight: '34px', padding: '0 12px', fontSize: '12px' }}>
                 <Code size={14} />
-                <span>{t('navStudio')}</span>
+                <span>{t('navWorkbench')}</span>
               </NavLink>
-              <NavLink to="/incidents" className="btn btn-secondary" style={{ minHeight: '34px', padding: '0 12px', fontSize: '12px' }}>
-                <WarningDiamond size={14} />
-                <span>{t('navIncidents')}</span>
+              <NavLink to="/memory" className="btn btn-secondary" style={{ minHeight: '34px', padding: '0 12px', fontSize: '12px' }}>
+                <ClockCounterClockwise size={14} />
+                <span>{t('navMemory')}</span>
               </NavLink>
               <NavLink to="/settings" className="btn btn-secondary" style={{ minHeight: '34px', padding: '0 12px', fontSize: '12px' }}>
                 <GearSix size={14} />
