@@ -8,7 +8,7 @@ const LANGS = [
   ['te-IN', 'తెలుగు'],
 ];
 
-export default function GitFlowchartPage() {
+export default function GitFlowchartPage({ onSelectNode, focusNodeId }) {
   const { lang: globalLang, setLang: setGlobalLang, t } = useI18n();
   const [target, setTarget] = useState('.');
   const [lang, setLang] = useState(
@@ -26,6 +26,10 @@ export default function GitFlowchartPage() {
     const mapped = globalLang === 'hi' ? 'hi-IN' : globalLang === 'te' ? 'te-IN' : 'en-IN';
     setLang(mapped);
   }, [globalLang]);
+
+  useEffect(() => {
+    scan();
+  }, []);
 
   const handleLanguageChange = (newLangCode) => {
     setLang(newLangCode);
@@ -143,11 +147,15 @@ export default function GitFlowchartPage() {
           </p>
           <InteractiveFlowchartSvg
             graph={data.flowchart_graph}
-            activeId={step?.node_id}
+            activeId={step?.node_id || focusNodeId}
             doneIds={done}
             onSelect={(id) => {
               stop();
               playFrom(nodeIdx(id));
+              if (onSelectNode) {
+                const node = data?.flowchart_graph?.nodes?.find((n) => n.id === id);
+                onSelectNode(node || { id });
+              }
             }}
           />
         </section>

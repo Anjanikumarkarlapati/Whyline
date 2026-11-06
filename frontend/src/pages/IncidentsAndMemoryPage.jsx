@@ -11,7 +11,7 @@ import { useI18n } from '../i18n';
 import StatusBadge from '../components/StatusBadge';
 import { FormattedText } from '../components/CodeText';
 
-export default function IncidentsAndMemoryPage() {
+export default function IncidentsAndMemoryPage({ onSelectIncident, highlightIncidentId }) {
   const { lang, t } = useI18n();
   const [incidents, setIncidents] = useState([]);
   const [checkpoints, setCheckpoints] = useState([]);
@@ -194,11 +194,22 @@ export default function IncidentsAndMemoryPage() {
                 <p className="form-helper">No incident webhooks recorded yet.</p>
               ) : (
                 <div className="attention-list">
-                  {incidents.map((inc) => (
+                  {incidents.map((inc) => {
+                    const isHighlighted = highlightIncidentId && (inc.id === highlightIncidentId || inc.linked_fence_id === highlightIncidentId);
+                    return (
                     <div
                       key={`${inc.id}-${inc.resolved_at}`}
-                      className="attention-row"
-                      style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}
+                      className={`attention-row ${isHighlighted ? 'highlighted-row' : ''}`}
+                      onClick={() => onSelectIncident && onSelectIncident(inc)}
+                      style={{
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        gap: '6px',
+                        cursor: onSelectIncident ? 'pointer' : 'default',
+                        border: isHighlighted ? '2px solid var(--accent)' : '1px solid var(--border-default)',
+                        background: isHighlighted ? 'var(--accent-wash)' : 'var(--bg-surface)',
+                        transition: 'all 150ms ease',
+                      }}
                     >
                       <div
                         style={{
@@ -218,7 +229,8 @@ export default function IncidentsAndMemoryPage() {
                         "<FormattedText text={inc.voice_postmortem} />"
                       </p>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
