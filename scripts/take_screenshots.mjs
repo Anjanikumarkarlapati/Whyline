@@ -2,9 +2,9 @@ import { execFileSync } from 'child_process';
 import { copyFileSync, mkdirSync } from 'fs';
 import { resolve } from 'path';
 
-const CHROME_PATH = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const ARTIFACT_DIR = 'C:\\Users\\anjan\\.gemini\\antigravity\\brain\\c1d9c1db-043a-4936-90b1-30d78341e944';
+const CHROME_PATH = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const SCREENSHOT_DIR = resolve('screenshots');
+const ARTIFACT_DIR = process.env.ARTIFACT_DIR || SCREENSHOT_DIR;
 
 mkdirSync(SCREENSHOT_DIR, { recursive: true });
 mkdirSync(ARTIFACT_DIR, { recursive: true });

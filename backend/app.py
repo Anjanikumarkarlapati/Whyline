@@ -466,7 +466,13 @@ async def gnani_stt_endpoint(req: GnaniSttRequest) -> dict:
 async def gnani_tts_endpoint(req: GnaniTtsRequest, request: Request) -> dict:
     """Dedicated Gnani Timbre TTS endpoint for real-time speech synthesis in en-IN, te-IN, or hi-IN."""
     return await synthesize_tts_endpoint(
-        TTSRequest(text=req.text, language=req.language, voice=req.voice),
+        TTSRequest(
+            text=req.text,
+            language=req.language,
+            voice=req.voice,
+            sample_rate=req.sample_rate,
+            enhance=req.enhance,
+        ),
         request=request,
     )
 
@@ -507,6 +513,8 @@ class TTSRequest(BaseModel):
     text: str
     language: str = "en-IN"
     voice: str = "Nalini"
+    sample_rate: int = 16000
+    enhance: bool = True
 
 
 _TTS_RATE_LIMIT: dict[str, list[float]] = {}
@@ -581,13 +589,13 @@ async def synthesize_tts_endpoint(req: TTSRequest, request: Request) -> dict:
     if clean_voice not in ALLOWED_VOICES:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported voice '{req.voice}'. Allowed: Nalini, Bhavna, Pranav",
+            detail=f"Unsupported voice '{req.voice}'. Allowed: " + ", ".join(sorted(ALLOWED_VOICES)),
         )
 
     cleanup_audio_cache(store.audio_dir, max_files=150, ttl_seconds=86400)
 
     norm_lang = normalize_gnani_language(req.language)
-    opaque_id = hashlib.sha256(f"{clean_voice}:{norm_lang}:{clean_text}".encode("utf-8")).hexdigest()[:16]
+    opaque_id = hashlib.sha256(f"{clean_voice}:{norm_lang}:{clean_text}:{req.sample_rate}:{req.enhance}".encode("utf-8")).hexdigest()[:16]
     stem = f"tts_{opaque_id}"
 
     tts_meta = synthesize_timbre_audio(
@@ -606,7 +614,8 @@ async def synthesize_tts_endpoint(req: TTSRequest, request: Request) -> dict:
         "provider_mode": tts_meta.get("provider_mode", "unknown"),
         "language": req.language,
         "voice": clean_voice,
-        "sample_rate": 16000,
+        "sample_rate": tts_meta.get("sample_rate", req.sample_rate),
+        "clarity_enhanced": req.enhance,
     }
 
 
