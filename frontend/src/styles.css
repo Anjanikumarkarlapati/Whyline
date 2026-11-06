@@ -1447,3 +1447,38 @@ img.brand-mark {
   outline-offset: 2px;
   border-radius: 12px;
 }
+
+/* --- Consolidated Workbench (60/40 Split & Mobile Stack) --- */
+.workbench-page-stack {
+  overflow-x: clip;
+}
+
+@media (max-width: 1023px) {
+  .workbench-split-grid {
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  .workbench-editor-col {
+    flex: none !important;
+    width: 100% !important;
+    min-height: 40vh !important;
+    max-height: 48vh !important;
+  }
+
+  .workbench-divider-handle {
+    display: none !important;
+  }
+
+  .workbench-context-col {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+  }
+
+  .workbench-context-col .segmented-control {
+    position: sticky;
+    top: 68px;
+    z-index: 20;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+}
