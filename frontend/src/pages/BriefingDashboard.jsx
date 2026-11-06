@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowsClockwise,
   Check,
+  Code,
   Microphone,
   Play,
   ShieldWarning,
@@ -35,6 +36,7 @@ export default function BriefingDashboard({ theme = 'light' }) {
   const [askDrawerOpen, setAskDrawerOpen] = useState(false);
   const [selectedFenceId, setSelectedFenceId] = useState('FENCE-001');
   const [drawerAutoPlay, setDrawerAutoPlay] = useState(false);
+  const [selectedAnomalyType, setSelectedAnomalyType] = useState('ALL');
 
   const loadBriefing = async () => {
     setLoading(true);
@@ -177,10 +179,27 @@ export default function BriefingDashboard({ theme = 'light' }) {
           </p>
         </div>
 
-        <button type="button" className="btn btn-secondary" onClick={handleScanRepo} disabled={loading}>
-          <ArrowsClockwise size={16} weight="regular" aria-hidden="true" />
-          <span>{t('btnScanRepo')}</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => navigate('/studio')}
+            style={{ minHeight: '38px', padding: '0 16px' }}
+          >
+            <Code size={16} weight="regular" aria-hidden="true" />
+            <span>Open Workbench</span>
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleScanRepo}
+            disabled={loading}
+            style={{ minHeight: '38px', padding: '0 14px' }}
+          >
+            <ArrowsClockwise size={16} weight="regular" aria-hidden="true" />
+            <span>{t('btnScanRepo')}</span>
+          </button>
+        </div>
       </section>
 
       {/* Toast Confirmation Banner */}
@@ -218,7 +237,15 @@ export default function BriefingDashboard({ theme = 'light' }) {
             </p>
           </div>
         </div>
-        <button type="button" className="btn btn-primary" onClick={() => navigate('/fences')}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() =>
+            navigate(
+              '/studio?file=src/main/java/com/healthconnect/payments/GatewayRouter.java&line=23&panel=fence&fence=FENCE-001'
+            )
+          }
+        >
           <Microphone size={16} weight="regular" aria-hidden="true" />
           <span>{t('btnReviewFence')}</span>
         </button>
@@ -264,12 +291,36 @@ export default function BriefingDashboard({ theme = 'light' }) {
       {/* Primary Operational Split: Needs Attention List (Left) + Compact 90s Demo Stepper (Right) */}
       <section className="operational-split">
         <article className="card">
-          <div className="card-header">
-            <div>
-              <h2 className="card-title">Needs attention</h2>
-              <p className="form-helper">Fences awaiting 10-second voice confirmation or historical review</p>
+          <div className="card-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <div>
+                <h2 className="card-title">Needs attention</h2>
+                <p className="form-helper">Fences awaiting 10-second voice confirmation or historical review</p>
+              </div>
+              <span className="mono-metric">{attentionFences.length} items</span>
             </div>
-            <span className="mono-metric">{attentionFences.length} items</span>
+
+            {/* Anomaly Type Filter Chips */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {['ALL', 'MAGIC_LITERAL_CONTROL_FLOW', 'EXPLICIT_THREAD_HALT', 'VALIDATION_BYPASS', 'SWALLOWED_EXCEPTION'].map((atype) => (
+                <button
+                  key={atype}
+                  type="button"
+                  className={`btn ${selectedAnomalyType === atype ? 'btn-primary' : 'btn-ghost'}`}
+                  style={{
+                    minHeight: '26px',
+                    padding: '0 10px',
+                    fontSize: '11px',
+                    fontFamily: 'DM Mono, monospace',
+                    borderRadius: '999px',
+                    border: '1px solid var(--border-default)',
+                  }}
+                  onClick={() => setSelectedAnomalyType(atype)}
+                >
+                  {atype === 'ALL' ? 'All (10)' : atype}
+                </button>
+              ))}
+            </div>
           </div>
 
           {loading ? (
@@ -283,7 +334,9 @@ export default function BriefingDashboard({ theme = 'light' }) {
             </div>
           ) : (
             <ul className="attention-list">
-              {attentionFences.map((fence) => (
+              {attentionFences
+                .filter((f) => selectedAnomalyType === 'ALL' || f.anomaly_type === selectedAnomalyType)
+                .map((fence) => (
                 <li key={fence.id} className="attention-item">
                   <div className="attention-item-flex">
                     <div className="attention-item-meta">
@@ -306,9 +359,14 @@ export default function BriefingDashboard({ theme = 'light' }) {
                   <button
                     type="button"
                     className="btn btn-secondary"
-                    onClick={() => navigate(`/fences?id=${fence.id}`)}
+                    onClick={() => {
+                      const filePath = fence.file_path || 'src/main/java/com/healthconnect/payments/GatewayRouter.java';
+                      const startLine = fence.start_line || 23;
+                      const fenceParam = fence.id ? `&fence=${encodeURIComponent(fence.id)}` : '';
+                      navigate(`/studio?file=${encodeURIComponent(filePath)}&line=${startLine}&panel=fence${fenceParam}`);
+                    }}
                   >
-                    <span>Inspect</span>
+                    <span>Open in Workbench</span>
                   </button>
                 </li>
               ))}

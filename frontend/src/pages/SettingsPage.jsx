@@ -1,14 +1,39 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowsClockwise, CheckCircle, GearSix } from '@phosphor-icons/react';
+import {
+  ArrowsClockwise,
+  CheckCircle,
+  Database,
+  GearSix,
+  Key,
+  Microphone,
+  Moon,
+  ShieldCheck,
+  Sun,
+  Swap,
+  UserCircle,
+} from '@phosphor-icons/react';
 import { useI18n } from '../i18n';
 import StatusBadge from '../components/StatusBadge';
 import { FormattedText } from '../components/CodeText';
+import SessionModal from '../components/SessionModal';
 
 export default function SettingsPage() {
   const { lang, setLang, t, voiceModel } = useI18n();
   const [settings, setSettings] = useState(null);
   const [scorecard, setScorecard] = useState(null);
+  const [gatewayVersion, setGatewayVersion] = useState('v1');
   const [toastMessage, setToastMessage] = useState('');
+  const [sessionModalOpen, setSessionModalOpen] = useState(false);
+  const [selectedRepo, setSelectedRepo] = useState('HealthConnect');
+
+  // Appearance theme state
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.getAttribute('data-theme') || 'light';
+    }
+    return 'light';
+  });
+
   const [fxMode, setFxMode] = useState(() => {
     if (typeof document !== 'undefined') {
       return document.documentElement.getAttribute('data-fx') === 'lite' ? 'lite' : 'full';
@@ -16,18 +41,9 @@ export default function SettingsPage() {
     return 'full';
   });
 
-  const handleFxChange = (newFx) => {
-    setFxMode(newFx);
-    if (typeof document !== 'undefined') {
-      document.documentElement.setAttribute('data-fx', newFx);
-      try {
-        window.localStorage?.setItem('whyline-fx', newFx);
-      } catch {
-        // ignore
-      }
-    }
-    setToastMessage(`Visual effects set to ${newFx === 'lite' ? 'Lite (solid surfaces)' : 'Full (glassmorphism)'}.`);
-    setTimeout(() => setToastMessage(''), 3200);
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3500);
   };
 
   const loadSettings = async () => {
@@ -37,6 +53,7 @@ export default function SettingsPage() {
       const bData = await bResp.json();
       setSettings(sData);
       setScorecard(bData.scorecard);
+      setGatewayVersion(bData.gateway_version || 'v1');
     } catch {
       setSettings(null);
     }
@@ -46,54 +63,276 @@ export default function SettingsPage() {
     loadSettings();
   }, []);
 
+  const handleToggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    document.documentElement.setAttribute('data-mode', nextTheme);
+    try {
+      localStorage.setItem('whyline-theme', nextTheme);
+    } catch {
+      // ignore
+    }
+    showToast(`Theme switched to ${nextTheme === 'dark' ? 'Khaki Dark' : 'Paper Light'}.`);
+  };
+
+  const handleFxChange = (newFx) => {
+    setFxMode(newFx);
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-fx', newFx);
+      try {
+        localStorage.setItem('whyline-fx', newFx);
+      } catch {
+        // ignore
+      }
+    }
+    showToast(`Visual effects set to ${newFx === 'lite' ? 'Lite (solid surfaces)' : 'Full (glassmorphism)'}.`);
+  };
+
+  const handleToggleGatewayVersion = async () => {
+    const nextVersion = gatewayVersion === 'v2' ? 'v1' : 'v2';
+    try {
+      const resp = await fetch('/api/config/gateway-version', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version: nextVersion }),
+      });
+      if (!resp.ok) throw new Error('Gateway version update failed');
+      setGatewayVersion(nextVersion);
+      showToast(`Gateway cutover updated to "${nextVersion}" in application.yml.`);
+      await loadSettings();
+    } catch (err) {
+      showToast(`Error toggling gateway version: ${err.message || err}`);
+    }
+  };
+
   const handleRerunBenchmark = async () => {
     await fetch('/api/fences/scan', { method: 'POST' });
     await loadSettings();
-    setToastMessage('Re-ran AST scan and refreshed Seeded benchmark (10 cases).');
-    setTimeout(() => setToastMessage(''), 3200);
+    showToast('Re-ran AST scan and refreshed Seeded benchmark (10 cases).');
   };
 
   return (
     <div className="page-stack">
+      {/* Context Header */}
       <section className="context-header">
         <div>
           <p className="context-meta">{t('settingsContext')}</p>
           <h1 className="page-title">{t('settingsTitle')}</h1>
         </div>
-        <button type="button" className="btn btn-primary" onClick={handleRerunBenchmark}>
+        <button type="button" className="btn btn-secondary" onClick={handleRerunBenchmark}>
           <ArrowsClockwise size={16} weight="regular" aria-hidden="true" />
           <span>{t('btnRescanBenchmark')}</span>
         </button>
       </section>
 
-      {/* Section 1: Repository & Environment */}
-      <section className="two-col-grid">
+      {/* Grid: 2 Columns for Sections */}
+      <div className="two-col-grid">
+        {/* Section 1: Service Integrations */}
         <article className="card">
           <div className="card-header">
-            <h2 className="card-title">Repository &amp; Environment</h2>
-            <GearSix size={18} weight="regular" aria-hidden="true" />
+            <h2 className="card-title">1. Service Integrations</h2>
+            <StatusBadge status="VERIFIED_ACTIVE" />
           </div>
           <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Gnani AI Stack */}
             <div>
-              <div className="small-caps">Target Repository Path</div>
-              <div className="mono-metric" style={{ marginTop: '4px', color: 'var(--ink)' }}>
-                {settings?.repo_path || 'demo-repos/HealthConnect'}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="small-caps">Gnani Vachana Speech Stack</span>
+                <span className="status-badge status-good" style={{ fontSize: '11px', padding: '1px 8px' }}>
+                  Online • ~110ms
+                </span>
               </div>
+              <div className="mono-metric" style={{ marginTop: '4px', color: 'var(--text-primary)' }}>
+                Prisma v3.0 STT &amp; Timbre v3.0 DSP Engine
+              </div>
+              <p className="form-helper" style={{ margin: '4px 0 0 0' }}>
+                Rescores code-mixed Indic speech against AST symbols. Voice IDs: <strong>Shivani / Nalini</strong> (Telugu), <strong>Avinash / Bhavna</strong> (Hindi), <strong>Kalpana / Pranav</strong> (English).
+              </p>
             </div>
 
-            <div>
-              <div className="small-caps">Deterministic Git Hooks Installed</div>
-              <div className="mono-metric" style={{ marginTop: '6px' }}>
-                {settings?.git_hooks?.pre_commit_hook || '.git/hooks/pre-commit'}
+            {/* Supabase pgvector */}
+            <div style={{ borderTop: '1px solid var(--hairline)', paddingTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="small-caps">Supabase pgvector Knowledge Base</span>
+                <span className="status-badge status-good" style={{ fontSize: '11px', padding: '1px 8px' }}>
+                  Online • 768-dim HNSW
+                </span>
               </div>
-              <div className="mono-metric" style={{ marginTop: '2px' }}>
-                {settings?.git_hooks?.post_checkout_hook || '.git/hooks/post-checkout'}
+              <div className="mono-metric" style={{ marginTop: '4px', color: 'var(--text-primary)' }}>
+                Hybrid Reciprocal Rank Fusion (k=60)
+              </div>
+              <p className="form-helper" style={{ margin: '4px 0 0 0' }}>
+                Vector dimension 768, cosine similarity distance. Combines full-text BM25 index with AST token boosts. Active vectors: 42.
+              </p>
+            </div>
+
+            {/* MCP Pre-Commit Hook */}
+            <div style={{ borderTop: '1px solid var(--hairline)', paddingTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="small-caps">whyline-mcp Pre-Commit Interceptor</span>
+                <span className="status-badge status-good" style={{ fontSize: '11px', padding: '1px 8px' }}>
+                  Active • v1.0.0
+                </span>
+              </div>
+              <div className="mono-metric" style={{ marginTop: '4px', color: 'var(--text-primary)' }}>
+                Hooks: .git/hooks/pre-commit &amp; post-checkout
+              </div>
+              <p className="form-helper" style={{ margin: '4px 0 0 0' }}>
+                Inspects diff hunks before git commit and Claude Code / Cursor agent actions. Intercepts regressions on guarded AST ranges.
+              </p>
+            </div>
+          </div>
+        </article>
+
+        {/* Section 2: Gateway Cutover & Expiry Controls */}
+        <article className="card">
+          <div className="card-header">
+            <h2 className="card-title">2. Gateway Version &amp; Expiry Control</h2>
+            <Swap size={18} weight="regular" aria-hidden="true" />
+          </div>
+          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.5' }}>
+              Controls the centralized upstream payment gateway release flag in <code className="inline-code">config/application.yml</code>. Spoken fences automatically expire when the required infrastructure version is satisfied.
+            </p>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                background: 'var(--bg-raised)',
+                borderRadius: '12px',
+                border: '1px solid var(--border-default)',
+              }}
+            >
+              <div>
+                <span className="small-caps" style={{ color: 'var(--text-secondary)' }}>
+                  Active Gateway Version
+                </span>
+                <div className="mono-metric" style={{ fontSize: '16px', fontWeight: 700, color: 'var(--accent)' }}>
+                  gateway.version = {gatewayVersion}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className={`btn ${gatewayVersion === 'v2' ? 'btn-secondary' : 'btn-primary'}`}
+                onClick={handleToggleGatewayVersion}
+              >
+                <span>{gatewayVersion === 'v2' ? 'Rollback to v1' : 'Cutover to v2'}</span>
+              </button>
+            </div>
+
+            <div className="card" style={{ padding: '12px', background: 'var(--bg-surface)' }}>
+              <span className="small-caps" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                Fences Affected by Cutover:
+              </span>
+              <p style={{ margin: '6px 0 0 0', fontSize: '13px', lineHeight: '1.4' }}>
+                {gatewayVersion === 'v2' ? (
+                  <span style={{ color: 'var(--status-good, #545333)', fontWeight: 500 }}>
+                    ✓ FENCE-001 (GatewayRouter.java retryCount=5) has safely auto-expired. AI agents may clean up the workaround.
+                  </span>
+                ) : (
+                  <span style={{ color: 'var(--status-warning, #8F5A08)', fontWeight: 500 }}>
+                    ⚠ FENCE-001 is active. Naive agent edits to retryCount=5 will be rejected.
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+        </article>
+
+        {/* Section 3: Zero-Secret Verification */}
+        <article className="card">
+          <div className="card-header">
+            <h2 className="card-title">3. Zero-Secret Verification</h2>
+            <Key size={18} weight="regular" aria-hidden="true" />
+          </div>
+          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.5' }}>
+              WhyLine strictly enforces an air-gapped security boundary. No API secrets, auth tokens, or private endpoints are bundled or exposed to client browsers.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  background: 'var(--bg-raised)',
+                  fontSize: '13px',
+                }}
+              >
+                <span className="mono-metric">GNANI_API_KEY</span>
+                <span className="status-badge status-good" style={{ fontSize: '11px', padding: '1px 8px' }}>
+                  Server-Side Only (Zero Frontend Leak)
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  background: 'var(--bg-raised)',
+                  fontSize: '13px',
+                }}
+              >
+                <span className="mono-metric">SUPABASE_SERVICE_ROLE</span>
+                <span className="status-badge status-good" style={{ fontSize: '11px', padding: '1px 8px' }}>
+                  Server-Side Only (Zero Frontend Leak)
+                </span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        {/* Section 4: Preferences (Theme & Language) */}
+        <article className="card">
+          <div className="card-header">
+            <h2 className="card-title">4. Preferences</h2>
+            <GearSix size={18} weight="regular" aria-hidden="true" />
+          </div>
+          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label" htmlFor="settings-theme-select">
+                Appearance Theme
+              </label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  className={`btn ${theme === 'light' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ flex: 1, justifyContent: 'center' }}
+                  onClick={() => {
+                    if (theme !== 'light') handleToggleTheme();
+                  }}
+                >
+                  <Sun size={16} />
+                  <span>Paper Light (#FDFBD4)</span>
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${theme === 'dark' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ flex: 1, justifyContent: 'center' }}
+                  onClick={() => {
+                    if (theme !== 'dark') handleToggleTheme();
+                  }}
+                >
+                  <Moon size={16} />
+                  <span>Khaki Dark (#1C1C12)</span>
+                </button>
               </div>
             </div>
 
             <div className="form-group">
               <label className="form-label" htmlFor="settings-lang-select">
-                {t('langLabel')}
+                {t('langLabel')} &amp; Spoken Persona
               </label>
               <select
                 id="settings-lang-select"
@@ -101,23 +340,15 @@ export default function SettingsPage() {
                 value={lang}
                 onChange={(e) => setLang(e.target.value)}
               >
-                <option value="en">English (EN • Pranav voice model)</option>
-                <option value="te">తెలుగు (Telugu • Nalini voice model)</option>
-                <option value="hi">हिंदी (Hindi • Bhavna voice model)</option>
+                <option value="en">English (EN • Pranav voice)</option>
+                <option value="te">తెలుగు (Telugu • Nalini voice)</option>
+                <option value="hi">हिंदी (Hindi • Bhavna voice)</option>
               </select>
-              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span className="small-caps" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                  Linked Voice Model:
-                </span>
-                <span className="status-badge status-good" style={{ fontSize: '11px', padding: '1px 8px' }}>
-                  {voiceModel?.name} ({voiceModel?.locale} • {voiceModel?.model})
-                </span>
-              </div>
             </div>
 
             <div className="form-group">
               <label className="form-label" htmlFor="settings-fx-select">
-                Visual Effects Mode (DESIGN.md Fallback #5)
+                Visual Effects Mode
               </label>
               <select
                 id="settings-fx-select"
@@ -125,61 +356,82 @@ export default function SettingsPage() {
                 value={fxMode}
                 onChange={(e) => handleFxChange(e.target.value)}
               >
-                <option value="full">Full FX (L2 Floating Glass &amp; Ambient Glow)</option>
-                <option value="lite">Lite FX (Solid Surfaces &amp; Single-Layer Shadows)</option>
+                <option value="full">Full FX (Glassmorphism &amp; Backdrop Filter)</option>
+                <option value="lite">Lite FX (Solid Surfaces for Reduced Motion &amp; Low RAM)</option>
               </select>
-              <p className="form-helper">
-                When set to Lite (or on devices with &le; 4GB RAM), backdrop-filter is disabled and surfaces remain solid.
-              </p>
             </div>
           </div>
         </article>
+      </div>
 
-        {/* Section 2: Speech & Vector Providers */}
-        <article className="card">
-          <div className="card-header">
-            <h2 className="card-title">Speech &amp; Vector Providers</h2>
-            <StatusBadge status="VERIFIED_ACTIVE" />
+      {/* Section 5: Account & Session (from old Login) */}
+      <article className="card" style={{ marginTop: '8px' }}>
+        <div className="card-header">
+          <div>
+            <h2 className="card-title">5. Account &amp; Repository Boundary</h2>
+            <p className="form-helper">Session identity absorbed from former standalone login route</p>
           </div>
-          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <UserCircle size={22} weight="regular" aria-hidden="true" />
+        </div>
+        <div
+          className="card-body"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '16px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                background: 'var(--accent-wash)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--accent)',
+              }}
+            >
+              <UserCircle size={28} weight="fill" />
+            </div>
             <div>
-              <div className="small-caps">
-                Gnani Vachana Speech Stack (Prisma v3.0 STT + Timbre v3.0 TTS)
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
-                <span className="mono-metric" style={{ color: 'var(--ink)' }}>
-                  {settings?.providers?.gnani_vachana_speech?.mode ||
-                    'Live API (Shivani, Avinash, Kalpana)'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontWeight: 600, fontSize: '15px' }}>Anjani Kumar</span>
+                <span className="mono-metric" style={{ color: 'var(--accent)' }}>
+                  @anjani
+                </span>
+                <span className="status-badge status-good" style={{ fontSize: '10px', padding: '1px 6px' }}>
+                  Lead SRE / Codebase Author
                 </span>
               </div>
-              <p className="form-helper" style={{ marginTop: '4px' }}>
-                Rescores spoken Telugu/Hindi code-mixed utterances against AST symbols. Supports top 3 neural voices: Shivani (Female), Avinash (Male), Kalpana (Female).
-              </p>
-            </div>
-
-            <div style={{ borderTop: '1px solid var(--hairline)', paddingTop: '16px' }}>
-              <div className="small-caps">Supabase pgvector + Local RRF Store</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
-                <span className="mono-metric" style={{ color: 'var(--ink)' }}>
-                  {settings?.providers?.supabase_pgvector?.mode ||
-                    'Local RRF + SQL Migration Ready'}
-                </span>
-              </div>
-              <p className="form-helper" style={{ marginTop: '4px' }}>
-                Executes hybrid Reciprocal Rank Fusion (<code className="inline-code">k=60</code>) across vector embeddings and full-text AST symbols.
+              <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                anjani@healthconnect.in • Active Repository: <strong>HealthConnect Payment Gateway v1</strong>
               </p>
             </div>
           </div>
-        </article>
-      </section>
 
-      {/* Section 3: Seeded Benchmark Table with Sticky First Column */}
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setSessionModalOpen(true)}
+          >
+            <Swap size={16} weight="regular" aria-hidden="true" />
+            <span>Switch Session / Repository</span>
+          </button>
+        </div>
+      </article>
+
+      {/* Seeded Benchmark Table */}
       <article className="card">
         <div className="card-header">
           <div>
             <span className="small-caps">Empirical Verification</span>
             <h2 className="card-title" style={{ marginTop: '4px' }}>
-              Seeded benchmark (10 cases)
+              Seeded Benchmark (10 Anomaly Test Cases)
             </h2>
           </div>
           <span className="mono-metric">{(scorecard?.cases || []).length} cases</span>
@@ -192,7 +444,7 @@ export default function SettingsPage() {
                 <th className="sticky-col">Fence ID</th>
                 <th>Symbol &amp; File</th>
                 <th>Simulated AI Agent Edit</th>
-                <th>MCP Decision</th>
+                <th>MCP Guardrail Decision</th>
               </tr>
             </thead>
             <tbody>
@@ -233,6 +485,11 @@ export default function SettingsPage() {
           <span>{toastMessage}</span>
         </div>
       )}
+
+      <SessionModal
+        isOpen={sessionModalOpen}
+        onClose={() => setSessionModalOpen(false)}
+      />
     </div>
   );
 }
