@@ -231,11 +231,11 @@ export default function SettingsPage() {
               </span>
               <p style={{ margin: '6px 0 0 0', fontSize: '13px', lineHeight: '1.4' }}>
                 {gatewayVersion === 'v2' ? (
-                  <span style={{ color: 'var(--status-good, #545333)', fontWeight: 500 }}>
+                  <span style={{ color: 'var(--status-good)', fontWeight: 500 }}>
                     FENCE-001 (GatewayRouter.java retryCount=5) has safely auto-expired. AI agents may clean up the workaround.
                   </span>
                 ) : (
-                  <span style={{ color: 'var(--status-warning, #8F5A08)', fontWeight: 500 }}>
+                  <span style={{ color: 'var(--status-warning)', fontWeight: 500 }}>
                     Note: FENCE-001 is active. Naive agent edits to retryCount=5 will be rejected.
                   </span>
                 )}
@@ -314,7 +314,7 @@ export default function SettingsPage() {
                   }}
                 >
                   <Sun size={16} />
-                  <span>Paper Light (#FDFBD4)</span>
+                  <span>Paper Light</span>
                 </button>
                 <button
                   type="button"
@@ -325,7 +325,7 @@ export default function SettingsPage() {
                   }}
                 >
                   <Moon size={16} />
-                  <span>Khaki Dark (#1C1C12)</span>
+                  <span>Khaki Dark</span>
                 </button>
               </div>
             </div>

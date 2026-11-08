@@ -191,7 +191,7 @@ export default function FenceTabPanel() {
             padding: '10px 14px',
             borderRadius: '8px',
             background: 'var(--accent)',
-            color: 'var(--on-accent, #FDFBD4)',
+            color: 'var(--on-accent)',
             fontSize: '13px',
             fontWeight: 500,
           }}
@@ -418,7 +418,7 @@ export default function FenceTabPanel() {
               <span className="small-caps" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                 Danger Condition
               </span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '13px', lineHeight: '1.5', color: 'var(--status-critical, #B3261E)' }}>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', lineHeight: '1.5', color: 'var(--status-critical)' }}>
                 {currentFence.danger_condition || 'Removing this parameter causes silent packet drops in upstream gateways.'}
               </p>
             </div>

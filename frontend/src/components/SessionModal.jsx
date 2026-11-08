@@ -71,8 +71,7 @@ export default function SessionModal({ isOpen, onClose }) {
           background: 'var(--bg-surface)',
           border: '1px solid var(--border-default)',
           borderRadius: '18px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-          padding: '24px',
+                    padding: '24px',
           position: 'relative',
         }}
       >

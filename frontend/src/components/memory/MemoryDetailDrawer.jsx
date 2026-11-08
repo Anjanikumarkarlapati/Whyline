@@ -147,8 +147,7 @@ export default function MemoryDetailDrawer({ isOpen, onClose, item }) {
           height: '100%',
           backgroundColor: 'var(--bg-surface)',
           borderLeft: '1px solid var(--border-default)',
-          boxShadow: '-8px 0 32px rgba(0, 0, 0, 0.15)',
-          display: 'flex',
+                    display: 'flex',
           flexDirection: 'column',
           padding: '24px',
           gap: '20px',
@@ -159,7 +158,7 @@ export default function MemoryDetailDrawer({ isOpen, onClose, item }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {item.type === 'incident' ? (
-              <WarningOctagon size={22} weight="fill" style={{ color: 'var(--status-critical, #B3261E)' }} />
+              <WarningOctagon size={22} weight="fill" style={{ color: 'var(--status-critical)' }} />
             ) : (
               <GitBranch size={22} weight="regular" style={{ color: 'var(--accent)' }} />
             )}

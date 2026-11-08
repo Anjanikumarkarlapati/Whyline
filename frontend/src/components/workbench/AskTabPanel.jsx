@@ -583,7 +583,7 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
             Step 2: Ask Any Question About This Repository
           </label>
           <VoiceLanguageDropdown
-            id="ask-bar-voice-lang-select"
+            id="query-voice-lang-select"
             value={lang}
             disabled={loading || isRecording}
             onChange={(nextCode, option) => {
@@ -981,7 +981,7 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
           >
             <span
               className="mono-metric"
-              style={{ fontWeight: 700, fontSize: '12px', color: 'var(--status-good, #545333)' }}
+              style={{ fontWeight: 700, fontSize: '12px', color: 'var(--status-good)' }}
             >
               Why This Code Is Written This Way • {response.executed_task.task_id}
             </span>

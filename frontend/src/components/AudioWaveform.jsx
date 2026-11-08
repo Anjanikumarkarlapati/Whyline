@@ -148,9 +148,7 @@ export default function AudioWaveform({
         background: 'var(--surface-glass, rgba(255, 254, 240, 0.84))',
         backdropFilter: 'blur(16px) saturate(145%)',
         WebkitBackdropFilter: 'blur(16px) saturate(145%)',
-        boxShadow:
-          'inset 0 1px 0 0 rgba(255, 255, 255, 0.65), inset 0 -1px 0 0 rgba(42, 41, 25, 0.08), 0 10px 26px -6px rgba(42, 41, 25, 0.12)',
-      }}
+              }}
     >
       {/* Waveform Header with Title & Telemetry */}
       <div
@@ -173,8 +171,7 @@ export default function AudioWaveform({
               borderRadius: '9999px',
               backgroundColor: isRecording ? 'var(--danger-tint)' : 'var(--accent-wash)',
               color: isRecording ? 'var(--danger)' : 'var(--accent)',
-              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(0, 0, 0, 0.08)',
-            }}
+                          }}
           >
             {isRecording ? (
               <Microphone size={15} weight="fill" />
@@ -206,8 +203,7 @@ export default function AudioWaveform({
             borderRadius: '9999px',
             backgroundColor: isRecording ? 'var(--danger-tint)' : 'var(--bg-raised)',
             border: isRecording ? '1px solid var(--danger)' : '1px solid var(--border-default)',
-            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.06)',
-          }}
+                      }}
         >
           {isRecording && (
             <span
@@ -267,9 +263,7 @@ export default function AudioWaveform({
           outline: 'none',
           userSelect: 'none',
           touchAction: 'none',
-          boxShadow:
-            'inset 0 2px 5px rgba(42, 41, 25, 0.14), inset 0 1px 2px rgba(42, 41, 25, 0.1), 0 1px 0 rgba(255, 255, 255, 0.65)',
-        }}
+                  }}
       >
         {/* Render 36 3D Embossed Spectrum Bars */}
         {liveAmplitudes.map((heightPercent, idx) => {
@@ -280,7 +274,7 @@ export default function AudioWaveform({
           let barBg;
           if (isRecording) {
             barBg = isPassed
-              ? 'linear-gradient(180deg, var(--danger) 0%, var(--amber, #D9A520) 100%)'
+              ? 'linear-gradient(180deg, var(--danger) 0%, var(--amber) 100%)'
               : 'var(--border-strong)';
           } else if (isPassed) {
             barBg = accentColor || 'var(--accent)';
@@ -312,10 +306,7 @@ export default function AudioWaveform({
                 maxHeight: '86%',
                 background: barBg,
                 borderRadius: '9999px',
-                boxShadow: isPassed
-                  ? 'inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 1px 2px rgba(42, 41, 25, 0.18)'
-                  : 'inset 0 1px 0 rgba(255, 255, 255, 0.25)',
-                transition: isRecording
+                                transition: isRecording
                   ? 'height 80ms ease-out, background 120ms ease'
                   : 'background 140ms ease, height 180ms ease',
               }}
@@ -348,8 +339,7 @@ export default function AudioWaveform({
               height: '9px',
               borderRadius: '50%',
               backgroundColor: isRecording ? 'var(--danger)' : 'var(--amber)',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
-            }}
+                          }}
           />
         </div>
 

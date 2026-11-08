@@ -241,11 +241,11 @@ export default function WhyTabPanel() {
                   height: '24px',
                   borderRadius: '50%',
                   background: 'var(--bg-surface)',
-                  border: '2px solid var(--status-critical, #B3261E)',
+                  border: '2px solid var(--status-critical)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: 'var(--status-critical, #B3261E)',
+                  color: 'var(--status-critical)',
                 }}
               >
                 <WarningOctagon size={14} weight="fill" />
@@ -253,7 +253,7 @@ export default function WhyTabPanel() {
 
               <div className="card" style={{ padding: '14px', background: 'var(--bg-surface)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span className="mono-metric" style={{ fontWeight: 700, color: 'var(--status-critical, #B3261E)', fontSize: '12px' }}>
+                  <span className="mono-metric" style={{ fontWeight: 700, color: 'var(--status-critical)', fontSize: '12px' }}>
                     {incidentId}
                   </span>
                   <span className="status-badge status-good" style={{ fontSize: '10px', padding: '1px 6px' }}>

@@ -28,7 +28,7 @@ export const VOICE_LANGUAGE_OPTIONS = [
 export default function VoiceLanguageDropdown({
   value = 'en',
   onChange,
-  id = 'ask-bar-voice-lang-select',
+  id = 'query-voice-lang-select',
   disabled = false,
   compact = false,
 }) {
@@ -65,7 +65,7 @@ export default function VoiceLanguageDropdown({
         border: '1px solid var(--border-strong)',
         borderRadius: '10px',
         padding: compact ? '2px 8px' : '4px 10px',
-        boxShadow: 'var(--emboss-raised, 0 1px 2px rgba(0, 0, 0, 0.06))',
+
       }}
     >
       <GlobeHemisphereWest

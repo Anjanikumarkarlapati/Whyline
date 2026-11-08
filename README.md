@@ -1,96 +1,208 @@
 # WhyLine Studio
 
-> **Guard the unwritten "why" behind code.**  
-> AST Anomaly Detection, Multilingual Spoken Fences (Gnani Prisma & Timbre), and Model Context Protocol (MCP) Pre-Commit Interception.
+<div align="center">
 
-[![Security Audit Passed](https://img.shields.io/badge/Security%20Audit-Zero%20Secrets%20Passed-brightgreen.svg)](#-security--privacy)
-[![WCAG 2.2 AA](https://img.shields.io/badge/A11y-WCAG%202.2%20AA%20Verified-brightgreen.svg)](#-architecture--visual-system)
-[![Gnani Vachana AI](https://img.shields.io/badge/Voice%20Stack-Gnani%20Prisma%20%26%20Timbre-blue.svg)](#-multilingual-voice-pipeline-gnani-ai)
-[![Eval Accuracy](https://img.shields.io/badge/Benchmark-100%25%20Accuracy%20(24%2F24)-success.svg)](#-guard-quality--benchmark-evaluation-evalmd)
+<h3>Guard the unwritten "why" behind code.</h3>
+
+<p>
+Tree-sitter AST Anomaly Detection • Multilingual Spoken Fences (Gnani Prisma & Timbre) • FastMCP Pre-Commit Interception • pgvector Hybrid Reciprocal Rank Fusion (RRF)
+</p>
+
+[![Security Audit Passed](https://img.shields.io/badge/Security%20Audit-Zero%20Secrets%20Passed-brightgreen.svg)](#-security--privacy-guarantee)
+[![WCAG 2.2 AA](https://img.shields.io/badge/A11y-WCAG%202.2%20AA%20Verified-brightgreen.svg)](#-architecture-studio-visual-system)
+[![Voice Stack](https://img.shields.io/badge/Voice%20Stack-Gnani%20Prisma%20%26%20Timbre-blue.svg)](#-multilingual-voice-pipeline-gnani-ai)
+[![Eval Benchmark](https://img.shields.io/badge/Benchmark-100%25%20Accuracy%20(24%2F24)-success.svg)](#-guard-quality--empirical-evaluation)
+[![MCP Protocol](https://img.shields.io/badge/Protocol-Model%20Context%20Protocol%20(MCP)-purple.svg)](#-model-context-protocol-mcp-server)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](#-license)
 
 **GitHub Repository**: [https://github.com/Anjanikumarkarlapati/Whyline](https://github.com/Anjanikumarkarlapati/Whyline)
 
----
-
-## 🌟 Overview
-
-Developers spend hours debugging and preserving fragile, undocumented workarounds (e.g., timing delays, retry counts, relaxed TLS handshakes). When AI coding agents (such as Claude Code or Cursor) or new team members refactor this code, they silently strip these workarounds—causing production regressions.
-
-**WhyLine Studio** bridges this gap:
-1. **AST Anomaly Detection**: Parses codebases to detect suspicious patterns (`MAGIC_LITERAL_CONTROL_FLOW`, `EXPLICIT_THREAD_HALT`, `VALIDATION_BYPASS`, `SWALLOWED_EXCEPTION`).
-2. **Spoken Fences & Provenance Mining**: Extracts historical git blame, PR context, and allows engineers to attach 10-second voice postmortems in English, Telugu, or Hindi (via Gnani Vachana AI).
-3. **Model Context Protocol (MCP) Server**: Intercepts automated agent edits and git commits before they are finalized. Rejects changes that violate active fences.
-4. **Architectural Co-Pilot**: Voice-to-voice and text query interface powered by Supabase pgvector hybrid Reciprocal Rank Fusion (RRF), delivering strategies to crack bugs safely.
+</div>
 
 ---
 
-## 🔒 Security & Privacy
+## 🌟 Overview: The "Why" Crisis in Modern Software
 
-WhyLine is built with an enterprise-grade **Zero-Secret Guarantee** to prevent private keys, authentication tokens, and credentials from leaking into source control:
+Every engineering team maintains fragile, undocumented workarounds:
+- Hardcoded retry delays protecting rate-limited payment gateways.
+- Thread sleeps compensating for proprietary GPU driver sync quirks.
+- Relaxed clock skew allowances for rural clinics with drifting system clocks.
+- Swallowed catch blocks preventing non-critical logging failures from dropping customer orders.
 
-### 1. Automated Secret Scanning (`scripts/scan_secrets.py`)
-- Runs automatically on every `git commit` via pre-commit hooks and CI sweeps across all repository files.
-- Inspects high-entropy token signatures including:
-  - Google API Keys & Gemini Developer Studio Keys (`AIza...`, `AQ....`)
-  - Gnani Vachana Production Tokens (`vach_...`)
-  - Supabase Service Role and Publishable Keys (`sb_secret_...`, `sb_publishable_...`)
-  - GitHub Personal Access Tokens (`ghp_...`, `github_pat_...`)
-  - Anthropic / OpenAI Secret Keys (`sk-...`)
-  - AWS Access Keys (`AKIA...`)
-  - RSA / EC / OpenSSH Private Keys (`-----BEGIN ... PRIVATE KEY-----`)
-  - Hardcoded production webhook secrets
-- Run audit manually anytime:
-  ```bash
-  python scripts/scan_secrets.py --all
-  ```
-  *(Expected Output: `[WhyLine Secret Scan] All checks passed. Zero secrets detected.`)*
+When autonomous AI coding agents (such as **Claude Code**, **Cursor**, or **Copilot**) or new team members refactor this code, they view these workarounds as "code smells" and delete them—triggering severe production outages.
 
-### 2. Strict Ignored Credentials & Files (`.gitignore`)
-- All `.env`, `*.env`, `.env.local`, `*.pem`, `*.key`, `*.cert`, and `*.p12` certificates are strictly excluded from git.
-- Only `.env.example` is committed, providing safe dummy placeholder keys (`your-gnani-vachana-api-key`, `your-supabase-service-role-secret-key`, `your-random-webhook-secret-here`).
-- Personal office documents (`*.xlsx`, `*.docx`, `*.doc`) and scratch output directories (`outputs/`, `tmp_test/`) are excluded from tracking.
+**WhyLine Studio** implements a modernized, voice-native **Chesterton's Fence** for software engineering:
+1. **Detects Anomalies**: Tree-sitter parses the abstract syntax tree to flag suspicious workarounds without false positives on routine CRUD code.
+2. **Attaches Spoken Context**: Mines git blame and historical PRs, allowing engineers to attach 10-second voice postmortems in **English, Telugu, or Hindi** via **Gnani Vachana AI**.
+3. **Intercepts Regressions**: Acts as a **FastMCP Server** and **deterministic git pre-commit hook**, rejecting agent edits and git commits that violate active fences.
+4. **Co-Pilots Solutions**: Pairs **Supabase pgvector** hybrid RRF search with **Google Gemini 3.8 Flash** to recommend safe, alternative architectural strategies.
 
-### 3. Isolated Sandbox Fallbacks
-- When `GNANI_API_KEY`, `GEMINI_API_KEY`, or `SUPABASE_SERVICE_ROLE_KEY` are unset, WhyLine operates 100% offline using deterministic local PCM audio synthesis and in-memory AST Reciprocal Rank Fusion (RRF) search with zero network leakage.
+---
+
+## 🏛️ System Architecture
+
+```mermaid
+flowchart TB
+    subgraph Clients ["Developers & AI Coding Agents"]
+        CLAUDE["Claude Code / Cursor / Agent"]
+        DEV["Developer Terminal & Git"]
+    end
+
+    subgraph Guardrails ["WhyLine Guardrail Layer"]
+        MCP["FastMCP Server (mcp/whyline_mcp.py)"]
+        HOOK[".git/hooks/pre-commit & CLI"]
+    end
+
+    subgraph CoreBackend ["WhyLine Backend (FastAPI :8000)"]
+        AST["Tree-sitter AST Scanner"]
+        PROV["Git Provenance Miner"]
+        STORE["WhyLineStore (.whyline/)"]
+        RAG["Dual-Source Hybrid RAG"]
+        TESTGEN["Invariant Test Compiler"]
+    end
+
+    subgraph SpeechAI ["Speech & Generative Intelligence"]
+        GNANI["Gnani Vachana AI (Timbre / Prisma)"]
+        GEMINI["Google Gemini 3.8 Flash"]
+        PGV[("Supabase pgvector (RRF)")]
+    end
+
+    subgraph FrontendStudio ["WhyLine Studio (React 18 / Vite :5173)"]
+        MONACO["Monaco Editor + Gutter Pins"]
+        WAVE["Audio Waveform Scrubber"]
+        DRAWER["Ask Repo Slide-Over Drawer"]
+        SCORE["Telemetry Scorecard Widget"]
+    end
+
+    CLAUDE <-->|check_fences / verify_diff| MCP
+    DEV <-->|git commit / whyline check| HOOK
+    HOOK --> MCP
+    MCP --> STORE
+
+    AST -->|Flagged Anomalies| STORE
+    PROV -->|Git & PR Provenance| STORE
+    STORE --> RAG
+    RAG --> GEMINI
+    RAG --> PGV
+    STORE --> GNANI
+
+    STORE --> TESTGEN
+    TESTGEN --> JUNIT["JUnit 5 & Pytest Suites"]
+
+    FrontendStudio <-->|REST API & Audio Streams| CoreBackend
+```
+
+---
+
+## 📚 Subsystem Documentation
+
+Detailed guides and API references are available in dedicated subsystem documentation:
+
+- 🐍 [**Backend Engine Guide** (`backend/README.md`)](backend/README.md): FastAPI architecture, Tree-sitter AST detection patterns, Hybrid RAG with pgvector RRF, Invariant Test Compiler, and REST API specification.
+- ⚛️ [**Frontend Studio Guide** (`frontend/README.md`)](frontend/README.md): React 18, Vite, Cream-and-Olive Field-Report theme, Monaco Editor with gutter pins, AudioWaveform scrubber, and Hallmark floor compliance.
+- 🔌 [**Model Context Protocol (MCP) Guide** (`mcp/README.md`)](mcp/README.md): FastMCP server installation, tool signatures, Cursor & Claude Desktop integration, git pre-commit hook setup, and diff-aware hunk validation.
+- 📖 [**Visual Page Guide** (`STEP_BY_STEP_VISUAL_GUIDE.md`)](STEP_BY_STEP_VISUAL_GUIDE.md): Visual walkthrough of every screen, button, and interaction in WhyLine Studio.
+- 🖼️ [**Screenshots Catalog** (`SCREENSHOTS_CATALOG.md`)](SCREENSHOTS_CATALOG.md): High-resolution catalog of UI states, drawers, and modal views.
 
 ---
 
 ## 🎙️ Multilingual Voice Pipeline (Gnani AI)
 
-WhyLine features synchronized speech-to-text (STT) and text-to-speech (TTS) via **Gnani Vachana AI**:
+WhyLine bridges human architectural intent through synchronized speech-to-text (STT) and text-to-speech (TTS) powered by **Gnani Vachana AI**:
 
-### 1. Language-to-Voice Model Linkage
-Switching the UI language automatically switches the dedicated neural voice model:
-| Language | Locale | Voice Model | Persona | Quality |
+### 1. Neural Voice Models
+Switching the UI language in the topbar automatically binds the dedicated neural voice persona:
+| Language | Locale Code | Neural Persona | Tone & Delivery | Audio Format |
 |---|---|---|---|---|
-| **English** | `en-IN` | **Pranav** | Male • Authoritative | 16kHz linear_pcm WAV |
-| **Telugu** | `te-IN` | **Nalini** | Female • Crisp Timbre | 16kHz linear_pcm WAV |
-| **Hindi** | `hi-IN` | **Bhavna** | Female • Articulate Neural | 16kHz linear_pcm WAV |
+| **English** | `en-IN` | **Pranav** | Male • Authoritative, Crisp | 16kHz linear PCM WAV |
+| **Telugu** | `te-IN` | **Nalini** | Female • Natural Indian Timbre | 16kHz linear PCM WAV |
+| **Hindi** | `hi-IN` | **Bhavna** | Female • Articulate, Professional | 16kHz linear PCM WAV |
 
 ### 2. AST Vocabulary Rescorer
-Code-mixed speech often misrecognizes programming terms. WhyLine's phonetic rescorer intercepts live STT output and restores exact CamelCase/snake_case code symbols:
+Speech recognition models typically struggle with programming identifiers and code-mixed speech. WhyLine's phonetic AST rescorer intercepts live transcripts and restores exact code symbols:
 - Spoken *"gateway router dot java"* $\rightarrow$ `GatewayRouter.java`
-- Spoken *"రీట్రై కౌంట్"* / *"रिट्राई काउंट"* $\rightarrow$ `retryCount`
-- Spoken *"టైమౌట్ మిల్లీసెకన్లు"* $\rightarrow$ `timeoutMs`
+- Spoken *"రీట్రై కౌంట్ ఐదు"* / *"रिट्राई काउंट पांच"* $\rightarrow$ `retryCount = 5`
+- Spoken *"టైమౌట్ మిల్లీసెకన్లు"* $\rightarrow$ `timeoutMs = 4500`
 - Spoken *"అప్లికేషన్ వై ఎమ్ ఎల్"* $\rightarrow$ `application.yml`
 
 ### 3. Interactive Audio Waveform (`AudioWaveform.jsx`)
-- 36-bar acoustic spectrum displaying real-time recording energy.
-- Interactive click-and-drag scrubber with playhead tracker and timestamp tooltip.
-- Accessible keyboard navigation (`Space`/`Enter` play toggle, `Left`/`Right` arrow keys for 1-second seeking).
+- 36-bar acoustic frequency spectrum showing live recording energy.
+- Real-time drag scrubber with playhead tracker and timestamp tooltip.
+- Accessible keyboard controls (`Space`/`Enter` play/pause toggle, `Left`/`Right` arrow keys for 1-second seeking).
 
 ---
 
-## 🏛️ Architecture & Visual System
+## 🛡️ Model Context Protocol (MCP) Server
 
-WhyLine Studio implements an **architecture-studio field report aesthetic**:
+WhyLine protects repositories against uncoordinated agent edits via standard **Model Context Protocol (MCP)** tools:
+
+| MCP Tool | Purpose | Behavior |
+|---|---|---|
+| `check_fences` | Pre-edit file check | Returns `ALLOW_EDIT` or `REJECT_EDIT` with spoken explanation. |
+| `verify_diff_against_fences` | Full diff verification | Parses git diff hunks; blocks only if fenced line ranges or invariant tokens are altered. |
+| `log_or_resume_context` | Dead-end memory | Records branch checkpoints (`whyline pause`) and displays them on checkout (`whyline resume`). |
+| `get_fence_audio` | Audio retrieval | Streams 16kHz WAV audio postmortems recorded by the author. |
+
+### CLI Fallback Mode
+For environments without native MCP support:
+```bash
+# Check staged changes before commit
+whyline check-staged
+
+# Check an incoming git patch
+whyline check fix-gateway.patch
+
+# Pipe unified diff directly
+git diff HEAD~1 | whyline check -
+```
+
+---
+
+## 🔒 Security & Privacy Guarantee
+
+WhyLine enforces an enterprise-grade **Zero-Secret Guarantee** to prevent sensitive credentials from entering version control:
+
+1. **Automated Secret Scanning (`scripts/scan_secrets.py`)**:
+   - Sweeps every commit and pull request for 11 high-entropy secret patterns (Google API keys, Gnani tokens, Supabase service roles, GitHub PATs, private keys).
+   - Run audit anytime:
+     ```bash
+     python scripts/scan_secrets.py --all
+     ```
+2. **Strict Sanitization & Exclusions (`.gitignore`)**:
+   - All `.env`, `*.pem`, `*.key`, and private certificates are excluded.
+   - Only sanitized `.env.example` is committed with placeholder values.
+3. **Air-Gapped Offline Fallbacks**:
+   - When external API keys (`GNANI_API_KEY`, `GEMINI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) are omitted, WhyLine operates 100% offline using deterministic local PCM audio synthesis and in-memory AST Reciprocal Rank Fusion (RRF).
+
+---
+
+## 📊 Guard Quality & Empirical Evaluation
+
+WhyLine's guardrail accuracy is benchmarked using **24 real-world labeled test cases** across Java and Python services (`backend/eval/cases.json`):
+
+| Evaluation Metric | Measured Score | Target Specification |
+|---|---|---|
+| **Precision** | **100.0%** (12/12) | 0 false blocks on routine, safe refactorings |
+| **Recall** | **100.0%** (12/12) | Catches 100% of naive workaround removals |
+| **False-Positive Rate** | **0.0%** | Zero unnecessary development interruptions |
+| **Benchmark Accuracy** | **100.0%** (24/24) | Deterministic guardrail precision |
+
+Run evaluation anytime:
+```bash
+python backend/eval/run_eval.py
+```
+
+---
+
+## 🎨 Architecture-Studio Visual System
+
+WhyLine Studio implements an **Architecture-Studio Field-Report Aesthetic**:
 - **Design Tokens**: Warm canvas (`#FDFBD4`), crisp surface (`#FFFEF0`), deep ink (`#2A2919`), and muted olive accents (`#545333`).
-- **L2 Floating Glass**: Topbar, navigation sheets, dialog modals, and footer feature `backdrop-filter: blur(14px) saturate(140%)` with top highlights and edge hairlines.
-- **3D Depth & Embossing**:
-  - **L1 Card**: Solid surface with 1px top highlight and soft two-layer shadows.
-  - **L3 Well (Deboss)**: Code containers and waveform tracks with inner shadows and bottom catch-light bevels.
-  - **Raised-Cap Controls**: Buttons and filter chips with 1px top highlight, 2px bottom lip, 1px hover lift, and 1px active sink.
-- **Accessibility & Contrast**: 100% WCAG 2.2 AA compliant contrast ratios across light and dark modes (`scripts/verify_contrast_and_a11y.py` $\rightarrow$ 18/18 PASS).
+- **Hallmark v2.0.0 Floor Compliance**:
+  - Zero box-shadows: Elevation achieved through 1px border contrast, background steps, and flat beveling.
+  - Zero `transition: all`: Strictly controlled property transitions.
+  - Pill-shaped controls: Fully rounded buttons, badges, and filter chips.
+- **Accessibility & Contrast**: 100% WCAG 2.2 AA compliant contrast ratios across both light and dark modes (`python scripts/audit_design_system.py` $\rightarrow$ 0 violations).
 
 ---
 
@@ -98,32 +210,33 @@ WhyLine Studio implements an **architecture-studio field report aesthetic**:
 
 ### Prerequisites
 - Python 3.10+
-- Node.js 18+ & npm
-- (Optional) Gnani Vachana API key & Supabase project
+- Node.js 18+ and npm
+- (Optional) Gnani Vachana API Key & Google Gemini API Key
 
-### 1. Backend Setup
-
+### 1. Repository Setup & Environment
 ```bash
 # Clone the repository
 git clone https://github.com/Anjanikumarkarlapati/Whyline.git
 cd Whyline
 
-# Copy safe environment configuration
+# Copy environment template
 cp .env.example .env
-
-# Install backend dependencies
-pip install fastapi uvicorn pydantic tree-sitter tree-sitter-java requests python-dotenv
-
-# Run backend API server
-python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Backend will be live at `http://127.0.0.1:8000`.
-
-### 2. Frontend Setup
-
+### 2. Backend Setup
 ```bash
-# Navigate to frontend
+# Install backend dependencies
+pip install -r requirements.txt
+# (or: pip install fastapi uvicorn pydantic tree-sitter tree-sitter-java requests python-dotenv)
+
+# Start FastAPI backend server
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
+```
+Backend API will be live at `http://127.0.0.1:8000`.
+
+### 3. Frontend Setup
+```bash
+# Navigate to frontend directory
 cd frontend
 
 # Install dependencies
@@ -132,71 +245,33 @@ npm install
 # Start Vite development server
 npm run dev
 ```
+Frontend Studio will be live at `http://localhost:5173`.
 
-Frontend will be accessible at `http://localhost:5173`.
-
----
-
-## 📡 Core Capabilities
-
-### 1. Spoken Fences Ledger (`/fences`)
-- View AST anomalies across repositories.
-- Inspect why a fence exists with recorded reasons, origin PR/commits, and audio postmortems.
-- Run 10-second multilingual voice confirmations (English, Telugu, Hindi).
-
-### 2. Protected Code Studio (`/studio`)
-- Integrated Monaco Editor with gutter fence pins marking protected code regions.
-- Developer Guide callout explicitly explaining guarded source visibility and invariant rationale.
-- Interactive Audio Waveform player for Spoken ADRs.
-
-### 3. Incidents & Dead-End Memory (`/incidents`)
-- PagerDuty/webhook postmortem simulator.
-- `whyline pause` git branch checkpointing: record ruled-out dead ends so engineers switching branches never repeat failed attempts.
-- AI Silent Assumption Ledger tracking MCP pre-commit verifications.
-
-### 4. Voice Co-Pilot & 3-Strategy Planner (`/copilot`)
-- Ask questions about the codebase via speech or text.
-- Returns spoken briefings, recommended code patches, and 3 ranked architectural strategies with visual risk meters.
-
-### 5. Deterministic MCP Server (`mcp/whyline_mcp.py`) & CLI Fallback
-- Standard Model Context Protocol interface for AI coding agents (`check_fences`, `verify_diff_against_fences`, `log_or_resume_context`, `get_fence_audio`).
-- CLI fallback for non-MCP environments: `whyline check <diff_file>` or `whyline check -` (reads unified diff from stdin).
-- Diff-aware guardrail: blocks only when the diff modifies fenced lines or violates invariant tokens, allowing whitespace, comments, renamed variables outside invariants, and safe code relocations.
+### 4. Install Git Pre-Commit Hooks
+```bash
+python -m backend.whyline.cli install-hooks
+```
 
 ---
 
-## 📊 Guard Quality & Benchmark Evaluation (`EVAL.md`)
+## 🧪 Testing & Verification Suite
 
-- **Total Labeled Cases**: 24 (12 Must-Block, 12 Must-Pass across Java & Python)
-- **Precision**: **100.0%** (0 false blocks on routine edits)
-- **Recall**: **100.0%** (Catches 100% of naive workaround removals)
-- **False-Positive Rate**: **0.0%**
-- **Accuracy**: **100.0%**
-- **Evaluation Runner**: `python backend/eval/run_eval.py`
-
----
-
-## 🧪 Testing & Verification
-
-Run the comprehensive test suite:
+Run the full verification battery:
 
 ```bash
-# 1. Run backend invariant & engine tests
-python -m pytest tests/ -v
-python -m pytest backend/tests/test_whyline_engine.py
+# 1. Run all unit and invariant test suites
+pytest tests/ -v
 
-# 2. Run secret scan & security audit
+# 2. Run backend engine and live API verification
+pytest backend/tests/test_whyline_engine.py -v
+
+# 3. Run enterprise secret scan
 python scripts/scan_secrets.py --all
 
-# 3. Verify Gnani Speech live STT & TTS pipeline
-python scripts/probe_gnani.py
-python scripts/verify_voice_accuracy.py
-
-# 4. Verify design tokens & accessibility contrast
+# 4. Verify design system & Hallmark floor compliance
 python scripts/audit_design_system.py
-python scripts/verify_contrast_and_a11y.py
 
-# 5. Build frontend production bundle
+# 5. Build production frontend bundle
 cd frontend && npm run build
 ```
 
@@ -204,4 +279,4 @@ cd frontend && npm run build
 
 ## 📄 License
 
-MIT License. Designed and engineered for resilient software architectures.
+MIT License. Designed and engineered for resilient, voice-native software architecture.
