@@ -2,6 +2,37 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+// Load .env safely across project root and parent directories
+function loadDotenvSafe() {
+  const envCandidates = [
+    path.resolve(process.cwd(), '.env'),
+    path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.env'),
+    'C:\\Users\\anjan\\Downloads\\Whyline\\.env',
+  ];
+  for (const envPath of envCandidates) {
+    if (fs.existsSync(envPath)) {
+      try {
+        const raw = fs.readFileSync(envPath, 'utf8');
+        for (const line of raw.split(/\r?\n/)) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) continue;
+          const eqIdx = trimmed.indexOf('=');
+          const key = trimmed.slice(0, eqIdx).trim();
+          const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
+          if (key && !(key in process.env)) {
+            process.env[key] = val;
+          }
+        }
+        break;
+      } catch {
+        // Ignore read errors
+      }
+    }
+  }
+}
+loadDotenvSafe();
+
 import { createWhylineApiMiddleware } from './backend-api-middleware.js';
 
 const __filename = fileURLToPath(import.meta.url);

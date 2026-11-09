@@ -44,6 +44,13 @@ export default function App() {
 
   return (
     <I18nProvider>
+      {/* Atmospheric Topographic Field-Grid Background (Aurelia / ui-gradients) */}
+      <div className="cartographic-field-bg" aria-hidden="true" />
+      {/* Directional OKLCH Ambient Illumination Cone */}
+      <div className="ambient-mesh-glow" aria-hidden="true" />
+      {/* Archival Tactile Dither Grain Overlay (dither-fx) */}
+      <div className="dither-grain-overlay" aria-hidden="true" />
+
       <div id="route-announcer" className="route-announcer" aria-live="polite" aria-atomic="true" />
       <BrowserRouter>
         <ErrorBoundary>

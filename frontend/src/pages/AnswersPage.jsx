@@ -50,7 +50,7 @@ export default function AnswersPage({ theme }) {
   };
 
   return (
-    <div className="page-stack workbench-page-stack" style={{ width: '100%' }}>
+    <div className="page-stack workbench-page-stack animate-fade-slide-up" style={{ width: '100%' }}>
       {/* Header */}
       <section
         className="context-header"
@@ -65,9 +65,9 @@ export default function AnswersPage({ theme }) {
       >
         <div>
           <p className="context-meta" style={{ marginBottom: '4px' }}>
-            Repository Answers &amp; Code Reader • {repoContext?.fullName || 'HealthConnect/payment-gateway-v1'}
+            Repository Answers &amp; Code Reader • <span className="font-mono tabular-nums">{repoContext?.fullName || 'HealthConnect/payment-gateway-v1'}</span>
           </p>
-          <h1 className="page-title" style={{ margin: 0 }}>
+          <h1 className="page-title" style={{ margin: 0, fontSize: 'var(--fluid-h1)' }}>
             Answers from the Repository
           </h1>
           <p style={{ margin: '6px 0 0', fontSize: '14px', color: 'var(--text-secondary)' }}>
@@ -113,7 +113,7 @@ export default function AnswersPage({ theme }) {
             padding: '18px',
             background: 'var(--bg-surface)',
             border: '1px solid var(--border-default)',
-            borderRadius: '16px',
+            borderRadius: 'var(--radius-card)',
             display: 'flex',
             flexDirection: 'column',
             gap: '16px',
@@ -128,7 +128,7 @@ export default function AnswersPage({ theme }) {
               display: 'flex',
               background: 'var(--bg-raised)',
               padding: '4px',
-              borderRadius: '10px',
+              borderRadius: 'var(--radius-control)',
               border: '1px solid var(--border-default)',
             }}
           >
@@ -139,7 +139,7 @@ export default function AnswersPage({ theme }) {
               className={`btn ${leftTab === 'answers' ? 'btn-primary' : 'btn-ghost'}`}
               style={{
                 flex: 1,
-                borderRadius: '8px',
+                borderRadius: 'var(--radius-nested)',
                 minHeight: '34px',
                 fontSize: '13px',
                 justifyContent: 'center',
@@ -158,7 +158,7 @@ export default function AnswersPage({ theme }) {
               className={`btn ${leftTab === 'ask' ? 'btn-primary' : 'btn-ghost'}`}
               style={{
                 flex: 1,
-                borderRadius: '8px',
+                borderRadius: 'var(--radius-nested)',
                 minHeight: '34px',
                 fontSize: '13px',
                 justifyContent: 'center',
@@ -184,7 +184,7 @@ export default function AnswersPage({ theme }) {
               <div
                 style={{
                   padding: '16px',
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-nested)',
                   background: 'var(--bg-raised)',
                   border: '1px solid var(--border-default)',
                   display: 'flex',
@@ -243,7 +243,7 @@ export default function AnswersPage({ theme }) {
                 <div
                   style={{
                     padding: '16px',
-                    borderRadius: '12px',
+                    borderRadius: 'var(--radius-nested)',
                     background: 'var(--bg-surface)',
                     border: '1px solid var(--border-default)',
                     display: 'flex',
@@ -265,7 +265,7 @@ export default function AnswersPage({ theme }) {
                     <div
                       style={{
                         padding: '10px 12px',
-                        borderRadius: '8px',
+                        borderRadius: 'var(--radius-nested-sm)',
                         background: 'var(--accent-wash)',
                         fontSize: '13px',
                         lineHeight: '1.5',
@@ -282,14 +282,14 @@ export default function AnswersPage({ theme }) {
                         Suggested Safe Code Change:
                       </span>
                       <pre
-                        className="code-block"
+                        className="code-block tabular-nums"
                         style={{
                           margin: 0,
                           padding: '12px',
                           fontSize: '12px',
                           lineHeight: '1.5',
                           background: 'var(--bg-raised)',
-                          borderRadius: '8px',
+                          borderRadius: 'var(--radius-nested-sm)',
                           overflowX: 'auto',
                         }}
                       >
@@ -305,7 +305,7 @@ export default function AnswersPage({ theme }) {
                 <div
                   style={{
                     padding: '16px',
-                    borderRadius: '12px',
+                    borderRadius: 'var(--radius-nested)',
                     background: 'var(--bg-surface)',
                     border: '1px solid var(--border-default)',
                     display: 'flex',
@@ -322,7 +322,7 @@ export default function AnswersPage({ theme }) {
                       key={`${cite.file_path}-${idx}`}
                       style={{
                         padding: '12px',
-                        borderRadius: '8px',
+                        borderRadius: 'var(--radius-nested-sm)',
                         background: 'var(--bg-raised)',
                         border: '1px solid var(--border-default)',
                         display: 'flex',
@@ -339,7 +339,7 @@ export default function AnswersPage({ theme }) {
                           gap: '8px',
                         }}
                       >
-                        <span className="mono-metric" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)' }}>
+                        <span className="mono-metric tabular-nums" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)' }}>
                           {cite.file_path} (Line {cite.line_number})
                         </span>
                         <button
@@ -354,7 +354,7 @@ export default function AnswersPage({ theme }) {
                           }
                         >
                           <FileCode size={13} weight="regular" />
-                          <span>Go to Line {cite.line_number}</span>
+                          <span>Go to Line <span className="tabular-nums">{cite.line_number}</span></span>
                           <ArrowRight size={11} />
                         </button>
                       </div>
@@ -374,7 +374,7 @@ export default function AnswersPage({ theme }) {
                 <div
                   style={{
                     padding: '16px',
-                    borderRadius: '12px',
+                    borderRadius: 'var(--radius-nested)',
                     background: 'var(--bg-surface)',
                     border: '1px solid var(--border-default)',
                     display: 'flex',
@@ -391,7 +391,7 @@ export default function AnswersPage({ theme }) {
                       key={strat.rank}
                       style={{
                         padding: '12px',
-                        borderRadius: '8px',
+                        borderRadius: 'var(--radius-nested-sm)',
                         background: 'var(--bg-raised)',
                         border: '1px solid var(--border-default)',
                         display: 'flex',
@@ -401,9 +401,9 @@ export default function AnswersPage({ theme }) {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontWeight: 600, fontSize: '13px' }}>
-                          Option {strat.rank}: {strat.title}
+                          Option <span className="tabular-nums">{strat.rank}</span>: {strat.title}
                         </span>
-                        <span className="mono-metric" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                        <span className="mono-metric tabular-nums" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                           {strat.risk_level} RISK
                         </span>
                       </div>
@@ -420,7 +420,7 @@ export default function AnswersPage({ theme }) {
                 <div
                   style={{
                     padding: '16px',
-                    borderRadius: '12px',
+                    borderRadius: 'var(--radius-nested)',
                     background: 'var(--bg-surface)',
                     border: '1px solid var(--border-default)',
                     display: 'flex',
@@ -432,7 +432,7 @@ export default function AnswersPage({ theme }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <ClockCounterClockwise size={16} weight="regular" style={{ color: 'var(--accent)' }} />
                       <span style={{ fontSize: '13px', fontWeight: 700 }}>
-                        Recent Questions ({qaHistory.length})
+                        Recent Questions (<span className="tabular-nums">{qaHistory.length}</span>)
                       </span>
                     </div>
                     <button
@@ -467,7 +467,7 @@ export default function AnswersPage({ theme }) {
                         style={{
                           textAlign: 'left',
                           padding: '10px 12px',
-                          borderRadius: '8px',
+                          borderRadius: 'var(--radius-nested-sm)',
                           background: 'var(--bg-raised)',
                           border: '1px solid var(--border-default)',
                           cursor: 'pointer',

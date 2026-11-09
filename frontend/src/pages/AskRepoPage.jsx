@@ -9,7 +9,7 @@ export default function AskRepoPage() {
   const { repoContext } = useWorkbenchSelection();
 
   return (
-    <div className="page-stack" style={{ maxWidth: '980px', margin: '0 auto', width: '100%' }}>
+    <div className="page-stack animate-fade-slide-up" style={{ maxWidth: '980px', margin: '0 auto', width: '100%' }}>
       {/* Beginner-Friendly Header */}
       <section
         className="context-header"
@@ -24,9 +24,9 @@ export default function AskRepoPage() {
       >
         <div>
           <p className="context-meta" style={{ marginBottom: '4px' }}>
-            GitHub Repository Guide • {repoContext?.fullName || 'HealthConnect/payment-gateway-v1'}
+            GitHub Repository Guide • <span className="font-mono tabular-nums">{repoContext?.fullName || 'HealthConnect/payment-gateway-v1'}</span>
           </p>
-          <h1 className="page-title" style={{ margin: 0 }}>
+          <h1 className="page-title" style={{ margin: 0, fontSize: 'var(--fluid-h1)' }}>
             Ask the Repository Any Question
           </h1>
           <p
@@ -64,7 +64,7 @@ export default function AskRepoPage() {
         </div>
       </section>
 
-      {/* Quick 3-Step Beginner Guide Strip */}
+      {/* Quick 3-Step Beginner Guide Strip with Spring Elevation */}
       <section
         aria-label="How to use WhyLine"
         style={{
@@ -74,15 +74,15 @@ export default function AskRepoPage() {
         }}
       >
         <div
-          className="card"
+          className="card guide-step-card card-interactive"
           style={{
             padding: '14px 16px',
             background: 'var(--bg-surface)',
             border: '1px solid var(--border-default)',
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-control)',
           }}
         >
-          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', marginBottom: '4px' }}>
+          <div className="tabular-nums" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', marginBottom: '4px' }}>
             01. Choose a Repository
           </div>
           <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
@@ -91,15 +91,15 @@ export default function AskRepoPage() {
         </div>
 
         <div
-          className="card"
+          className="card guide-step-card card-interactive"
           style={{
             padding: '14px 16px',
             background: 'var(--bg-surface)',
             border: '1px solid var(--border-default)',
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-control)',
           }}
         >
-          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', marginBottom: '4px' }}>
+          <div className="tabular-nums" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', marginBottom: '4px' }}>
             02. Ask Your Doubt
           </div>
           <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
@@ -108,15 +108,15 @@ export default function AskRepoPage() {
         </div>
 
         <div
-          className="card"
+          className="card guide-step-card card-interactive"
           style={{
             padding: '14px 16px',
             background: 'var(--bg-surface)',
             border: '1px solid var(--border-default)',
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-control)',
           }}
         >
-          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', marginBottom: '4px' }}>
+          <div className="tabular-nums" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', marginBottom: '4px' }}>
             03. Hear &amp; Inspect the Code
           </div>
           <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.45' }}>

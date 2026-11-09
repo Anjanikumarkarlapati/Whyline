@@ -2,14 +2,19 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowsClockwise,
+  ArrowsIn,
+  ArrowsOut,
   CheckCircle,
   Code,
+  Copy,
   GitBranch,
   Graph,
   Pause,
   Play,
+  RocketLaunch,
   SkipForward,
   SpeakerHigh,
+  Stack,
 } from '@phosphor-icons/react';
 import { QUICK_GITHUB_REPOS, useWorkbenchSelection } from '../context/WorkbenchContext';
 import { useI18n } from '../i18n';
@@ -29,7 +34,21 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
   const [activeStepIdx, setActiveStepIdx] = useState(0);
   const [isWalkthroughPlaying, setIsWalkthroughPlaying] = useState(false);
   const [voiceAgentStatus, setVoiceAgentStatus] = useState('Ready');
-  const [viewMode, setViewMode] = useState('steps'); // 'steps' | 'graph'
+  const [viewMode, setViewMode] = useState('steps'); // 'steps' | 'graph' | 'dossier'
+  const [graphSubMode, setGraphSubMode] = useState('pipeline'); // 'pipeline' | 'mindmap'
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [zoomScale, setZoomScale] = useState(1);
+  const [copiedCmd, setCopiedCmd] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isFullscreen]);
 
   const audioRef = useRef(null);
   const walkthroughTimerRef = useRef(null);
@@ -208,7 +227,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
   const nextStep = activeStepIdx < steps.length - 1 ? steps[activeStepIdx + 1] : null;
 
   return (
-    <article className="card" aria-label="GitHub Repository Flowchart and Step-by-Step Guide">
+    <article className={`card ${isFullscreen ? "repo-flowchart-fullscreen" : ""}`} aria-label="GitHub Repository Flowchart and Step-by-Step Guide">
       <div className="card-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -235,6 +254,17 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
             <SpeakerHigh size={14} weight="regular" aria-hidden="true" />
             <span className="mono-metric">{voiceAgentStatus}</span>
           </span>
+          <button
+            id="btn-toggle-flowchart-fullscreen"
+            type="button"
+            className="btn btn-secondary"
+            style={{ minHeight: '30px', padding: '0 12px', fontSize: '12px' }}
+            onClick={() => setIsFullscreen((prev) => !prev)}
+            title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Expand Flowchart to Fullscreen'}
+          >
+            {isFullscreen ? <ArrowsIn size={15} /> : <ArrowsOut size={15} />}
+            <span>{isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}</span>
+          </button>
         </div>
       </div>
 
@@ -414,14 +444,53 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                 </p>
               </div>
             </div>
+
+            {flowData?.project_summary?.full_stack_breakdown && (
+              <div
+                style={{
+                  marginTop: '4px',
+                  paddingTop: '12px',
+                  borderTop: '1px solid var(--border-default)',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '10px',
+                }}
+              >
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                    Detected Stack:
+                  </span>
+                  <span className="status-badge status-good" style={{ fontSize: '11px' }}>
+                    {flowData.project_summary.full_stack_breakdown.backend}
+                  </span>
+                  <span className="status-badge status-muted" style={{ fontSize: '11px' }}>
+                    {flowData.project_summary.full_stack_breakdown.database}
+                  </span>
+                  <span className="status-badge status-muted" style={{ fontSize: '11px' }}>
+                    {flowData.project_summary.full_stack_breakdown.architecture_style}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ minHeight: '28px', padding: '0 12px', fontSize: '12px' }}
+                  onClick={() => setViewMode('dossier')}
+                >
+                  <RocketLaunch size={14} />
+                  <span>Full Stack, Alternatives &amp; Deploy Guide</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 
-        {/* View Mode Toggle: Step Cards vs Visual Diagram */}
+        {/* View Mode Toggle: Step Cards vs Interactive Flowchart & Mind Map vs Full Stack & Deploy Dossier */}
         {steps.length > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
             <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Click Any Step Below to Hear Its Voice Explanation and See the Code:
+              Choose Architecture View (Click any node or step for voice walkthrough &amp; code):
             </span>
             <div className="segmented-control" role="group" aria-label="Flowchart display mode">
               <button
@@ -439,53 +508,320 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                 style={{ whiteSpace: 'nowrap' }}
               >
                 <Graph size={14} weight="regular" style={{ marginRight: '4px' }} aria-hidden="true" />
-                Visual Flow Diagram
+                Flowchart &amp; Mind Map
+              </button>
+              <button
+                type="button"
+                className={`segmented-btn ${viewMode === 'dossier' ? 'active' : ''}`}
+                onClick={() => setViewMode('dossier')}
+                style={{ whiteSpace: 'nowrap' }}
+              >
+                <Stack size={14} weight="regular" style={{ marginRight: '4px' }} aria-hidden="true" />
+                Full Stack &amp; Deploy Guide
               </button>
             </div>
           </div>
         )}
 
-        {/* Visual SVG Diagram Mode */}
+        {/* Visual SVG Diagram & Radial Mind Map Mode */}
         {steps.length > 0 && viewMode === 'graph' && (
           <div
             style={{
               padding: '20px',
-              borderRadius: '12px',
+              borderRadius: '14px',
               border: '1px solid var(--border-default)',
               background: 'var(--bg-raised)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
             }}
           >
-            <InteractiveFlowchartSvg
-              graph={
-                flowData?.graph || {
-                  nodes: steps.map((s, idx) => ({
-                    id: s.node_id,
-                    label: s.title,
-                    category: s.phase,
-                    position: { x: (idx % 3) * 230 + 20, y: Math.floor(idx / 3) * 110 + 20 },
-                  })),
-                  edges: steps.slice(0, -1).map((s, idx) => ({
-                    id: `e-${idx}`,
-                    source: s.node_id,
-                    target: steps[idx + 1].node_id,
-                    label: 'next',
-                  })),
-                }
-              }
-              activeId={currentStep?.node_id}
-              doneIds={steps.slice(0, activeStepIdx).map((s) => s.node_id)}
-              onSelect={(nodeId) => {
-                const foundIdx = steps.findIndex((s) => s.node_id === nodeId);
-                if (foundIdx >= 0) {
-                  stopVoiceWalkthrough();
-                  setActiveStepIdx(foundIdx);
-                  playSingleStepAudio(steps[foundIdx]);
-                  if (onSelectStep) {
-                    onSelectStep(steps[foundIdx]);
-                  }
-                }
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div className="segmented-control" role="group" aria-label="Diagram topology">
+                <button
+                  type="button"
+                  className={`segmented-btn ${graphSubMode === 'pipeline' ? 'active' : ''}`}
+                  onClick={() => setGraphSubMode('pipeline')}
+                >
+                  Linear Execution Flowchart
+                </button>
+                <button
+                  type="button"
+                  className={`segmented-btn ${graphSubMode === 'mindmap' ? 'active' : ''}`}
+                  onClick={() => setGraphSubMode('mindmap')}
+                >
+                  Radial Project Mind Map
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ minHeight: '28px', padding: '0 10px', fontSize: '12px' }}
+                  onClick={() => setZoomScale((z) => Math.max(0.6, +(z - 0.15).toFixed(2)))}
+                >
+                  Zoom -
+                </button>
+                <span className="mono-metric" style={{ fontSize: '12px', minWidth: '46px', textAlign: 'center' }}>
+                  {Math.round(zoomScale * 100)}%
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ minHeight: '28px', padding: '0 10px', fontSize: '12px' }}
+                  onClick={() => setZoomScale((z) => Math.min(1.8, +(z + 0.15).toFixed(2)))}
+                >
+                  Zoom +
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ minHeight: '28px', padding: '0 10px', fontSize: '12px' }}
+                  onClick={() => setZoomScale(1)}
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ minHeight: '28px', padding: '0 12px', fontSize: '12px' }}
+                  onClick={() => setIsFullscreen((prev) => !prev)}
+                >
+                  {isFullscreen ? <ArrowsIn size={14} /> : <ArrowsOut size={14} />}
+                  <span>{isFullscreen ? 'Exit Full Screen' : 'Full Screen Canvas'}</span>
+                </button>
+              </div>
+            </div>
+
+            <div
+              style={{
+                overflowX: 'auto',
+                overflowY: 'auto',
+                padding: '12px',
+                borderRadius: '12px',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+                minHeight: isFullscreen ? '55vh' : '280px',
               }}
-            />
+            >
+              <div style={{ transform: `scale(${zoomScale})`, transformOrigin: 'top left', transition: 'transform 160ms ease' }}>
+                <InteractiveFlowchartSvg
+                  graph={
+                    graphSubMode === 'mindmap' && flowData?.graph?.mind_map
+                      ? {
+                          nodes: [
+                            flowData.graph.mind_map.hub,
+                            ...(flowData.graph.mind_map.branches || []),
+                          ],
+                          edges: (flowData.graph.mind_map.branches || []).map((b, idx) => ({
+                            id: `mm-e-${idx}`,
+                            source: flowData.graph.mind_map.hub.id,
+                            target: b.id,
+                            label: b.phase || 'module',
+                          })),
+                        }
+                      : flowData?.graph || {
+                          nodes: steps.map((s, idx) => ({
+                            id: s.node_id,
+                            label: s.title,
+                            category: s.phase,
+                            position: { x: idx * 240 + 40, y: 120 },
+                          })),
+                          edges: steps.slice(0, -1).map((s, idx) => ({
+                            id: `e-${idx}`,
+                            source: s.node_id,
+                            target: steps[idx + 1].node_id,
+                            label: 'next',
+                          })),
+                        }
+                  }
+                  activeId={currentStep?.node_id}
+                  doneIds={steps.slice(0, activeStepIdx).map((s) => s.node_id)}
+                  onSelect={(nodeId) => {
+                    const foundIdx = steps.findIndex((s) => s.node_id === nodeId);
+                    if (foundIdx >= 0) {
+                      stopVoiceWalkthrough();
+                      setActiveStepIdx(foundIdx);
+                      playSingleStepAudio(steps[foundIdx]);
+                      if (onSelectStep) {
+                        onSelectStep(steps[foundIdx]);
+                      }
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Full Stack Architecture, Alternatives & Deployment Playbook Mode */}
+        {flowData && viewMode === 'dossier' && (
+          <div
+            role="region"
+            aria-label="Full Stack Architecture, Modern Alternatives, and Deployment Guide"
+            style={{
+              padding: '20px',
+              borderRadius: '14px',
+              border: '1px solid var(--border-default)',
+              background: 'var(--bg-raised)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px',
+            }}
+          >
+            {/* Section 1: Full Stack Breakdown */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <Stack size={18} weight="duotone" color="var(--accent)" />
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>
+                  1. Complete Full-Stack Breakdown ({flowData?.repo_name || repoContext?.fullName})
+                </h3>
+              </div>
+              <div className="dossier-stack-grid">
+                {[
+                  { label: 'Frontend & UI Layer', value: flowData?.project_summary?.full_stack_breakdown?.frontend || 'React 19 + Vite 6 SPA' },
+                  { label: 'Backend & API Runtime', value: flowData?.project_summary?.full_stack_breakdown?.backend || 'Java 21 Spring Boot / Node.js' },
+                  { label: 'Database & Persistence', value: flowData?.project_summary?.full_stack_breakdown?.database || 'PostgreSQL 16 + Redis 7' },
+                  { label: 'Architecture Pattern', value: flowData?.project_summary?.full_stack_breakdown?.architecture_style || 'Hexagonal Outbox + Spoken Fences' },
+                ].map((item) => (
+                  <div key={item.label} className="dossier-card">
+                    <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+                      {item.label}
+                    </span>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.45 }}>
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Section 2: Why This Stack is Best */}
+            <div
+              style={{
+                padding: '16px 20px',
+                borderRadius: '12px',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-strong)',
+              }}
+            >
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent)', marginBottom: '6px' }}>
+                2. Why This Stack Is Optimal for This Repository
+              </div>
+              <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)' }}>
+                {flowData?.project_summary?.why_this_stack_is_best ||
+                  'This architecture balances high concurrency, strict transactional safety, and rapid developer iteration without unnecessary framework overhead.'}
+              </p>
+            </div>
+
+            {/* Section 3: Suggested Modern Alternatives */}
+            {flowData?.project_summary?.modern_alternatives?.length > 0 && (
+              <div>
+                <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '10px' }}>
+                  3. Recommended Modern Stack Alternatives &amp; Trade-Offs
+                </div>
+                <div className="dossier-stack-grid">
+                  {flowData.project_summary.modern_alternatives.map((alt, i) => (
+                    <div key={i} className="dossier-card">
+                      <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--accent)' }}>
+                        {alt.name}
+                      </div>
+                      <div style={{ fontSize: '12px', lineHeight: 1.45 }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>Pros: </strong>
+                        <span>{alt.pros}</span>
+                      </div>
+                      <div style={{ fontSize: '12px', lineHeight: 1.45 }}>
+                        <strong style={{ color: 'var(--text-secondary)' }}>Trade-offs: </strong>
+                        <span>{alt.cons}</span>
+                      </div>
+                      <div style={{ fontSize: '12px', lineHeight: 1.45, marginTop: '4px', paddingTop: '6px', borderTop: '1px solid var(--border-default)' }}>
+                        <strong>When to choose: </strong>
+                        <span>{alt.when_to_choose}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Section 4: Production Deployment Guide */}
+            {flowData?.project_summary?.deployment_strategy && (
+              <div
+                style={{
+                  padding: '18px 20px',
+                  borderRadius: '14px',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-default)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '14px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <RocketLaunch size={18} weight="duotone" color="var(--accent)" />
+                    <span style={{ fontSize: '15px', fontWeight: 700 }}>
+                      4. Best Way to Deploy: {flowData.project_summary.deployment_strategy.recommended_platform}
+                    </span>
+                  </div>
+                  {flowData.project_summary.deployment_strategy.cli_deploy_command && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ minHeight: '28px', padding: '0 12px', fontSize: '12px' }}
+                      onClick={() => {
+                        navigator.clipboard?.writeText(flowData.project_summary.deployment_strategy.cli_deploy_command);
+                        setCopiedCmd(true);
+                        setTimeout(() => setCopiedCmd(false), 2000);
+                      }}
+                    >
+                      <Copy size={14} />
+                      <span>{copiedCmd ? 'Copied Deploy Command!' : 'Copy CLI Deploy Command'}</span>
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {(flowData.project_summary.deployment_strategy.deploy_steps || []).map((st, i) => (
+                    <div key={i} style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                      {st}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="two-col-grid">
+                  {flowData.project_summary.deployment_strategy.dockerfile && (
+                    <CodeBlock
+                      label="Production Multi-Stage Dockerfile"
+                      code={flowData.project_summary.deployment_strategy.dockerfile}
+                    />
+                  )}
+                  {flowData.project_summary.deployment_strategy.cli_deploy_command && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <CodeBlock
+                        label="One-Line Production Deploy Command"
+                        code={flowData.project_summary.deployment_strategy.cli_deploy_command}
+                      />
+                      {flowData.project_summary.deployment_strategy.environment_variables?.length > 0 && (
+                        <div>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                            REQUIRED ENVIRONMENT SECRETS:
+                          </span>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {flowData.project_summary.deployment_strategy.environment_variables.map((envVar) => (
+                              <span key={envVar} className="status-badge status-muted mono-metric" style={{ fontSize: '11px' }}>
+                                {envVar}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -563,6 +899,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                     key={step.node_id}
                     id={`flow-node-step-${step.step_number}`}
                     type="button"
+                    className={`flowchart-step-interactive ${isActive ? 'flowchart-step-active' : ''}`}
                     onClick={() => {
                       stopVoiceWalkthrough();
                       setActiveStepIdx(idx);
@@ -574,7 +911,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                     style={{
                       textAlign: 'left',
                       padding: '14px 16px',
-                      borderRadius: '10px',
+                      borderRadius: 'var(--radius-nested)',
                       border: isActive
                         ? '2px solid var(--accent)'
                         : '1px solid var(--border-default)',

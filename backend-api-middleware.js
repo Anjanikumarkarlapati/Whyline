@@ -13,6 +13,37 @@ import { DEMO_FILES } from './frontend/src/context/demoFiles.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function loadDotenvSafe() {
+  const envCandidates = [
+    path.resolve(process.cwd(), '.env'),
+    path.resolve(__dirname, '.env'),
+    path.resolve(__dirname, '..', '.env'),
+    'C:\\Users\\anjan\\Downloads\\Whyline\\.env',
+  ];
+  for (const envPath of envCandidates) {
+    if (fs.existsSync(envPath)) {
+      try {
+        const raw = fs.readFileSync(envPath, 'utf8');
+        for (const line of raw.split(/\r?\n/)) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) continue;
+          const eqIdx = trimmed.indexOf('=');
+          const key = trimmed.slice(0, eqIdx).trim();
+          const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
+          if (key && !(key in process.env)) {
+            process.env[key] = val;
+          }
+        }
+        break;
+      } catch {
+        // Ignore
+      }
+    }
+  }
+}
+loadDotenvSafe();
+
+
 const REPO_DIR = path.resolve(__dirname, 'demo-repos', 'HealthConnect');
 const WHYLINE_DIR = path.join(REPO_DIR, '.whyline');
 const FENCES_PATH = path.join(WHYLINE_DIR, 'fences.json');
@@ -462,8 +493,9 @@ function getActiveRepoContext() {
 }
 
 function getGenAIClient() {
+  loadDotenvSafe();
   const apiKey = String(process.env.GEMINI_API_KEY || '').trim();
-  if (!apiKey || !apiKey.startsWith('AIza') || apiKey.length < 25) {
+  if (!apiKey || apiKey.length < 20) {
     return null;
   }
   try {
@@ -723,65 +755,56 @@ export async function executePipeline(config: PipelineConfig) {
  * Synthesizes speech using Gemini 3.8 Flash Lite TTS (`gemini-3.8-flash-lite-tts`)
  * and caches the WAV file in AUDIO_DIR so `/api/audio/...` serves it cleanly.
  */
-async function synthesizeSpeechWithGemini(text, language = 'en-IN') {
-  const ai = getGenAIClient();
-  if (!ai || !text) return null;
+async function synthesizeSpeechAudio(text, language = 'en-IN') {
+  if (!text) return null;
+  loadDotenvSafe();
+  const langKey = language.includes('te') ? 'te-IN' : language.includes('hi') ? 'hi-IN' : 'en-IN';
+  const digest = crypto.createHash('md5').update(`${langKey}:${text}`).digest('hex').slice(0, 10);
+  const filename = `voice_${digest}.wav`;
+  const filePath = path.join(AUDIO_DIR, filename);
 
-  try {
-    const digest = crypto
-      .createHash('md5')
-      .update(`gemini-tts:${language}:${text}`)
-      .digest('hex')
-      .slice(0, 12);
-    const filename = `gemini_tts_${digest}.wav`;
-    const filePath = path.join(AUDIO_DIR, filename);
-
-    if (fs.existsSync(filePath) && fs.statSync(filePath).size > 200) {
-      return `/api/audio/${filename}`;
-    }
-
-    const voiceName = language.includes('te')
-      ? 'Kore'
-      : language.includes('hi')
-        ? 'Puck'
-        : 'Fenrir';
-
-    const response = await withTimeout(
-      ai.models.generateContent({
-        model: 'gemini-3.8-flash-lite-tts',
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text: String(text).slice(0, 600),
-              },
-            ],
-          },
-        ],
-        config: {
-          responseModalities: ['AUDIO'],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName },
-            },
-          },
-        },
-      }),
-      3000
-    );
-
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    if (base64Audio) {
-      fs.mkdirSync(AUDIO_DIR, { recursive: true });
-      fs.writeFileSync(filePath, Buffer.from(base64Audio, 'base64'));
-      return `/api/audio/${filename}`;
-    }
-  } catch {
-    // Fallback to local studio WAV if TTS call fails
+  if (fs.existsSync(filePath) && fs.statSync(filePath).size > 200) {
+    return `/api/audio/${filename}`;
   }
+
+  // 1. Live Gnani Timbre TTS (supports Telugu, Hindi, English with code-mixed AST symbols)
+  const gnaniKey = String(process.env.GNANI_API_KEY || '').trim();
+  if (gnaniKey) {
+    try {
+      const voice = langKey.includes('te') ? 'Nalini' : langKey.includes('hi') ? 'Pranav' : 'Nalini';
+      const resp = await fetch('https://api.vachana.ai/api/v1/tts/inference', {
+        method: 'POST',
+        headers: {
+          'X-API-Key-ID': gnaniKey,
+          'Content-Type': 'application/json',
+          'User-Agent': 'WhyLine/1.0',
+        },
+        body: JSON.stringify({
+          model: 'timbre-v2.5',
+          text: String(text).slice(0, 480),
+          language: langKey,
+          voice,
+        }),
+        signal: AbortSignal.timeout(6000),
+      });
+
+      if (resp.ok) {
+        const arrayBuf = await resp.arrayBuffer();
+        if (arrayBuf.byteLength > 100) {
+          fs.mkdirSync(AUDIO_DIR, { recursive: true });
+          fs.writeFileSync(filePath, Buffer.from(arrayBuf));
+          return `/api/audio/${filename}`;
+        }
+      }
+    } catch {
+      // Continue to fallback
+    }
+  }
+
   return null;
 }
+
+const synthesizeSpeechWithGemini = synthesizeSpeechAudio;
 
 /**
  * Uses the server-side Gemini 3.8 Flash model (`gemini-3.8-flash`) as the reasoning brain
@@ -837,7 +860,7 @@ Requirements:
 
     const response = await withTimeout(
       ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+        model: 'gemini-3.5-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -1322,7 +1345,7 @@ export function createWhylineApiMiddleware() {
               const cleanedBase64 = body.audio_base64.replace(/^data:[^;]+;base64,/, '');
               const sttResp = await withTimeout(
                 ai.models.generateContent({
-                  model: 'gemini-3.5-transcribe',
+                  model: 'gemini-3.5-flash',
                   contents: {
                     parts: [
                       {
@@ -1372,78 +1395,520 @@ export function createWhylineApiMiddleware() {
         pathname === '/api/gemini/explain-flowchart'
       ) {
         const body = method === 'POST' ? await parseBody(req) : {};
+        // If request specified a custom repo_url or github_url, switch or index it first
+        const requestedRepoUrl = body.github_url || body.repo_url || body.repo;
+        if (requestedRepoUrl && requestedRepoUrl !== getActiveRepoContext().url) {
+          try {
+            await loadAndIndexGitHubRepository(requestedRepoUrl);
+          } catch (e) {
+            console.warn('Could not index custom repo on the fly:', e.message);
+          }
+        }
+
+        const repoCtx = getActiveRepoContext();
         const language = (body.language || 'telugu').toLowerCase();
         const langKey = language.includes('hi')
           ? 'hindi'
           : language.includes('en')
             ? 'english'
             : 'telugu';
+        const langCode = langKey === 'hindi' ? 'hi-IN' : langKey === 'telugu' ? 'te-IN' : 'en-IN';
 
-        const steps = [
-          {
-            step_number: 1,
-            node_id: 'STEP-1',
-            title: 'Patient Checkout & UPI Intent',
-            file_path: 'src/main/java/com/healthconnect/payments/GatewayRouter.java',
-            line_range: '10-18',
-            summary: 'Receives clinic appointment settlement payload and validates currency & amount.',
-            audio_url: `/api/audio/flow_4a1ee7_${langKey}_step1.wav`,
+        // Check if repo is local or custom
+        if (repoCtx.isLocal) {
+          const steps = [
+            {
+              step_number: 1,
+              node_id: 'STEP-1',
+              phase: 'entrypoint',
+              title: 'Patient Checkout & UPI Intent Dispatcher',
+              file_path: 'src/main/java/com/healthconnect/payments/GatewayRouter.java',
+              line_range: '10-18',
+              summary: 'Receives clinic appointment settlement payload and validates currency & amount.',
+              spoken_narration: langKey === 'hindi'
+                ? 'Step 1: Patient checkout payload GatewayRouter mein enter hota hai aur currency validate hoti hai.'
+                : langKey === 'telugu'
+                  ? 'Step 1: పేషెంట్ చెక్‌అవుట్ పేలోడ్ GatewayRouter ద్వారా రిసీవ్ అయ్యి అమౌంట్ మరియు కరెన్సీని వాలిడేట్ చేస్తుంది.'
+                  : 'Step 1: Ingress GatewayRouter receives clinic settlement requests and validates UPI transaction payloads.',
+              simple_explanation: 'This file is the main front door for doctor clinic checkout requests. It checks the amount and patient ID before processing.',
+              real_world_example: 'Like the receptionist at a hospital clinic verifying the patient appointment token before directing them to billing.',
+              what_happens: 'Parses incoming JSON settlement request, verifies mandatory parameters, and establishes transactional context.',
+              why_guarded: 'Rejects malformed currency codes or zero-rupee authorizations before initiating payment processor handshakes.',
+              danger_if_removed: 'Malicious or corrupted payloads would trigger unhandled null pointer exceptions in downstream payment processors.',
+              symbol_name: 'GatewayRouter.dispatchSettlement()',
+              matched_token: 'currency.equals("INR") && amount > 0',
+              code_snippet: 'public SettlementResult dispatchSettlement(SettlementRequest req) {\n    Objects.requireNonNull(req, "request cannot be null");\n    if (!"INR".equals(req.getCurrency()) || req.getAmount() <= 0) {\n        throw new InvalidSettlementException("Invalid currency or non-positive amount");\n    }\n    return processWithRetries(req);\n}',
+              audio_url: `/api/audio/flow_4a1ee7_${langKey}_step1.wav`,
+            },
+            {
+              step_number: 2,
+              node_id: 'STEP-2',
+              phase: 'guard',
+              title: 'FENCE-001: Midnight Retry Loop (retryCount = 5)',
+              file_path: 'src/main/java/com/healthconnect/payments/GatewayRouter.java',
+              line_range: '19-28',
+              fence_id: 'FENCE-001',
+              summary: 'Guarded by Spoken Fence FENCE-001: maintains 5 retries while gateway.version == v1 to survive 00:00 IST packet drops.',
+              spoken_narration: langKey === 'hindi'
+                ? 'Step 2: Spoken Fence FENCE-001 yahan 5 retries enforce karta hai taaki midnight packet drop mein payment fail na ho.'
+                : langKey === 'telugu'
+                  ? 'Step 2: Spoken Fence FENCE-001 ఇక్కడ 5 రీట్రైలను లాక్ చేస్తుంది. రాత్రి 12 గంటలకు ప్యాకెట్ డ్రాప్స్ వచ్చినా పేమెంట్ ఆగదు.'
+                  : 'Step 2: Spoken Fence FENCE-001 enforces 5 exponential retries to survive Indian banking network midnight packet drops.',
+              simple_explanation: 'A safety loop that tries reconnecting 5 times when banks restart their batch systems at midnight.',
+              real_world_example: 'Like redialing a phone call automatically when rural cellular signal drops for 10 seconds.',
+              what_happens: 'Executes exponential backoff loop while gateway.version is v1 to ride out transient NPCI connectivity blips.',
+              why_guarded: 'INC-9921 previously caused an 18% settlement failure rate at 00:00 IST when set to fewer retries.',
+              danger_if_removed: 'Changing retryCount back to 1 or 3 immediately resurrects the midnight clinic settlement failure surge.',
+              symbol_name: 'GatewayRouter.executeRetryLoop()',
+              matched_token: 'int retryCount = 5',
+              code_snippet: '// FENCE-001: Spoken invariant locked by @anjani\nint retryCount = 5;\nfor (int attempt = 1; attempt <= retryCount; attempt++) {\n    try {\n        return gatewayClient.sendSettlement(req);\n    } catch (TransientGatewayException ex) {\n        Thread.sleep(calculateBackoff(attempt));\n    }\n}',
+              audio_url: `/api/audio/flow_4a1ee7_${langKey}_step2.wav`,
+            },
+            {
+              step_number: 3,
+              node_id: 'STEP-3',
+              phase: 'domain',
+              title: 'Idempotency Outbox Deduplication',
+              file_path: 'src/main/java/com/healthconnect/payments/SettlementIdempotencyGuard.java',
+              line_range: '8-24',
+              fence_id: 'FENCE-002',
+              summary: 'Attaches deterministic SHA-256 X-Idempotency-Key so retries never double-charge the patient.',
+              spoken_narration: langKey === 'hindi'
+                ? 'Step 3: Idempotency Guard SHA-256 key check karta hai taaki retry hone par patient do baar charge na ho.'
+                : langKey === 'telugu'
+                  ? 'Step 3: ఐడెంపోటెన్సీ గార్డ్ SHA-256 కీని తనిఖీ చేసి రోగిపై డబుల్ చార్జ్ పడకుండా రక్షిస్తుంది.'
+                  : 'Step 3: SettlementIdempotencyGuard assigns deterministic SHA-256 tokens ensuring retries never double-charge.',
+              simple_explanation: 'Guarantees that clicking pay twice or retrying over spotty Wi-Fi only charges the patient once.',
+              real_world_example: 'Like getting a unique receipt barcode stamped on your clinic bill that cannot be redeemed twice.',
+              what_happens: 'Calculates SHA-256 of settlement body, claims Redis lock, and stores transaction state in durable Postgres outbox table.',
+              why_guarded: 'Prevents distributed race conditions across clinic billing counters.',
+              danger_if_removed: 'Retried requests would cause duplicate ledger entries and catastrophic double debits.',
+              symbol_name: 'SettlementIdempotencyGuard.acquireLock()',
+              matched_token: 'X-Idempotency-Key',
+              code_snippet: 'public boolean acquireLock(String appointmentId, String sha256Key) {\n    String existing = redisTemplate.opsForValue().get("idemp:" + appointmentId);\n    if (existing != null) return false;\n    return redisTemplate.opsForValue().setIfAbsent("idemp:" + appointmentId, sha256Key, 15, TimeUnit.MINUTES);\n}',
+              audio_url: `/api/audio/flow_4a1ee7_${langKey}_step3.wav`,
+            },
+            {
+              step_number: 4,
+              node_id: 'STEP-4',
+              phase: 'storage',
+              title: 'DICOM Imaging & Adreno GPU Frame Sync',
+              file_path: 'src/main/java/com/healthconnect/imaging/DicomShaderPipeline.java',
+              line_range: '6-18',
+              fence_id: 'FENCE-003',
+              summary: 'Applies 120ms frame pacing buffer on clinic Android tablets to prevent driver buffer overflow.',
+              spoken_narration: langKey === 'hindi'
+                ? 'Step 4: DICOM imaging pipeline clinic tablets par 120 millisecond frame sync buffer lagata hai.'
+                : langKey === 'telugu'
+                  ? 'Step 4: DICOM ఇమేజింగ్ పైప్‌లైన్ క్లినిక్ టాబ్లెట్లపై 120ms ఫ్రేమ్ పేసింగ్ బఫర్‌ను అందిస్తుంది.'
+                  : 'Step 4: DicomShaderPipeline buffers medical image frame pacing to prevent GPU driver panics on clinic tablets.',
+              simple_explanation: 'Smooths out X-ray and ultrasound rendering on Android tablets so the screen does not freeze or crash.',
+              real_world_example: 'Like a water tank accumulator steadying the flow so clinic pipes do not burst under high pressure.',
+              what_happens: 'Synchronizes OpenGL shader frames with Adreno hardware timing barriers.',
+              why_guarded: 'Hospital budget tablets crash when rendering 16-bit uncompressed DICOM slices without pacing.',
+              danger_if_removed: 'Tablets experience kernel panics and black screens while doctors review surgical imaging.',
+              symbol_name: 'DicomShaderPipeline.synchronizeFrame()',
+              matched_token: 'framePacingMs = 120',
+              code_snippet: '// FENCE-003: Frame pacing for Adreno 610/618 GPU stability\nprivate static final int FRAME_PACING_MS = 120;\npublic void renderSlice(DicomFrame frame) {\n    syncHardwareFence();\n    Thread.sleep(FRAME_PACING_MS);\n    dispatchEglSurface(frame);\n}',
+              audio_url: `/api/audio/flow_4a1ee7_${langKey}_step4.wav`,
+            },
+            {
+              step_number: 5,
+              node_id: 'STEP-5',
+              phase: 'telemetry',
+              title: 'JWT Clock-Skew Validation (180s Tolerance)',
+              file_path: 'src/main/java/com/healthconnect/auth/JwtClockSkewFilter.java',
+              line_range: '4-15',
+              fence_id: 'FENCE-004',
+              summary: 'Permits 180s NTP drift for rural clinic routers before finalizing settlement webhook.',
+              spoken_narration: langKey === 'hindi'
+                ? 'Step 5: JWT filter rural clinic routers ke 180 second clock drift ko accept karke webhook finalize karta hai.'
+                : langKey === 'telugu'
+                  ? 'Step 5: JWT ఫిల్టర్ గ్రామీణ క్లినిక్ రౌటర్ల 180 సెకన్ల క్లాక్ డ్రిఫ్ట్‌ను అంగీకరించి వెబ్‌హుక్‌ను రికార్డ్ చేస్తుంది.'
+                  : 'Step 5: JwtClockSkewFilter tolerates 180-second NTP router drift before dispatching settlement confirmation webhooks.',
+              simple_explanation: 'Allows rural clinics whose router clocks are 2-3 minutes off to still authenticate securely.',
+              real_world_example: 'Like a train ticket checker accepting a watch that is running 2 minutes slow in a remote village.',
+              what_happens: 'Validates JWT signature while expanding expiration window by 180 seconds for skew tolerance.',
+              why_guarded: 'Rural primary health centers lack local NTP servers and experience battery RTC drift.',
+              danger_if_removed: 'Over 30% of rural clinic transactions would be falsely rejected as expired tokens.',
+              symbol_name: 'JwtClockSkewFilter.doFilterInternal()',
+              matched_token: 'setAllowedClockSkewSeconds(180)',
+              code_snippet: '// FENCE-004: 180s NTP drift tolerance for rural clinic hardware\njwtParserBuilder.setAllowedClockSkewSeconds(180);\nClaims claims = jwtParserBuilder.build().parseClaimsJws(token).getBody();\nrecordAuditProvenance(claims.getSubject(), "SETTLEMENT_APPROVED");',
+              audio_url: `/api/audio/flow_4a1ee7_${langKey}_step5.wav`,
+            },
+          ];
+
+          const project_summary = {
+            simple_explanation: 'HealthConnect is an offline-resilient healthcare clinic payment gateway and DICOM diagnostic workstation in India. It guarantees that rural and sub-district hospital billing never double-charges patients during midnight ISP packet drops, maintaining automated spoken fence invariants and audit provenance.',
+            real_world_example: 'Think of it like an offline UPI card swiper at a village clinic with patchy cellular connectivity: it buffers transaction tokens locally with an idempotency lock so when the link reconnects, the clinic settles bills safely without repeat debits.',
+            full_stack_breakdown: {
+              frontend: 'Android Native (Jetpack Compose / Java) on clinic tablets & React 19 web dashboard',
+              backend: 'Spring Boot 3.4 on Java 21 (Virtual Threads / Loom) with Hexagonal Architecture',
+              database: 'PostgreSQL 16 with TimescaleDB & Redis 7 cluster for idempotent outbox locks',
+              runtime: 'OCI Linux Containers orchestrated via Kubernetes / Google Cloud Run',
+              architecture_style: 'Outbox Pattern with Spoken Fence Architectural Decision Records (ADRs)',
+            },
+            why_this_stack_is_best: 'Java 21 virtual threads deliver ultra-high concurrency for 50,000+ simultaneous clinic webhooks with negligible memory footprint. Spring Boot provides battle-tested transaction atomicity and idempotent locks, while Redis cluster prevents distributed double-spend anomalies across sub-second retry spikes.',
+            modern_alternatives: [
+              {
+                name: 'Go (Golang 1.22) + Gin / Fiber + pgx',
+                pros: 'Sub-millisecond cold starts, zero-allocation serialization, minimal binary footprint (<30MB)',
+                cons: 'Smaller enterprise ORM ecosystem compared to Spring Data JPA/Hibernate',
+                when_to_choose: 'When ultra-low latency microservices with instant cold starts on serverless are prioritized.',
+              },
+              {
+                name: 'Rust + Tokio + Axum + SQLx',
+                pros: 'Compile-time memory safety, zero GC pause spikes during midnight billing surges',
+                cons: 'Higher developer ramp-up time and slower compilation cycles',
+                when_to_choose: 'High-frequency settlement ledgers where zero latency jitter is legally mandated.',
+              },
+              {
+                name: 'Node.js (TypeScript) + Fastify + Prisma',
+                pros: 'Unified language across web frontends, rapid prototyping, massive package ecosystem',
+                cons: 'Single-threaded event loop requires careful worker thread isolation for heavy DICOM cryptographic hashing',
+                when_to_choose: 'Full-stack TypeScript teams building developer tooling and clinical web apps.',
+              },
+            ],
+            deployment_strategy: {
+              recommended_platform: 'Google Cloud Run / AWS ECS Fargate + Cloud SQL PostgreSQL',
+              deploy_steps: [
+                '1. Containerize the service using a multi-stage distroless Eclipse Temurin JDK 21 build.',
+                '2. Provision Managed PostgreSQL with PgBouncer connection pooling and Redis Cloud instance.',
+                '3. Set environment secrets: SUPABASE_URL, GNANI_API_KEY, GEMINI_API_KEY, and DB credentials.',
+                '4. Deploy container with CPU allocation "always on" to preserve idempotency cache connections.',
+                '5. Configure health check probes at /actuator/health with 5s timeout.',
+              ],
+              dockerfile: 'FROM maven:3.9-eclipse-temurin-21-alpine AS builder\nWORKDIR /app\nCOPY pom.xml .\nRUN mvn dependency:go-offline\nCOPY src ./src\nRUN mvn clean package -DskipTests\n\nFROM eclipse-temurin:21-jre-alpine\nWORKDIR /app\nCOPY --from=builder /app/target/*.jar app.jar\nEXPOSE 8080\nUSER 1001\nENTRYPOINT ["java", "-XX:+UseZGC", "-jar", "app.jar"]',
+              cli_deploy_command: 'gcloud run deploy healthconnect-gateway --image gcr.io/healthconnect/payment-gateway:latest --platform managed --region asia-south1 --allow-unauthenticated',
+              environment_variables: ['DATABASE_URL', 'REDIS_HOST', 'GNANI_API_KEY', 'GEMINI_API_KEY', 'WEBHOOK_SECRET'],
+            },
+          };
+
+          const graph = {
+            nodes: [
+              { id: 'STEP-1', label: steps[0].title, phase: 'entrypoint', position: { x: 40, y: 120 } },
+              { id: 'STEP-2', label: steps[1].title, phase: 'guard', position: { x: 280, y: 120 } },
+              { id: 'STEP-3', label: steps[2].title, phase: 'domain', position: { x: 520, y: 120 } },
+              { id: 'STEP-4', label: steps[3].title, phase: 'storage', position: { x: 760, y: 120 } },
+              { id: 'STEP-5', label: steps[4].title, phase: 'telemetry', position: { x: 1000, y: 120 } },
+            ],
+            edges: [
+              { id: 'e1', source: 'STEP-1', target: 'STEP-2', label: 'dispatches' },
+              { id: 'e2', source: 'STEP-2', target: 'STEP-3', label: 'evaluates fence' },
+              { id: 'e3', source: 'STEP-3', target: 'STEP-4', label: 'claims lock' },
+              { id: 'e4', source: 'STEP-4', target: 'STEP-5', label: 'renders & syncs' },
+            ],
+            mind_map: {
+              hub: { id: 'REPO-HUB', label: repoCtx.fullName, phase: 'hub', position: { x: 480, y: 220 } },
+              branches: [
+                { id: 'STEP-1', label: steps[0].title, phase: 'entrypoint', position: { x: 140, y: 70 } },
+                { id: 'STEP-2', label: steps[1].title, phase: 'guard', position: { x: 820, y: 70 } },
+                { id: 'STEP-3', label: steps[2].title, phase: 'domain', position: { x: 140, y: 370 } },
+                { id: 'STEP-4', label: steps[3].title, phase: 'storage', position: { x: 820, y: 370 } },
+                { id: 'STEP-5', label: steps[4].title, phase: 'telemetry', position: { x: 480, y: 440 } },
+              ],
+            },
+          };
+
+          return sendJson(res, 200, {
+            status: 'ok',
+            repo_name: repoCtx.fullName,
+            language: langKey,
+            project_summary,
+            steps,
+            nodes: steps,
+            graph,
+          });
+        }
+
+        // Custom repository dynamic flowchart generation
+        let dynamicFlow = null;
+        const ai = getGenAIClient();
+        if (ai) {
+          try {
+            const filesContext = (repoCtx.files || [])
+              .slice(0, 6)
+              .map((f) => `FILE: ${f.path}\n${(f.code || '').slice(0, 450)}`)
+              .join('\n---\n');
+
+            const prompt = `You are a Principal Software Architect explaining the repository "${repoCtx.fullName}" (${repoCtx.description}).
+Files in repository:
+${filesContext}
+
+Generate a comprehensive architectural breakdown and 5-stage sequential execution flowchart for this repository in ${langKey} language.
+Format as JSON with exact keys:
+{
+  "project_summary": {
+    "simple_explanation": "2-3 sentences explaining what this project does and why it exists in everyday English.",
+    "real_world_example": "A clear, relatable real-world comparison or analogy.",
+    "full_stack_breakdown": {
+      "frontend": "Frontend stack or 'CLI / Headless Backend'",
+      "backend": "Primary language and backend frameworks",
+      "database": "Database, cache, or storage system",
+      "runtime": "Runtime environment and package managers",
+      "architecture_style": "Architectural pattern (e.g. Middleware Pipeline, Event-Driven, Microkernel)"
+    },
+    "why_this_stack_is_best": "2-3 sentences explaining why this technology stack is ideal for this project's requirements.",
+    "modern_alternatives": [
+      { "name": "Alternative stack 1", "pros": "Key advantages", "cons": "Key drawbacks", "when_to_choose": "When to pick this" },
+      { "name": "Alternative stack 2", "pros": "Key advantages", "cons": "Key drawbacks", "when_to_choose": "When to pick this" }
+    ],
+    "deployment_strategy": {
+      "recommended_platform": "Recommended deployment platform (e.g. Google Cloud Run, Vercel, Railway, AWS)",
+      "deploy_steps": ["Step 1...", "Step 2...", "Step 3..."],
+      "dockerfile": "Dockerfile snippet",
+      "cli_deploy_command": "CLI deployment command",
+      "environment_variables": ["PORT", "NODE_ENV"]
+    }
+  },
+  "steps": [
+    {
+      "step_number": 1,
+      "node_id": "STEP-1",
+      "phase": "entrypoint",
+      "title": "Entry point step title",
+      "file_path": "path to entry file",
+      "line_range": "1-25",
+      "summary": "1-sentence summary",
+      "spoken_narration": "Natural voice narration in ${langKey}",
+      "simple_explanation": "Plain language explanation",
+      "real_world_example": "Analogy",
+      "what_happens": "What this step does",
+      "why_guarded": "Why this design is safe",
+      "danger_if_removed": "What breaks if removed",
+      "symbol_name": "Primary symbol or function",
+      "matched_token": "Key code token",
+      "code_snippet": "Relevant code snippet"
+    }
+    // Exactly 5 steps: step 1 entrypoint, step 2 domain, step 3 guard, step 4 storage, step 5 telemetry
+  ]
+}`;
+
+            const aiResp = await withTimeout(
+              ai.models.generateContent({
+                model: 'gemini-3.5-flash',
+                contents: prompt,
+                config: { responseMimeType: 'application/json' },
+              }),
+              7500
+            );
+
+            dynamicFlow = JSON.parse(aiResp.text || '{}');
+          } catch (e) {
+            console.warn('Gemini custom flowchart generation failed, falling back to heuristic engine:', e.message);
+          }
+        }
+
+        // Heuristic fallback if Gemini is offline or failed
+        if (!dynamicFlow || !dynamicFlow.steps || dynamicFlow.steps.length === 0) {
+          const files = repoCtx.files || [];
+          const isNode = repoCtx.language?.toLowerCase().includes('javascript') || repoCtx.language?.toLowerCase().includes('typescript');
+          const isPython = repoCtx.language?.toLowerCase().includes('python');
+
+          const entryFile = files[0] || { path: 'index.js', code: '// Entry point' };
+          const domainFile = files[1] || entryFile;
+          const guardFile = files[2] || domainFile;
+          const storageFile = files[3] || domainFile;
+          const telemetryFile = files[4] || entryFile;
+
+          dynamicFlow = {
+            project_summary: {
+              simple_explanation: `${repoCtx.fullName} is an open-source ${repoCtx.language} project: ${repoCtx.description || 'high-performance software system'}. It provides robust modular architecture for production services.`,
+              real_world_example: 'Like an organized factory assembly line where each station inspects, processes, and packages items before dispatching them.',
+              full_stack_breakdown: {
+                frontend: isNode ? 'React / Vite or Browser Client' : 'CLI / REST API Consumer',
+                backend: `${repoCtx.language} (${isNode ? 'Node.js / Express' : isPython ? 'Python / FastAPI' : 'Standard Library'})`,
+                database: 'PostgreSQL / In-Memory State / Key-Value Store',
+                runtime: isNode ? 'Node.js v20+ / npm / pnpm' : isPython ? 'Python 3.12 / pip / venv' : 'Native Platform Runtime',
+                architecture_style: 'Modular Service Pipeline with Invariant Validation',
+              },
+              why_this_stack_is_best: `The ${repoCtx.language} ecosystem offers non-blocking asynchronous I/O, massive community libraries, and battle-tested stability for high-concurrency network tasks.`,
+              modern_alternatives: [
+                {
+                  name: 'Rust (Axum + Tokio)',
+                  pros: 'Zero-cost abstractions, memory safety without garbage collection, tiny memory footprint',
+                  cons: 'Steeper learning curve and longer compilation times',
+                  when_to_choose: 'When predictable microsecond latency and zero GC pauses are required.',
+                },
+                {
+                  name: 'Go (Golang 1.22)',
+                  pros: 'Extremely fast compilation, lightweight goroutines, simple deployment binaries',
+                  cons: 'Less expressive type system and simpler metaprogramming',
+                  when_to_choose: 'When building cloud-native microservices and Kubernetes operators.',
+                },
+              ],
+              deployment_strategy: {
+                recommended_platform: 'Google Cloud Run / AWS ECS / Vercel',
+                deploy_steps: [
+                  '1. Create a minimal multi-stage Docker container.',
+                  '2. Set runtime environment variables.',
+                  '3. Deploy to container runtime with automated autoscaling.',
+                ],
+                dockerfile: isNode
+                  ? 'FROM node:20-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --omit=dev\nCOPY . .\nEXPOSE 3000\nCMD ["npm", "start"]'
+                  : 'FROM python:3.12-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install -r requirements.txt\nCOPY . .\nCMD ["python", "main.py"]',
+                cli_deploy_command: `docker build -t ${repoCtx.repo}:latest . && docker run -p 3000:3000 ${repoCtx.repo}:latest`,
+                environment_variables: ['PORT=3000', 'NODE_ENV=production'],
+              },
+            },
+            steps: [
+              {
+                step_number: 1,
+                node_id: 'STEP-1',
+                phase: 'entrypoint',
+                title: `1. Ingress & Request Parsing (${entryFile.shortName || entryFile.path})`,
+                file_path: entryFile.path,
+                line_range: '1-30',
+                summary: `Entry point for incoming traffic in ${repoCtx.fullName}.`,
+                spoken_narration: langKey === 'hindi'
+                  ? `Step 1: ${entryFile.path} mein request aati hai aur basic parameters parse hote hain.`
+                  : langKey === 'telugu'
+                    ? `Step 1: ${entryFile.path} ద్వారా రిక్వెస్ట్ రిసీవ్ అయ్యి పారామీటర్లను ప్రాసెస్ చేస్తుంది.`
+                    : `Step 1: Ingress requests are accepted and parsed in ${entryFile.path}.`,
+                simple_explanation: 'The front door of this repository where commands or network calls first arrive.',
+                real_world_example: 'Like the main entrance lobby of a building where visitors state their purpose.',
+                what_happens: 'Initializes context and validates incoming arguments.',
+                why_guarded: 'Ensures invalid arguments fail fast before consuming backend resources.',
+                danger_if_removed: 'Application crashes on malformed requests.',
+                symbol_name: entryFile.shortName || 'main()',
+                matched_token: 'module.exports / entry',
+                code_snippet: entryFile.code ? entryFile.code.slice(0, 250) : '// Entry point logic',
+              },
+              {
+                step_number: 2,
+                node_id: 'STEP-2',
+                phase: 'domain',
+                title: `2. Core Domain Logic (${domainFile.shortName || domainFile.path})`,
+                file_path: domainFile.path,
+                line_range: '10-40',
+                summary: 'Executes the primary business logic and routing operations.',
+                spoken_narration: langKey === 'hindi'
+                  ? `Step 2: ${domainFile.path} core logic execute karta hai.`
+                  : langKey === 'telugu'
+                    ? `Step 2: ${domainFile.path} ముఖ్యమైన బిజినెస్ లాజిక్‌ను ఎగ్జిక్యూట్ చేస్తుంది.`
+                    : `Step 2: Core domain operations and routing execute in ${domainFile.path}.`,
+                simple_explanation: 'The primary brain of the repository where the actual work happens.',
+                real_world_example: 'Like the kitchen in a restaurant where the requested meal is prepared.',
+                what_happens: 'Transforms inputs into domain models and executes state transitions.',
+                why_guarded: 'Enforces business rules and state machine consistency.',
+                danger_if_removed: 'The core functionality of the project ceases to work.',
+                symbol_name: domainFile.shortName || 'execute()',
+                matched_token: 'function / class',
+                code_snippet: domainFile.code ? domainFile.code.slice(0, 250) : '// Domain logic',
+              },
+              {
+                step_number: 3,
+                node_id: 'STEP-3',
+                phase: 'guard',
+                title: `3. Safety Fences & Invariant Guards (${guardFile.shortName || guardFile.path})`,
+                file_path: guardFile.path,
+                line_range: '15-45',
+                summary: 'Validates security boundaries, rate limits, and error invariants.',
+                spoken_narration: langKey === 'hindi'
+                  ? `Step 3: ${guardFile.path} safety checks aur guardrails verify karta hai.`
+                  : langKey === 'telugu'
+                    ? `Step 3: ${guardFile.path} సేఫ్టీ చెక్స్ మరియు గార్డ్‌రైల్స్‌ను ధృవీకరిస్తుంది.`
+                    : `Step 3: Safety invariants and boundaries are validated in ${guardFile.path}.`,
+                simple_explanation: 'A safety barrier ensuring no unsafe data damages the system.',
+                real_world_example: 'Like an automated circuit breaker preventing power surges in a house.',
+                what_happens: 'Checks invariants, authentication boundaries, and concurrency locks.',
+                why_guarded: 'Protects against race conditions and unauthorized operations.',
+                danger_if_removed: 'System is vulnerable to state corruption and security leaks.',
+                symbol_name: guardFile.shortName || 'guard()',
+                matched_token: 'if (!valid) throw',
+                code_snippet: guardFile.code ? guardFile.code.slice(0, 250) : '// Guard logic',
+              },
+              {
+                step_number: 4,
+                node_id: 'STEP-4',
+                phase: 'storage',
+                title: `4. State Persistence & Network Outbox (${storageFile.shortName || storageFile.path})`,
+                file_path: storageFile.path,
+                line_range: '1-35',
+                summary: 'Persists changes to storage or dispatches upstream network requests.',
+                spoken_narration: langKey === 'hindi'
+                  ? `Step 4: ${storageFile.path} state ko persist aur save karta hai.`
+                  : langKey === 'telugu'
+                    ? `Step 4: ${storageFile.path} డేటాను స్టోర్ లేదా నెట్‌వర్క్ ద్వారా పంపుతుంది.`
+                    : `Step 4: Data persistence and downstream service dispatch in ${storageFile.path}.`,
+                simple_explanation: 'Saves the result safely so it is not lost when power goes out.',
+                real_world_example: 'Like writing an entry into a ledger book or safe deposit box.',
+                what_happens: 'Performs transactional writes or external HTTP calls.',
+                why_guarded: 'Guarantees durability and prevents data loss.',
+                danger_if_removed: 'Changes are lost immediately when process restarts.',
+                symbol_name: storageFile.shortName || 'persist()',
+                matched_token: 'write / save / fetch',
+                code_snippet: storageFile.code ? storageFile.code.slice(0, 250) : '// Storage logic',
+              },
+              {
+                step_number: 5,
+                node_id: 'STEP-5',
+                phase: 'telemetry',
+                title: `5. Response Dispatch & Telemetry (${telemetryFile.shortName || telemetryFile.path})`,
+                file_path: telemetryFile.path,
+                line_range: '20-50',
+                summary: 'Formats output response, records metrics, and closes connection.',
+                spoken_narration: langKey === 'hindi'
+                  ? `Step 5: ${telemetryFile.path} final response bhejta hai aur metrics record karta hai.`
+                  : langKey === 'telugu'
+                    ? `Step 5: ${telemetryFile.path} చివరి రెస్పాన్స్‌ను పంపి ఆడిట్ రికార్డ్ చేస్తుంది.`
+                    : `Step 5: Response output is dispatched and telemetry logged in ${telemetryFile.path}.`,
+                simple_explanation: 'Sends the finished answer back to the user and writes an audit record.',
+                real_world_example: 'Like handing the customer their receipt and bag at checkout.',
+                what_happens: 'Flushes response stream, updates latency gauges, and emits audit event.',
+                why_guarded: 'Provides observability so engineers know the system is healthy.',
+                danger_if_removed: 'Callers hang indefinitely waiting for completion.',
+                symbol_name: telemetryFile.shortName || 'respond()',
+                matched_token: 'return res / send',
+                code_snippet: telemetryFile.code ? telemetryFile.code.slice(0, 250) : '// Telemetry logic',
+              },
+            ],
+          };
+        }
+
+        // Attach audio URLs and calculate exact 2D graph positions
+        const steps = dynamicFlow.steps.map((s, idx) => {
+          return {
+            ...s,
+            audio_url: s.audio_url || `/api/audio/flow_4a1ee7_${langKey}_step${Math.min(5, idx + 1)}.wav`,
+          };
+        });
+
+        const graph = {
+          nodes: steps.map((s, idx) => ({
+            id: s.node_id,
+            label: s.title,
+            phase: s.phase,
+            position: { x: 40 + idx * 240, y: 120 },
+          })),
+          edges: steps.slice(0, -1).map((s, idx) => ({
+            id: `e${idx + 1}`,
+            source: s.node_id,
+            target: steps[idx + 1].node_id,
+            label: idx === 0 ? 'routes' : idx === 1 ? 'validates' : idx === 2 ? 'persists' : 'finalizes',
+          })),
+          mind_map: {
+            hub: { id: 'REPO-HUB', label: repoCtx.fullName, phase: 'hub', position: { x: 480, y: 220 } },
+            branches: [
+              { id: 'STEP-1', label: steps[0]?.title || 'Ingress', phase: 'entrypoint', position: { x: 140, y: 70 } },
+              { id: 'STEP-2', label: steps[1]?.title || 'Domain', phase: 'domain', position: { x: 820, y: 70 } },
+              { id: 'STEP-3', label: steps[2]?.title || 'Guard', phase: 'guard', position: { x: 140, y: 370 } },
+              { id: 'STEP-4', label: steps[3]?.title || 'Storage', phase: 'storage', position: { x: 820, y: 370 } },
+              { id: 'STEP-5', label: steps[4]?.title || 'Telemetry', phase: 'telemetry', position: { x: 480, y: 440 } },
+            ],
           },
-          {
-            step_number: 2,
-            node_id: 'STEP-2',
-            title: 'FENCE-001: Midnight Retry Loop (retryCount = 5)',
-            file_path: 'src/main/java/com/healthconnect/payments/GatewayRouter.java',
-            line_range: '19-28',
-            fence_id: 'FENCE-001',
-            summary:
-              'Guarded by Spoken Fence FENCE-001: maintains 5 retries while gateway.version == v1 to survive 00:00 IST packet drops.',
-            audio_url: `/api/audio/flow_4a1ee7_${langKey}_step2.wav`,
-          },
-          {
-            step_number: 3,
-            node_id: 'STEP-3',
-            title: 'Idempotency Outbox Deduplication',
-            file_path: 'src/main/java/com/healthconnect/payments/SettlementIdempotencyGuard.java',
-            line_range: '8-24',
-            fence_id: 'FENCE-002',
-            summary:
-              'Attaches deterministic SHA-256 X-Idempotency-Key so retries never double-charge the patient.',
-            audio_url: `/api/audio/flow_4a1ee7_${langKey}_step3.wav`,
-          },
-          {
-            step_number: 4,
-            node_id: 'STEP-4',
-            title: 'DICOM Imaging & Adreno GPU Frame Sync',
-            file_path: 'src/main/java/com/healthconnect/imaging/DicomShaderPipeline.java',
-            line_range: '6-18',
-            fence_id: 'FENCE-003',
-            summary:
-              'Applies 120ms frame pacing buffer on clinic Android tablets to prevent driver buffer overflow.',
-            audio_url: `/api/audio/flow_4a1ee7_${langKey}_step4.wav`,
-          },
-          {
-            step_number: 5,
-            node_id: 'STEP-5',
-            title: 'JWT Clock-Skew Validation (180s Tolerance)',
-            file_path: 'src/main/java/com/healthconnect/auth/JwtClockSkewFilter.java',
-            line_range: '4-15',
-            fence_id: 'FENCE-004',
-            summary:
-              'Permits 180s NTP drift for rural clinic routers before finalizing settlement webhook.',
-            audio_url: `/api/audio/flow_4a1ee7_${langKey}_step5.wav`,
-          },
-        ];
+        };
 
         return sendJson(res, 200, {
           status: 'ok',
-          repo_name: getActiveRepoContext().fullName,
+          repo_name: repoCtx.fullName,
           language: langKey,
+          project_summary: dynamicFlow.project_summary,
           steps,
           nodes: steps,
+          graph,
         });
       }
-
       // POST /api/git/scan & POST /api/git/scan-narrated
       if ((pathname === '/api/git/scan' || pathname === '/api/git/scan-narrated') && method === 'POST') {
         const body = await parseBody(req);
@@ -1597,7 +2062,7 @@ export function createWhylineApiMiddleware() {
               const cleanedBase64 = body.audio_base64.replace(/^data:[^;]+;base64,/, '');
               const sttResp = await withTimeout(
                 ai.models.generateContent({
-                  model: 'gemini-3.5-transcribe',
+                  model: 'gemini-3.5-flash',
                   contents: {
                     parts: [
                       {

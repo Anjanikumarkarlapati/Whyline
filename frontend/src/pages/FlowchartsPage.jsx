@@ -9,7 +9,7 @@ export default function FlowchartsPage() {
   const { repoContext, selectLocation } = useWorkbenchSelection();
 
   return (
-    <div className="page-stack" style={{ width: '100%' }}>
+    <div className="page-stack animate-fade-slide-up" style={{ width: '100%' }}>
       {/* Header */}
       <section
         className="context-header"
@@ -24,9 +24,9 @@ export default function FlowchartsPage() {
       >
         <div>
           <p className="context-meta" style={{ marginBottom: '4px' }}>
-            Visual Architecture Guide • {repoContext?.fullName || 'HealthConnect/payment-gateway-v1'}
+            Visual Architecture Guide • <span className="font-mono tabular-nums">{repoContext?.fullName || 'HealthConnect/payment-gateway-v1'}</span>
           </p>
-          <h1 className="page-title" style={{ margin: 0 }}>
+          <h1 className="page-title" style={{ margin: 0, fontSize: 'var(--fluid-h1)' }}>
             GitHub Repository Flowcharts
           </h1>
           <p style={{ margin: '6px 0 0', fontSize: '15px', color: 'var(--text-secondary)', maxWidth: '68ch' }}>

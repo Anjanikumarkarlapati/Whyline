@@ -287,6 +287,7 @@ export default function AudioWaveform({
           return (
             <div
               key={idx}
+              className="audio-bar-interactive" 
               onClick={(e) => {
                 if (isRecording) return;
                 e.stopPropagation();
@@ -434,7 +435,7 @@ export default function AudioWaveform({
           {onToggleRecord && (
             <button
               type="button"
-              className={`btn ${isRecording ? 'btn-danger' : 'btn-secondary'}`}
+              className={`btn card-interactive ${isRecording ? 'btn-danger voice-pulse-ring' : 'btn-secondary'}`}
               style={{
                 minHeight: '34px',
                 padding: '0 12px',

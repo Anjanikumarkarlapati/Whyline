@@ -606,8 +606,8 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
               <button
                 key={sq.label}
                 type="button"
-                className="btn btn-secondary"
-                style={{ minHeight: '28px', padding: '0 10px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                className="btn btn-secondary starter-chip-interactive card-interactive"
+                style={{ minHeight: '28px', padding: '0 10px', fontSize: '12px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 onClick={() => {
                   setQuery(sq.query);
                   if (sq.file) {
@@ -616,7 +616,8 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
                   runSttAndExecuteTask(sq.query);
                 }}
               >
-                {sq.label}
+                <span>{sq.label}</span>
+                <ArrowRight size={11} className="chip-arrow-icon" />
               </button>
             ))}
           </div>
@@ -644,7 +645,7 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
           <button
             type="button"
             data-testid="voice-mic-btn"
-            className={`btn btn-icon ${isRecording ? 'btn-danger' : 'btn-secondary'}`}
+            className={`btn btn-icon card-interactive ${isRecording ? 'btn-danger voice-pulse-ring' : 'btn-secondary'}`}
             onClick={handleToggleRecord}
             aria-label={isRecording ? 'Stop recording and ask question' : 'Speak question with microphone'}
             style={{
