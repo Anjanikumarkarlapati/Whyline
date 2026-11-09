@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { ChatCircleText, Code, Graph } from '@phosphor-icons/react';
 import { useWorkbenchSelection } from '../context/WorkbenchContext';
 import AskTabPanel from '../components/workbench/AskTabPanel';
+import RepoFlowchartExplorer from '../components/RepoFlowchartExplorer';
 
 export default function AskRepoPage() {
   const navigate = useNavigate();
-  const { repoContext } = useWorkbenchSelection();
+  const { repoContext, selectLocation } = useWorkbenchSelection();
 
   return (
     <div className="page-stack animate-fade-slide-up" style={{ maxWidth: '980px', margin: '0 auto', width: '100%' }}>
@@ -127,6 +128,18 @@ export default function AskRepoPage() {
 
       {/* Main Interactive Ask Repo Workspace */}
       <AskTabPanel />
+
+      {/* Integrated Interactive Flowchart & Voice Walkthrough */}
+      <RepoFlowchartExplorer
+        onSelectStep={(step) => {
+          if (step?.file_path) {
+            selectLocation({
+              file: step.file_path,
+              line: step.line_start || 1,
+            });
+          }
+        }}
+      />
     </div>
   );
 }

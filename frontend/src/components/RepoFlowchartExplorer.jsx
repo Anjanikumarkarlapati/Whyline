@@ -53,13 +53,25 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
   const audioRef = useRef(null);
   const walkthroughTimerRef = useRef(null);
   const walkthroughActiveRef = useRef(false);
+  const lastScannedKeyRef = useRef('');
 
   const langCode = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
 
+  const normalizeRepoKey = (urlStr = '') =>
+    String(urlStr || '')
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\/(www\.)?github\.com\//, '')
+      .replace(/\.git$/, '')
+      .replace(/\/+$/, '');
+
   useEffect(() => {
-    if (repoContext?.url && repoContext.url !== githubUrl) {
+    if (repoContext?.url) {
+      const nextKey = normalizeRepoKey(repoContext.url);
       setGithubUrl(repoContext.url);
-      fetchFlowchartScan(repoContext.url, langCode, false);
+      if (nextKey && nextKey !== lastScannedKeyRef.current) {
+        fetchFlowchartScan(repoContext.url, langCode, true);
+      }
     }
   }, [repoContext?.url]);
 
@@ -83,10 +95,28 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
     }
   };
 
+  const speakWithBrowserFallback = (text, targetLang, onDone) => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window && text) {
+      try {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = targetLang || langCode;
+        utter.onend = () => onDone?.();
+        utter.onerror = () => onDone?.();
+        window.speechSynthesis.speak(utter);
+        return;
+      } catch {
+        // Fall through
+      }
+    }
+    onDone?.();
+  };
+
   const playProjectSummaryAudio = (projectSummary) => {
     if (!projectSummary) return;
     stopVoiceWalkthrough();
     setVoiceAgentStatus(`Playing Overview (${langCode})`);
+    const fallbackText = `${projectSummary.simple_explanation || ''} ${projectSummary.real_world_example || ''}`.trim();
 
     if (projectSummary.audio_url) {
       if (!audioRef.current) {
@@ -95,25 +125,19 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
         audioRef.current.src = projectSummary.audio_url;
       }
       audioRef.current.onended = () => setVoiceAgentStatus('Ready');
-      audioRef.current.onerror = () => setVoiceAgentStatus('Ready');
+      audioRef.current.onerror = () =>
+        speakWithBrowserFallback(fallbackText, langCode, () => setVoiceAgentStatus('Ready'));
       audioRef.current.play().catch(() => {
-        setVoiceAgentStatus('Ready');
+        speakWithBrowserFallback(fallbackText, langCode, () => setVoiceAgentStatus('Ready'));
       });
-    } else if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-        const text = `${projectSummary.simple_explanation || ''} ${projectSummary.real_world_example || ''}`;
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.lang = langCode;
-        utter.onend = () => setVoiceAgentStatus('Ready');
-        window.speechSynthesis.speak(utter);
-      } catch {
-        setVoiceAgentStatus('Ready');
-      }
+    } else {
+      speakWithBrowserFallback(fallbackText, langCode, () => setVoiceAgentStatus('Ready'));
     }
   };
 
   const fetchFlowchartScan = async (targetUrl, targetLangCode, autoPlayWalkthrough = false) => {
+    const resolvedUrl = targetUrl || githubUrl;
+    lastScannedKeyRef.current = normalizeRepoKey(resolvedUrl);
     stopVoiceWalkthrough();
     setLoading(true);
     setVoiceAgentStatus('Building Flowchart...');
@@ -122,7 +146,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          github_url: targetUrl || githubUrl,
+          github_url: resolvedUrl,
           language: targetLangCode || langCode,
         }),
       });
@@ -159,7 +183,11 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
 
   const playSingleStepAudio = (stepObj, onComplete) => {
     if (!stepObj) return;
-    setVoiceAgentStatus(`Speaking Step ${stepObj.step_number} (${stepObj.tts_language || langCode})`);
+    const stepLang = stepObj.tts_language || langCode;
+    setVoiceAgentStatus(`Speaking Step ${stepObj.step_number} (${stepLang})`);
+    const spokenText =
+      stepObj.spoken_narration ||
+      `Step ${stepObj.step_number}: ${stepObj.title}. ${stepObj.simple_explanation || stepObj.summary || ''}`;
 
     let finished = false;
     const finishOnce = () => {
@@ -176,7 +204,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
       }
     };
 
-    walkthroughTimerRef.current = setTimeout(finishOnce, 3500);
+    walkthroughTimerRef.current = setTimeout(finishOnce, 14000);
 
     if (stepObj.audio_url) {
       if (!audioRef.current) {
@@ -192,8 +220,14 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
         }
       };
       audioRef.current.onended = finishOnce;
-      audioRef.current.onerror = finishOnce;
-      audioRef.current.play().catch(() => {});
+      audioRef.current.onerror = () => {
+        speakWithBrowserFallback(spokenText, stepLang, finishOnce);
+      };
+      audioRef.current.play().catch(() => {
+        speakWithBrowserFallback(spokenText, stepLang, finishOnce);
+      });
+    } else {
+      speakWithBrowserFallback(spokenText, stepLang, finishOnce);
     }
   };
 
@@ -211,6 +245,9 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
         return;
       }
       setActiveStepIdx(idx);
+      if (onSelectStep && steps[idx]) {
+        onSelectStep(steps[idx]);
+      }
       playSingleStepAudio(steps[idx], () => {
         if (walkthroughActiveRef.current) {
           runStep(idx + 1);
@@ -273,8 +310,9 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            lastScannedKeyRef.current = normalizeRepoKey(githubUrl);
             loadGitHubRepo(githubUrl);
-            fetchFlowchartScan(githubUrl, langCode, false);
+            fetchFlowchartScan(githubUrl, langCode, true);
           }}
           style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}
         >
@@ -347,9 +385,10 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                 className="btn btn-secondary"
                 style={{ minHeight: '28px', padding: '0 10px', fontSize: '12px', whiteSpace: 'nowrap' }}
                 onClick={() => {
+                  lastScannedKeyRef.current = normalizeRepoKey(demo.url);
                   setGithubUrl(demo.url);
                   loadGitHubRepo(demo.url);
-                  fetchFlowchartScan(demo.url, langCode, false);
+                  fetchFlowchartScan(demo.url, langCode, true);
                 }}
               >
                 <span className="mono-metric">{demo.label}</span>
@@ -524,7 +563,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
         )}
 
         {/* Visual SVG Diagram & Radial Mind Map Mode */}
-        {steps.length > 0 && viewMode === 'graph' && (
+        {steps.length > 0 && (viewMode === 'steps' || viewMode === 'graph') && (
           <div
             style={{
               padding: '20px',

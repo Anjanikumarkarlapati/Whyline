@@ -153,8 +153,9 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
         sampleQuestion ||
         (loaded.isLocal
           ? 'How do we fix the double-charge bug in GatewayRouter.java without breaking retryCount = 5?'
-          : `How does ${loaded.files?.[0]?.shortName || loaded.repo} work in ${loaded.fullName} and how do we change it safely?`);
+          : `Explain how ${loaded.fullName} works, its core files (${loaded.files?.[0]?.shortName || loaded.repo}), and how to modify it safely.`);
       setQuery(nextQuestion);
+      await runSttAndExecuteTask(nextQuestion, null, loaded.url, loaded.fullName);
     }
   };
 
@@ -190,14 +191,22 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
     }
   };
 
-  const runSttAndExecuteTask = async (rawHint, explicitLang = null) => {
+  const runSttAndExecuteTask = async (
+    rawHint,
+    explicitLang = null,
+    explicitRepoUrl = null,
+    explicitRepoFullName = null
+  ) => {
     const targetLang = explicitLang || lang;
     const langCode = targetLang === 'hi' ? 'hi-IN' : targetLang === 'te' ? 'te-IN' : 'en-IN';
     const rawQ = (rawHint || query || '').trim();
     if (!rawQ) return;
 
+    const effectiveRepoUrl = explicitRepoUrl || repoInput || repoContext?.url;
+    const effectiveRepoName = explicitRepoFullName || repoContext?.fullName || effectiveRepoUrl;
+
     const cached = getCachedVoiceResponse({
-      repoFullName: repoContext?.fullName,
+      repoFullName: effectiveRepoName,
       question: rawQ,
       language: langCode,
     });
@@ -224,9 +233,9 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
         setSttTelemetry(sttData);
         setQuery(rescoredQuery);
       }
-      await handleAsk(rescoredQuery, sttData, targetLang, rawQ);
+      await handleAsk(rescoredQuery, sttData, targetLang, rawQ, effectiveRepoUrl, effectiveRepoName);
     } catch {
-      await handleAsk(rawQ, null, targetLang, rawQ);
+      await handleAsk(rawQ, null, targetLang, rawQ, effectiveRepoUrl, effectiveRepoName);
     }
   };
 
@@ -243,7 +252,9 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
     explicitQuery,
     existingStt = null,
     explicitLang = null,
-    originalRawQuery = null
+    originalRawQuery = null,
+    explicitRepoUrl = null,
+    explicitRepoFullName = null
   ) => {
     const q = (explicitQuery || query || '').trim();
     if (!q) return;
@@ -251,10 +262,12 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
     const targetLang = explicitLang || lang;
     const langCode = targetLang === 'hi' ? 'hi-IN' : targetLang === 'te' ? 'te-IN' : 'en-IN';
     const voiceForLang = targetLang === 'te' ? 'Nalini' : targetLang === 'hi' ? 'Bhavna' : 'Pranav';
+    const targetRepoUrl = explicitRepoUrl || repoInput || repoContext?.url;
+    const targetRepoName = explicitRepoFullName || repoContext?.fullName || targetRepoUrl;
 
     if (!existingStt) {
       const cached = getCachedVoiceResponse({
-        repoFullName: repoContext?.fullName,
+        repoFullName: targetRepoName,
         question: q,
         language: langCode,
       });
@@ -274,6 +287,7 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
           question: q,
           language: langCode,
           voice: voiceForLang,
+          repo_url: targetRepoUrl,
           output_mode: 'voice_and_text',
         }),
       });
@@ -396,19 +410,6 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
       a.play()
         .then(() => {
           setIsPlayingAudio(true);
-          if (
-            typeof window !== 'undefined' &&
-            'speechSynthesis' in window &&
-            spokenText &&
-            !String(target).includes('gemini_tts_')
-          ) {
-            try {
-              window.speechSynthesis.cancel();
-              const utter = new SpeechSynthesisUtterance(spokenText);
-              utter.lang = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
-              window.speechSynthesis.speak(utter);
-            } catch {}
-          }
         })
         .catch(() => {
           startSimulatedWaveformPlayback(spokenText);
