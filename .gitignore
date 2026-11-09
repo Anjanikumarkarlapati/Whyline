@@ -32,6 +32,8 @@ screenshots/
 # Generated at runtime — do NOT commit. The demo-repos/ copies are fixtures
 # and are intentionally tracked via the negation rules below.
 /.whyline/
+demo-repos/**/.whyline/audio/*.wav
+*.wav
 
 # Temporary test scratch files
 /tmp_test/
