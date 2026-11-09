@@ -517,6 +517,41 @@ function withTimeout(promise, timeoutMs = 3500) {
   ]);
 }
 
+/**
+ * Prioritizes Gemini 4 Argon (`gemini-4-argon`) as requested by user instruction,
+ * with zero-downtime cascade to Flash variants if rate-limited or quota-exhausted.
+ */
+const GEMINI_MODEL_CASCADE = [
+  process.env.GEMINI_MODEL || 'gemini-4-argon',
+  'gemini-3.5-flash-lite',
+  'gemini-3.7-flash',
+  'gemini-3.8-flash',
+  'gemini-3.1-flash-lite',
+  'gemini-3.5-flash',
+];
+
+async function generateContentWithFallback(ai, params, timeoutMs = 12000) {
+  let lastError = null;
+  for (const model of GEMINI_MODEL_CASCADE) {
+    try {
+      const response = await withTimeout(
+        ai.models.generateContent({
+          ...params,
+          model,
+        }),
+        timeoutMs
+      );
+      if (response && (response.text || response.candidates?.length)) {
+        return { response, modelUsed: model };
+      }
+    } catch (err) {
+      lastError = err;
+      // If 429 quota, 429 rate-limit, 404, or timeout, quickly cascade to next model
+    }
+  }
+  throw lastError || new Error('All Gemini model cascade targets failed');
+}
+
 function inferEditorLanguage(filePath = '') {
   const ext = path.extname(filePath).toLowerCase();
   if (ext === '.java') return 'java';
@@ -870,9 +905,9 @@ Requirements:
 7. "referenced_files": 1 to 3 exact file citations with file_path, line_number, snippet, and explanation.
 8. "strategies": 3 ranked architectural strategies (rank 1 = LOW risk recommended, rank 2 = MODERATE risk, rank 3 = HIGH risk naive approach).`;
 
-    const response = await withTimeout(
-      ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+    const { response, modelUsed } = await generateContentWithFallback(
+      ai,
+      {
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -926,8 +961,8 @@ Requirements:
             ],
           },
         },
-      }),
-      12000
+      },
+      15000
     );
 
     const parsed = JSON.parse(response.text || '{}');
@@ -937,7 +972,7 @@ Requirements:
         ...baselinePayload,
         repo_full_name: repoCtx.fullName,
         repo_url: repoCtx.url,
-        brain_engine: 'Gemini 3.8 Flash Live Repository Brain (@google/genai)',
+        brain_engine: `Gemini (${modelUsed}) Live Repository Brain (@google/genai)`,
         spoken_reply: parsed.spoken_answer,
         spoken_answer: parsed.spoken_answer,
         guardrail_rule: parsed.guardrail_rule || baselinePayload.guardrail_rule,
@@ -1360,9 +1395,9 @@ export function createWhylineApiMiddleware() {
           if (ai) {
             try {
               const cleanedBase64 = body.audio_base64.replace(/^data:[^;]+;base64,/, '');
-              const sttResp = await withTimeout(
-                ai.models.generateContent({
-                  model: 'gemini-3.5-flash',
+              const { response: sttResp } = await generateContentWithFallback(
+                ai,
+                {
                   contents: {
                     parts: [
                       {
@@ -1376,8 +1411,8 @@ export function createWhylineApiMiddleware() {
                       },
                     ],
                   },
-                }),
-                3000
+                },
+                5000
               );
               if (sttResp.text && sttResp.text.trim()) {
                 rawQuestion = sttResp.text.trim();
@@ -1701,13 +1736,13 @@ Format as JSON with exact keys:
   ]
 }`;
 
-            const aiResp = await withTimeout(
-              ai.models.generateContent({
-                model: 'gemini-3.5-flash',
+            const { response: aiResp } = await generateContentWithFallback(
+              ai,
+              {
                 contents: prompt,
                 config: { responseMimeType: 'application/json' },
-              }),
-              7500
+              },
+              10000
             );
 
             dynamicFlow = JSON.parse(aiResp.text || '{}');
@@ -2077,9 +2112,9 @@ Format as JSON with exact keys:
           if (ai) {
             try {
               const cleanedBase64 = body.audio_base64.replace(/^data:[^;]+;base64,/, '');
-              const sttResp = await withTimeout(
-                ai.models.generateContent({
-                  model: 'gemini-3.5-flash',
+              const { response: sttResp } = await generateContentWithFallback(
+                ai,
+                {
                   contents: {
                     parts: [
                       {
@@ -2093,8 +2128,8 @@ Format as JSON with exact keys:
                       },
                     ],
                   },
-                }),
-                3000
+                },
+                5000
               );
               if (sttResp.text && sttResp.text.trim()) {
                 rawTranscript = sttResp.text.trim();
