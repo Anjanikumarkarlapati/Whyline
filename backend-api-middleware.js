@@ -759,7 +759,19 @@ async function synthesizeSpeechAudio(text, language = 'en-IN') {
   if (!text) return null;
   loadDotenvSafe();
   const langKey = language.includes('te') ? 'te-IN' : language.includes('hi') ? 'hi-IN' : 'en-IN';
-  const digest = crypto.createHash('md5').update(`${langKey}:${text}`).digest('hex').slice(0, 10);
+
+  // Sanitize text for clean voice pronunciation (strip markdown, backticks, code fences)
+  const cleanSpokenText = String(text)
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/[`*_#>\[\]]/g, ' ')
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 450);
+
+  if (!cleanSpokenText) return null;
+
+  const digest = crypto.createHash('md5').update(`${langKey}:${cleanSpokenText}`).digest('hex').slice(0, 10);
   const filename = `voice_${digest}.wav`;
   const filePath = path.join(AUDIO_DIR, filename);
 
@@ -781,11 +793,11 @@ async function synthesizeSpeechAudio(text, language = 'en-IN') {
         },
         body: JSON.stringify({
           model: 'timbre-v2.5',
-          text: String(text).slice(0, 480),
+          text: cleanSpokenText,
           language: langKey,
           voice,
         }),
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(8000),
       });
 
       if (resp.ok) {
@@ -915,7 +927,7 @@ Requirements:
           },
         },
       }),
-      3500
+      12000
     );
 
     const parsed = JSON.parse(response.text || '{}');
@@ -1328,9 +1340,14 @@ export function createWhylineApiMiddleware() {
         method === 'POST'
       ) {
         const body = await parseBody(req);
-        // If the request specifies a repo_url to switch on the fly, load it first
-        if (body.repo_url) {
-          await loadAndIndexGitHubRepository(body.repo_url);
+        // If the request specifies a repo_url / github_url / repo to switch on the fly, load it first
+        const requestedRepo = body.repo_url || body.github_url || body.repo;
+        if (requestedRepo && requestedRepo !== getActiveRepoContext().url) {
+          try {
+            await loadAndIndexGitHubRepository(requestedRepo);
+          } catch (e) {
+            console.warn('Could not index custom repo on the fly in copilot:', e.message);
+          }
         }
 
         const repoCtx = getActiveRepoContext();
