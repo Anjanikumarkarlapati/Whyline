@@ -47,7 +47,9 @@ Thumbs.db
 *.xlsx
 outputs/
 
-# Graphify Knowledge Graph
-graphify-out/
+# Graphify Knowledge Graph (track GRAPH_REPORT.md, graph.json, graph.html; ignore cache & temp sidecars)
+graphify-out/cache/
+graphify-out/.*
+frontend/src/graphify-out/
 
 scratch/
