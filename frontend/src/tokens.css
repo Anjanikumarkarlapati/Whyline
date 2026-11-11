@@ -1269,3 +1269,89 @@ a.btn:active {
   border: 1px solid rgba(217, 215, 182, 0.18);
   backdrop-filter: blur(8px);
 }
+
+
+/* =========================================================================
+ * Motion Canvas pass — login stage, repo-load choreography, route + modal
+ * transitions. All kinetic effects are neutralised by the reduced-motion gate.
+ * ========================================================================= */
+.login-stage { position: relative; z-index: 1; width: 100%; max-width: 1360px; margin: 0 auto; padding: 0 24px; }
+.login-stage .auth-centered { min-height: 0; padding: 0; }
+.login-stage .login-split-layout { min-height: 100vh; align-items: center; }
+
+/* Staggered reveal: --i is the sequence index */
+.login-reveal { animation: fadeSlideUp 520ms var(--ease-glide) both; animation-delay: calc(var(--i, 0) * 80ms); }
+
+.login-hero-body { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 24px; }
+.login-brand { display: inline-flex; align-items: center; gap: 10px; }
+.login-hero-mark { width: 36px; height: 36px; border-radius: 10px; background: #545333; color: #FDFBD4; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; border: 1px solid rgba(253, 251, 212, 0.3); }
+.login-hero-name { font-weight: 600; font-size: 18px; letter-spacing: -0.03em; color: #FDFBD4; }
+.login-hero-tag { font-size: 12px; color: #D9D7B6; }
+.login-hero-title { font-family: var(--font-display); font-weight: 400; font-size: clamp(28px, 3.5vw, 42px); line-height: 1.12; color: #FDFBD4; margin: 0 0 12px; }
+.login-hero-copy { font-size: 15px; line-height: 1.6; color: #D9D7B6; margin: 0; max-width: 56ch; }
+
+/* Hero background drifts slowly — a survey map being unrolled */
+.login-hero-bg-art { animation: mapDrift 28s linear infinite alternate; }
+@keyframes mapDrift { from { background-position: 0 0, 0 0, 0 0; } to { background-position: 0 0, 0 0, 120px 60px; } }
+
+/* Pipeline schematic: wires draw in, hot node breathes */
+.login-schematic { padding: 16px; border-radius: 16px; background: rgba(20, 20, 9, 0.65); border: 1px solid rgba(217, 215, 182, 0.22); }
+.login-schematic svg { width: 100%; height: auto; display: block; }
+.schematic-node rect { fill: #25251A; stroke: #878672; stroke-width: 1.2; }
+.schematic-node.is-hot rect { fill: #2F2F22; stroke: #D9A520; stroke-width: 1.5; animation: flowchartGlow 2.4s ease-in-out infinite; }
+.s-title { fill: #FDFBD4; font: 600 11px var(--font-sans); }
+.s-mono { fill: #D9D7B6; font: 400 10px var(--font-mono); }
+.schematic-wire { fill: none; stroke: #D9A520; stroke-width: 1.8; stroke-dasharray: 1; stroke-dashoffset: 1; animation: wireDraw 900ms var(--ease-glide) 700ms forwards; }
+.schematic-wire.w2 { stroke: #D9D7B6; animation-delay: 1100ms; }
+@keyframes wireDraw { to { stroke-dashoffset: 0; } }
+
+.login-pillars { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.login-pillar-card { transition: transform 180ms var(--ease-glide), border-color 150ms ease; }
+.login-pillar-card:hover { transform: translateY(-2px); border-color: rgba(217, 165, 32, 0.6); }
+.login-pillar-title { display: flex; align-items: center; gap: 6px; color: #D9A520; font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.login-pillar-card p { margin: 0; font-size: 12px; color: #D9D7B6; line-height: 1.45; }
+
+/* Auth card */
+.login-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.login-card-tools { display: flex; align-items: center; gap: 8px; }
+.login-lang { min-height: 32px; padding: 2px 8px; font-size: 13px; width: auto; }
+.login-form { display: flex; flex-direction: column; gap: 16px; }
+.login-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.preset-chip { min-height: 32px; padding: 0 12px; font-size: 12px; gap: 8px; transition: transform 180ms var(--ease-spring), background-color 150ms ease; }
+.preset-chip:hover { transform: translateY(-2px); }
+.preset-badge { opacity: 0.75; font-size: 11px; }
+.login-form-btn:hover .chip-arrow-icon { transform: translateX(4px); }
+.login-demo-btn { align-self: center; font-size: 12px; }
+
+/* Repo insertion field */
+.repo-field { display: flex; align-items: center; gap: 8px; padding-left: 12px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--bg-surface); color: var(--text-secondary); transition: border-color 150ms ease, box-shadow 200ms var(--ease-glide); }
+.repo-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+.repo-field .form-input { border: 0; background: transparent; box-shadow: none; flex: 1; min-width: 0; }
+.repo-field .form-input:focus-visible { outline: none !important; }
+.repo-field.has-error { border-color: var(--status-critical); animation: fieldShake 320ms var(--ease-press); }
+.field-error { display: flex; align-items: center; gap: 6px; }
+@keyframes fieldShake { 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+
+/* Repo-load progress */
+.load-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.load-step { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--border-default); border-radius: 12px; background: var(--bg-surface); color: var(--text-secondary); transition: border-color 200ms ease, background-color 200ms ease, color 200ms ease; }
+.load-step.is-active { border-color: var(--accent); background: var(--accent-wash); color: var(--text-primary); animation: fadeSlideUp 300ms var(--ease-glide) both; }
+.load-step.is-done { color: var(--text-primary); }
+.load-step.is-done .load-step-icon { color: var(--status-good); animation: checkPop 360ms var(--ease-spring); }
+.load-step-icon { display: inline-flex; justify-content: center; }
+.load-step .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); }
+.load-step-state { font: 400 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; }
+.load-bar { height: 4px; border-radius: 4px; background: var(--bg-raised); overflow: hidden; }
+.load-bar span { display: block; height: 100%; background: var(--accent); transform-origin: left; transition: transform 600ms var(--ease-glide); }
+.spin { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes checkPop { 0% { transform: scale(0.4); } 100% { transform: scale(1); } }
+
+/* App-wide: route transition, nav underline, modal entrance */
+.main-content .container > * { animation: fadeSlideUp 300ms var(--ease-glide) both; }
+.nav-link { position: relative; }
+.nav-link::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: 4px; height: 2px; border-radius: 2px; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform 240ms var(--ease-glide); }
+.nav-link:hover::after, .nav-link.active::after { transform: scaleX(1); }
+.session-modal-card { animation: fadeScaleIn 220ms var(--ease-spring) both; }
+.drawer-backdrop { animation: backdropIn 180ms ease both; }
+@keyframes backdropIn { from { opacity: 0; } }

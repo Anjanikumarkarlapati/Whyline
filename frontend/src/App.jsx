@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { I18nProvider } from './i18n';
 import { WorkbenchProvider } from './context/WorkbenchContext';
 import Layout from './components/Layout';
+import LoginPage from './pages/LoginPage';
 import AskRepoPage from './pages/AskRepoPage';
 import AnswersPage from './pages/AnswersPage';
 import FlowchartsPage from './pages/FlowchartsPage';
@@ -57,6 +58,7 @@ export default function App() {
           <WorkbenchProvider>
             <RouteAnnouncer />
             <Routes>
+              <Route path="/login" element={<LoginPage theme={theme} onToggleTheme={toggleTheme} />} />
               <Route element={<Layout theme={theme} onToggleTheme={toggleTheme} />}>
                 {/* 3 Beginner-Friendly Developer Pages */}
                 <Route path="/" element={<AskRepoPage />} />
@@ -72,7 +74,6 @@ export default function App() {
                 <Route path="/git" element={<LegacyRedirect to="/flowcharts" />} />
                 <Route path="/incidents" element={<LegacyRedirect to="/flowcharts" />} />
                 <Route path="/settings" element={<LegacyRedirect to="/" />} />
-                <Route path="/login" element={<LegacyRedirect to="/" />} />
 
                 {/* Catch-all fallback */}
                 <Route path="*" element={<LegacyRedirect to="/" />} />

@@ -75,18 +75,21 @@ export function parseGitHubRepoInput(input = '') {
     };
   }
 
-  // Match https://github.com/owner/repo or github.com/owner/repo
-  const urlMatch = raw.match(/github\.com\/([^/\s]+)\/([^/\s#?]+)/i);
+  // Match https://github.com/owner/repo or github.com/owner/repo (strict slug chars only, no .. traversal)
+  const isSafeSlug = (s) => /^[a-zA-Z0-9_.-]{1,100}$/.test(s) && s !== '.' && s !== '..' && !s.includes('..');
+  const urlMatch = raw.match(/github\.com\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)/i);
   if (urlMatch) {
     const owner = urlMatch[1];
     const repo = urlMatch[2].replace(/\.git$/i, '');
-    return {
-      owner,
-      repo,
-      fullName: `${owner}/${repo}`,
-      url: `https://github.com/${owner}/${repo}`,
-      isLocal: false,
-    };
+    if (isSafeSlug(owner) && isSafeSlug(repo)) {
+      return {
+        owner,
+        repo,
+        fullName: `${owner}/${repo}`,
+        url: `https://github.com/${owner}/${repo}`,
+        isLocal: false,
+      };
+    }
   }
 
   // Match shorthand owner/repo
@@ -94,6 +97,15 @@ export function parseGitHubRepoInput(input = '') {
   if (shortMatch) {
     const owner = shortMatch[1];
     const repo = shortMatch[2].replace(/\.git$/i, '');
+    if (!isSafeSlug(owner) || !isSafeSlug(repo)) {
+      return {
+        owner: 'HealthConnect',
+        repo: 'payment-gateway-v1',
+        fullName: 'HealthConnect/payment-gateway-v1',
+        url: 'https://github.com/HealthConnect/payment-gateway-v1',
+        isLocal: true,
+      };
+    }
     if (owner.toLowerCase() === 'healthconnect') {
       return {
         owner: 'HealthConnect',

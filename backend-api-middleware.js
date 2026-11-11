@@ -556,8 +556,8 @@ async function generateContentWithFallback(ai, params, timeoutMs = 6500) {
       lastError = err;
       const msg = String(err?.message || err || '');
       const isTimeout = msg.includes('timed out') || msg.includes('Timeout');
-      if (!isTimeout) {
-        // HTTP 429 quota or 404: put model on 10-minute cooldown and immediately try next model
+      if (!isTimeout || model === 'gemini-4-argon') {
+        // HTTP 429 quota, 404, or fast probe timeout: put model on 10-minute cooldown and try next model
         modelCooldownMap.set(model, Date.now() + 10 * 60 * 1000);
       } else {
         // Timeout reached: do not multiply timeout across remaining models
@@ -638,17 +638,18 @@ function scoreRepositoryBlobPath(filePath = '') {
     lower.includes('funding.yml') ||
     lower.includes('issue_template') ||
     lower.includes('pull_request_template') ||
-    lower.includes('license')
+    lower.includes('license') ||
+    /(^|\/)\.|(^|\/)(e2e|tests?|__tests__|cypress|playwright)\/|\.(spec|test)\.|eslintrc|prettierrc|babel\.config|jest\.|webpack|rollup|postcss|(^|\/)styles?\.(js|ts|jsx|tsx)$|\.d\.ts$/.test(lower)
   ) {
     return -100;
   }
   let score = 10;
   const primaryExts = ['.ts', '.tsx', '.js', '.jsx', '.py', '.java', '.go', '.rs', '.rb', '.cs', '.cpp', '.c'];
   if (primaryExts.some((ext) => lower.endsWith(ext))) score += 40;
-  if (lower.startsWith('src/') || lower.startsWith('lib/') || lower.startsWith('app/') || lower.startsWith('pkg/') || lower.startsWith('cmd/') || lower.startsWith('core/')) {
+  if (/^(src|lib|app|pkg|cmd|core|server|client|backend|frontend|api)\//.test(lower)) {
     score += 30;
   }
-  if (lower.includes('index.') || lower.includes('main.') || lower.includes('server.') || lower.includes('app.') || lower.includes('router') || lower.includes('core.') || lower.includes('client.')) {
+  if (/(^|\/)(index|main|server|app|router|routes?|controllers?|models?|schemas?|services?|client|api|auth|middleware|db|store|reducers?)[./_-]/.test(lower)) {
     score += 25;
   }
   if (lower === 'package.json' || lower === 'pyproject.toml' || lower === 'cargo.toml' || lower === 'go.mod' || lower === 'pom.xml') {
@@ -657,6 +658,265 @@ function scoreRepositoryBlobPath(filePath = '') {
   if (lower === 'readme.md') score += 15;
   if (lower.includes('test') || lower.includes('spec') || lower.includes('example')) score -= 15;
   return score;
+}
+
+const MANIFEST_RE = /(^|\/)(readme\.md|package\.json|requirements\.txt|pyproject\.toml|pipfile|go\.mod|pom\.xml|build\.gradle(\.kts)?|gemfile|cargo\.toml|composer\.json|docker-compose\.ya?ml|schema\.prisma|\.env\.(example|sample|template|local\.example))$/i;
+
+// [needle, category, label]. Matched against package.json dependency names, else manifest/source text.
+const STACK_SIGNATURES = [
+  ['next', 'frontend', 'Next.js'], ['react', 'frontend', 'React'], ['react-scripts', 'frontend', 'Create React App'],
+  ['vue', 'frontend', 'Vue'], ['nuxt', 'frontend', 'Nuxt'], ['svelte', 'frontend', 'Svelte'], ['@angular/core', 'frontend', 'Angular'],
+  ['solid-js', 'frontend', 'SolidJS'], ['astro', 'frontend', 'Astro'], ['vite', 'frontend', 'Vite'], ['react-native', 'frontend', 'React Native'],
+  ['expo', 'frontend', 'Expo'], ['redux', 'frontend', 'Redux'], ['@reduxjs/toolkit', 'frontend', 'Redux Toolkit'],
+  ['tailwindcss', 'frontend', 'Tailwind CSS'], ['@mui/material', 'frontend', 'Material UI'], ['@material-ui/core', 'frontend', 'Material UI'],
+  ['express', 'backend', 'Express'], ['fastify', 'backend', 'Fastify'], ['koa', 'backend', 'Koa'], ['@nestjs/core', 'backend', 'NestJS'],
+  ['hono', 'backend', 'Hono'], ['@hapi/hapi', 'backend', 'hapi'], ['socket.io', 'backend', 'Socket.IO'], ['graphql', 'backend', 'GraphQL'],
+  ['flask', 'backend', 'Flask'], ['django', 'backend', 'Django'], ['fastapi', 'backend', 'FastAPI'], ['click', 'backend', 'Click CLI'],
+  ['spring-boot', 'backend', 'Spring Boot'], ['gin-gonic/gin', 'backend', 'Gin'], ['labstack/echo', 'backend', 'Echo'],
+  ['gofiber/fiber', 'backend', 'Fiber'], ['rails', 'backend', 'Rails'], ['actix-web', 'backend', 'Actix Web'], ['axum', 'backend', 'Axum'],
+  ['laravel/framework', 'backend', 'Laravel'], ['body-parser', 'backend', 'body-parser'], ['cors', 'backend', 'CORS middleware'],
+  ['mongoose', 'database', 'MongoDB (Mongoose)'], ['mongodb', 'database', 'MongoDB'], ['pymongo', 'database', 'MongoDB'],
+  ['pg', 'database', 'PostgreSQL'], ['psycopg2', 'database', 'PostgreSQL'], ['mysql2', 'database', 'MySQL'], ['mysql', 'database', 'MySQL'],
+  ['sqlite3', 'database', 'SQLite'], ['better-sqlite3', 'database', 'SQLite'], ['@prisma/client', 'database', 'Prisma ORM'],
+  ['sequelize', 'database', 'Sequelize ORM'], ['typeorm', 'database', 'TypeORM'], ['drizzle-orm', 'database', 'Drizzle ORM'],
+  ['sqlalchemy', 'database', 'SQLAlchemy'], ['gorm', 'database', 'GORM'], ['redis', 'database', 'Redis'], ['ioredis', 'database', 'Redis'],
+  ['@supabase/supabase-js', 'database', 'Supabase'], ['firebase', 'database', 'Firebase'], ['firebase-admin', 'database', 'Firebase Admin'],
+  ['stripe', 'services', 'Stripe'], ['openai', 'services', 'OpenAI API'], ['@google/genai', 'services', 'Gemini API'],
+  ['@google/generative-ai', 'services', 'Gemini API'], ['@anthropic-ai/sdk', 'services', 'Anthropic API'], ['twilio', 'services', 'Twilio'],
+  ['@sendgrid/mail', 'services', 'SendGrid'], ['nodemailer', 'services', 'Nodemailer (SMTP)'], ['aws-sdk', 'services', 'AWS SDK'],
+  ['@aws-sdk/client-s3', 'services', 'AWS S3'], ['cloudinary', 'services', 'Cloudinary'], ['axios', 'services', 'Axios HTTP client'],
+  ['ky', 'services', 'Ky Fetch client'], ['jsonwebtoken', 'auth', 'JWT (jsonwebtoken)'], ['passport', 'auth', 'Passport.js'],
+  ['bcrypt', 'auth', 'bcrypt'], ['bcryptjs', 'auth', 'bcrypt'], ['next-auth', 'auth', 'NextAuth'], ['@clerk/nextjs', 'auth', 'Clerk'],
+  ['@auth0/auth0-react', 'auth', 'Auth0'], ['@react-oauth/google', 'auth', 'Google OAuth'],
+];
+
+const ENV_PATTERNS = [
+  /process\.env\.([A-Z_][A-Z0-9_]*)/g,
+  /process\.env\[['"]([A-Z0-9_]+)['"]\]/g,
+  /import\.meta\.env\.([A-Z_][A-Z0-9_]*)/g,
+  /os\.(?:environ\.get\(|environ\[|getenv\()\s*['"]([A-Z0-9_]+)['"]/g,
+  /(?:System\.getenv|os\.Getenv|env::var)\(\s*"([A-Z0-9_]+)"/g,
+  /ENV\[['"]([A-Z0-9_]+)['"]\]/g,
+];
+const IGNORED_ENV = new Set(['NODE_ENV', 'PORT', 'PUBLIC_URL', 'CI', 'HOME', 'PATH']);
+
+// Credentials committed to source. Only the file, line, and kind are reported, never the secret value.
+const SECRET_PATTERNS = [
+  [/mongodb(?:\+srv)?:\/\/[^\s'"`:@]+:[^\s'"`@]+@/, 'MongoDB connection URI with embedded credentials (extract to CONNECTION_URL / MONGODB_URI)'],
+  [/postgres(?:ql)?:\/\/[^\s'"`:@]+:[^\s'"`@]+@/, 'PostgreSQL connection URI with embedded credentials (extract to DATABASE_URL)'],
+  [/AIza[0-9A-Za-z_-]{35}/, 'Google API key (extract to GEMINI_API_KEY / GOOGLE_API_KEY)'],
+  [/sk_live_[0-9A-Za-z]{16,}/, 'Stripe live secret key (extract to STRIPE_SECRET_KEY)'],
+  [/sk-[A-Za-z0-9]{32,}/, 'OpenAI-style secret key (extract to OPENAI_API_KEY)'],
+  [/gh[pousr]_[0-9A-Za-z]{36}/, 'GitHub personal access token (extract to GITHUB_TOKEN)'],
+  [/AKIA[0-9A-Z]{16}/, 'AWS access key ID (extract to AWS_ACCESS_KEY_ID)'],
+];
+
+/** Deterministic stack + API-key detection from manifests and fetched source. No LLM. */
+function detectRepositoryStack(repoCtx) {
+  const found = { frontend: new Set(), backend: new Set(), database: new Set(), services: new Set(), auth: new Set() };
+  const runtimes = new Set();
+  for (const m of repoCtx.manifests || []) {
+    const name = m.path.split('/').pop().toLowerCase();
+    if (name === 'readme.md') continue;
+    let deps = null;
+    if (name === 'package.json') {
+      runtimes.add('Node.js');
+      try {
+        const pkg = JSON.parse(m.text);
+        deps = new Set(Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).map((d) => d.toLowerCase()));
+      } catch {
+        deps = new Set();
+      }
+    } else if (/requirements|pyproject|pipfile/.test(name)) runtimes.add('Python');
+    else if (name === 'go.mod') runtimes.add('Go');
+    else if (/pom\.xml|gradle/.test(name)) runtimes.add('Java (JVM)');
+    else if (name === 'cargo.toml') runtimes.add('Rust');
+    else if (name === 'gemfile') runtimes.add('Ruby');
+    else if (name === 'composer.json') runtimes.add('PHP');
+    const text = m.text.toLowerCase();
+    for (const [needle, cat, label] of STACK_SIGNATURES) {
+      const hit = deps ? deps.has(needle) : new RegExp(`(^|[^a-z0-9_-])${needle.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}([^a-z0-9_-]|$)`, 'm').test(text);
+      if (hit) found[cat].add(label);
+    }
+  }
+
+  // Also scan source imports/requires so repos without root manifests or curated repos still resolve accurately.
+  const importedPkgs = new Set();
+  for (const f of repoCtx.files || []) {
+    const code = f.code || '';
+    for (const m of code.matchAll(/(?:from\s+['"]([^'".][^'"]*)['"]|require\(\s*['"]([^'".][^'"]*)['"]\)|^\s*(?:import|from)\s+([a-zA-Z0-9_]+))/gm)) {
+      const spec = (m[1] || m[2] || m[3] || '').toLowerCase();
+      if (spec) importedPkgs.add(spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0]);
+    }
+  }
+  for (const [needle, cat, label] of STACK_SIGNATURES) {
+    if (importedPkgs.has(needle)) found[cat].add(label);
+  }
+  if (!runtimes.size && repoCtx.language) {
+    const lang = repoCtx.language.toLowerCase();
+    if (lang.includes('javascript') || lang.includes('typescript')) runtimes.add('Node.js / ECMAScript');
+    else if (lang.includes('python')) runtimes.add('Python');
+    else if (lang.includes('java')) runtimes.add('Java (JVM)');
+    else if (lang.includes('go')) runtimes.add('Go');
+    else if (lang.includes('rust')) runtimes.add('Rust');
+    else runtimes.add(repoCtx.language);
+  }
+
+  const envVars = new Set();
+  const secrets = [];
+  const sources = [...(repoCtx.files || []).map((f) => ({ path: f.path, text: f.code || '' })), ...(repoCtx.manifests || [])];
+  for (const { path: p, text } of sources) {
+    for (const re of ENV_PATTERNS) for (const match of text.matchAll(re)) envVars.add(match[1]);
+    if (/\.env\./i.test(p)) for (const match of text.matchAll(/^\s*([A-Z][A-Z0-9_]*)\s*=/gm)) envVars.add(match[1]);
+    const lines = text.split(/\r?\n/);
+    for (const [re, kind] of SECRET_PATTERNS) {
+      const lineIdx = lines.findIndex((l) => re.test(l));
+      if (lineIdx !== -1) secrets.push({ file: p, line: lineIdx + 1, kind });
+    }
+  }
+
+  const list = (s) => [...s];
+  const envList = list(envVars).filter((v) => !IGNORED_ENV.has(v)).sort();
+  const inferredKeys = [];
+  if (found.database.has('MongoDB (Mongoose)') || found.database.has('MongoDB')) {
+    if (!envList.some((k) => /MONGO|CONNECTION_URL|DB|DATABASE/i.test(k))) inferredKeys.push('MONGODB_URI / CONNECTION_URL (MongoDB connection string)');
+  }
+  if (found.database.has('PostgreSQL') && !envList.some((k) => /PG|POSTGRES|DATABASE_URL/i.test(k))) inferredKeys.push('DATABASE_URL (PostgreSQL connection string)');
+  if (found.database.has('Prisma ORM') && !envList.some((k) => /DATABASE_URL/i.test(k))) inferredKeys.push('DATABASE_URL (Prisma database connection string)');
+  if (found.services.has('OpenAI API') && !envList.includes('OPENAI_API_KEY')) inferredKeys.push('OPENAI_API_KEY');
+  if (found.services.has('Gemini API') && !envList.includes('GEMINI_API_KEY')) inferredKeys.push('GEMINI_API_KEY');
+  if (found.services.has('Stripe') && !envList.some((k) => /STRIPE/i.test(k))) inferredKeys.push('STRIPE_SECRET_KEY');
+  if (found.auth.has('JWT (jsonwebtoken)') && !envList.some((k) => /JWT|SECRET/i.test(k))) inferredKeys.push('JWT_SECRET');
+
+  const apiKeysAndEnv = [
+    ...envList,
+    ...inferredKeys,
+    ...secrets.map((s) => `⚠️ ${s.file}:${s.line} — ${s.kind}`),
+  ];
+
+  return {
+    frontend: list(found.frontend),
+    backend: list(found.backend),
+    database: list(found.database),
+    services: list(found.services),
+    auth: list(found.auth),
+    runtimes: list(runtimes),
+    env_vars: envList,
+    api_keys_and_env: apiKeysAndEnv.length ? apiKeysAndEnv : ['No external API keys required (runs with local/standard runtime config)'],
+    hardcoded_secrets: secrets,
+    manifests: (repoCtx.manifests || []).map((m) => m.path),
+  };
+}
+
+function formatDetectedStackSummary(repoCtx, stack) {
+  const fe = stack.frontend.length ? stack.frontend.join(' + ') : 'None (No browser UI layer in this repo)';
+  const be = stack.backend.length
+    ? `${stack.runtimes.join('/') || repoCtx.language} (${stack.backend.join(' + ')})`
+    : stack.frontend.length
+      ? 'None (Client-side / Frontend-only)'
+      : `${stack.runtimes.join(' / ') || repoCtx.language} Core Library / CLI`;
+  const db = stack.database.length ? stack.database.join(' + ') : 'None (Stateless / In-Memory)';
+  const svc = [...stack.services, ...stack.auth].join(' + ') || 'Native platform & standard HTTP';
+  const keys = stack.api_keys_and_env.join(', ');
+  const arch =
+    stack.frontend.length && stack.backend.length
+      ? `Full-Stack ${stack.frontend[0]} + ${stack.backend[0]} (${stack.database[0] || 'Stateless'})`
+      : stack.backend.length
+        ? `Backend / API Service (${stack.backend.join(' + ')})`
+        : stack.frontend.length
+          ? `Frontend Application (${stack.frontend.join(' + ')})`
+          : `Modular ${repoCtx.language} Package`;
+  return { frontend: fe, backend: be, database: db, apis_and_services: svc, api_keys_summary: keys, runtime: stack.runtimes.join(' + ') || repoCtx.language, architecture_style: arch };
+}
+
+/** Asks Gemini for a repo-grounded summary + 5-step flow. Returns null on any failure. */
+async function buildGeminiFlowchart(repoCtx, stack, langKey) {
+  const ai = getGenAIClient();
+  if (!ai || !(repoCtx.files || []).length) return null;
+  const langName = langKey === 'hindi' ? 'Hindi (Hindi-English code-mix ok)' : langKey === 'telugu' ? 'Telugu (Telugu-English code-mix ok)' : 'English';
+  const filesCtx = repoCtx.files
+    .map((f) => `FILE: ${f.path}\n${(f.code || '').split(/\r?\n/).slice(0, 90).map((l, i) => `${i + 1}: ${l}`).join('\n')}`)
+    .join('\n\n---\n\n');
+  const manifestCtx = (repoCtx.manifests || []).map((m) => `MANIFEST: ${m.path}\n${m.text.slice(0, 2500)}`).join('\n\n');
+  const prompt = `You are explaining the GitHub repository ${repoCtx.fullName} to a developer who has never seen it.
+Description: ${repoCtx.description}
+Repository tree (partial): ${(repoCtx.tree || []).slice(0, 150).join(', ')}
+
+Deterministically detected stack (ground truth from manifests, do not contradict): ${JSON.stringify(stack)}
+
+${manifestCtx}
+
+${filesCtx}
+
+Rules:
+- Only state facts supported by the files, manifests, or detected stack above. If a layer is absent write "Not detected".
+- "steps": exactly 5 steps in the real order a request/data flows through this project (e.g. UI -> API client -> server route -> controller -> database). Every file_path MUST be one of the FILE paths above, and line_range must point at real lines.
+- "detailed_explanation": 4-6 sentences on what the project does, how frontend and backend talk, where data is stored, and which API keys / environment variables must be configured.
+- spoken_narration, simple_explanation and real_world_example in ${langName}; everything else in English.`;
+
+  const str = { type: Type.STRING };
+  const { response } = await generateContentWithFallback(
+    ai,
+    {
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            project_summary: {
+              type: Type.OBJECT,
+              properties: {
+                simple_explanation: str,
+                real_world_example: str,
+                detailed_explanation: str,
+                full_stack_breakdown: {
+                  type: Type.OBJECT,
+                  properties: { frontend: str, backend: str, database: str, apis_and_services: str, auth: str, runtime: str, architecture_style: str },
+                  required: ['frontend', 'backend', 'database', 'apis_and_services', 'auth', 'runtime', 'architecture_style'],
+                },
+                why_this_stack_is_best: str,
+                modern_alternatives: {
+                  type: Type.ARRAY,
+                  items: { type: Type.OBJECT, properties: { name: str, pros: str, cons: str, when_to_choose: str }, required: ['name', 'pros', 'cons', 'when_to_choose'] },
+                },
+                deployment_strategy: {
+                  type: Type.OBJECT,
+                  properties: { recommended_platform: str, deploy_steps: { type: Type.ARRAY, items: str }, dockerfile: str, cli_deploy_command: str },
+                  required: ['recommended_platform', 'deploy_steps', 'dockerfile', 'cli_deploy_command'],
+                },
+              },
+              required: ['simple_explanation', 'real_world_example', 'detailed_explanation', 'full_stack_breakdown', 'why_this_stack_is_best', 'modern_alternatives', 'deployment_strategy'],
+            },
+            steps: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  title: str, phase: str, file_path: str, line_range: str, summary: str, spoken_narration: str,
+                  simple_explanation: str, real_world_example: str, what_happens: str, why_guarded: str, danger_if_removed: str, symbol_name: str,
+                },
+                required: ['title', 'phase', 'file_path', 'line_range', 'summary', 'spoken_narration', 'simple_explanation', 'what_happens', 'symbol_name'],
+              },
+            },
+          },
+          required: ['project_summary', 'steps'],
+        },
+      },
+    },
+    20000
+  );
+  const parsed = JSON.parse(response.text || '{}');
+  if (!parsed?.project_summary || !Array.isArray(parsed.steps) || parsed.steps.length === 0) return null;
+
+  // Re-anchor any hallucinated path onto a real fetched file so code links never 404.
+  const byPath = new Map(repoCtx.files.map((f) => [f.path, f]));
+  parsed.steps = parsed.steps.slice(0, 6).map((s, i) => {
+    const file = byPath.get(s.file_path) || repoCtx.files[i % repoCtx.files.length];
+    const start = Math.max(1, parseInt(String(s.line_range).split('-')[0], 10) || 1);
+    return { ...s, file_path: file.path, code_snippet: (file.code || '').split(/\r?\n/).slice(start - 1, start + 11).join('\n') };
+  });
+  return parsed;
 }
 
 /**
@@ -724,8 +984,8 @@ async function loadAndIndexGitHubRepository(rawInput) {
       );
     }
 
-    const codeExts = ['.ts', '.tsx', '.js', '.jsx', '.py', '.java', '.go', '.rs', '.rb', '.cs', '.cpp', '.c', '.json', '.toml', '.yml', '.yaml', '.md'];
-    const candidateBlobs = (treeData?.tree || [])
+    const codeExts = ['.ts', '.tsx', '.js', '.jsx', '.py', '.java', '.go', '.rs', '.rb', '.cs', '.cpp', '.c'];
+    const sortedBlobs = (treeData?.tree || [])
       .filter(
         (item) =>
           item.type === 'blob' &&
@@ -734,9 +994,41 @@ async function loadAndIndexGitHubRepository(rawInput) {
           codeExts.some((ext) => item.path.toLowerCase().endsWith(ext)) &&
           scoreRepositoryBlobPath(item.path) > 0
       )
-      .sort((a, b) => scoreRepositoryBlobPath(b.path) - scoreRepositoryBlobPath(a.path))
-      .slice(0, 5);
+      .sort((a, b) => scoreRepositoryBlobPath(b.path) - scoreRepositoryBlobPath(a.path));
 
+    // Pick up to 8 diverse files across top-level and leaf directories so both client/ and server/ layers are represented.
+    const candidateBlobs = [];
+    const dirCounts = new Map();
+    const rootCounts = new Map();
+    const distinctRoots = new Set(sortedBlobs.map((b) => (b.path.includes('/') ? b.path.split('/')[0] : '.')));
+    const maxPerRoot = distinctRoots.size > 1 ? 4 : 8;
+    for (const blob of sortedBlobs) {
+      if (candidateBlobs.length >= 8) break;
+      const rootDir = blob.path.includes('/') ? blob.path.split('/')[0] : '.';
+      const leafDir = blob.path.includes('/') ? blob.path.slice(0, blob.path.lastIndexOf('/')) : '.';
+      if ((rootCounts.get(rootDir) || 0) >= maxPerRoot) continue;
+      if ((dirCounts.get(leafDir) || 0) >= 1 && sortedBlobs.length > 8) continue;
+      candidateBlobs.push(blob);
+      rootCounts.set(rootDir, (rootCounts.get(rootDir) || 0) + 1);
+      dirCounts.set(leafDir, (dirCounts.get(leafDir) || 0) + 1);
+    }
+    for (const blob of sortedBlobs) {
+      if (candidateBlobs.length >= 8) break;
+      if (!candidateBlobs.includes(blob)) candidateBlobs.push(blob);
+    }
+
+    // Manifests + env templates drive stack/API-key detection; shallow ones first (root, client/, server/).
+    const treePaths = (treeData?.tree || []).filter((item) => item.type === 'blob').map((item) => item.path);
+    const manifestPaths = treePaths
+      .filter((p) => MANIFEST_RE.test(p) && !p.includes('node_modules/') && p.split('/').length <= 3)
+      .sort((a, b) => a.split('/').length - b.split('/').length)
+      .slice(0, 8);
+    const manifestsPromise = Promise.all(
+      manifestPaths.map(async (p) => {
+        const text = await fetchTextWithTimeout(`https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/${branch}/${p}`);
+        return text ? { path: p, text: text.slice(0, 20000) } : null;
+      })
+    );
     if (candidateBlobs.length > 0) {
       const fetchedResults = await Promise.all(
         candidateBlobs.map(async (blob, i) => {
@@ -847,6 +1139,7 @@ export async function ${st.fn}(payload: Record<string, unknown>) {
     }
 
     const symbols = files.map((f) => f.path);
+    const manifests = (await manifestsPromise).filter(Boolean);
 
     activeRepoContext = {
       owner: parsed.owner,
@@ -859,6 +1152,8 @@ export async function ${st.fn}(payload: Record<string, unknown>) {
       language,
       stars,
       files,
+      manifests,
+      tree: treePaths.slice(0, 400),
       fences,
       symbols,
       commits:
@@ -995,7 +1290,7 @@ async function queryGeminiRepositoryBrain(question, language, repoCtx, baselineP
           : 'English';
 
     const repoFilesContext = (repoCtx.files || [])
-      .slice(0, 5)
+      .slice(0, 8)
       .map((f) => {
         const numberedLines = (f.code || '')
           .split(/\r?\n/)
@@ -1006,9 +1301,11 @@ async function queryGeminiRepositoryBrain(question, language, repoCtx, baselineP
       })
       .join('\n\n---\n\n');
 
+    const detectedStack = detectRepositoryStack(repoCtx);
     const prompt = `You are the WhyLine Gemini Repository Voice Agent & Principal Architecture Brain.
 Active GitHub Repository: ${repoCtx.fullName} (${repoCtx.url})
 Description: ${repoCtx.description}
+Detected Stack, Manifests & Required API Keys: ${JSON.stringify(detectedStack)}
 Active Spoken Fences / Guardrails: ${JSON.stringify(repoCtx.fences || [])}
 
 Indexed Repository Source Files (with line numbers):
@@ -1163,6 +1460,8 @@ function getGatewayVersion() {
   return 'v1';
 }
 
+const MAX_BODY_BYTES = 2 * 1024 * 1024;
+
 function parseBody(req) {
   return new Promise((resolve) => {
     if (req.body && typeof req.body === 'object') {
@@ -1170,10 +1469,21 @@ function parseBody(req) {
       return;
     }
     let raw = '';
+    let bytes = 0;
+    let aborted = false;
     req.on('data', (chunk) => {
+      if (aborted) return;
+      bytes += chunk.length;
+      if (bytes > MAX_BODY_BYTES) {
+        aborted = true;
+        raw = '';
+        resolve({});
+        return;
+      }
       raw += chunk;
     });
     req.on('end', () => {
+      if (aborted) return;
       if (!raw) {
         resolve({});
         return;
@@ -1804,175 +2114,137 @@ export function createWhylineApiMiddleware() {
           return sendJson(res, 200, flowchartResponseCache.get(flowCacheKey));
         }
 
-        // Custom repository dynamic flowchart generation (fast AST-grounded 5-step builder + optional 2s Gemini enrichment)
-        let dynamicFlow = null;
+        // Custom repository dynamic flowchart generation: deterministic manifest/AST stack + Gemini repo-grounded synthesis
+        const stack = detectRepositoryStack(repoCtx);
+        const groundedBreakdown = formatDetectedStackSummary(repoCtx, stack);
+        let dynamicFlow = await buildGeminiFlowchart(repoCtx, stack, langKey).catch(() => null);
+        let flowSource = dynamicFlow ? 'gemini+ast-manifest' : 'ast-manifest';
 
-        // Heuristic fallback if Gemini is offline or failed
+        // Deterministic AST + manifest fallback if Gemini is offline or rate-limited
         if (!dynamicFlow || !dynamicFlow.steps || dynamicFlow.steps.length === 0) {
           const files = repoCtx.files || [];
-          const isNode = repoCtx.language?.toLowerCase().includes('javascript') || repoCtx.language?.toLowerCase().includes('typescript');
-          const isPython = repoCtx.language?.toLowerCase().includes('python');
+          const isNode = stack.runtimes.some((r) => /node/i.test(r)) || /javascript|typescript/i.test(repoCtx.language || '');
+          const isPython = stack.runtimes.some((r) => /python/i.test(r)) || /python/i.test(repoCtx.language || '');
 
-          const entryFile = files[0] || { path: 'index.js', code: '// Entry point' };
-          const domainFile = files[1] || entryFile;
-          const guardFile = files[2] || domainFile;
-          const storageFile = files[3] || domainFile;
-          const telemetryFile = files[4] || entryFile;
+          const pickByRole = (re, fallbackIdx) => files.find((f) => re.test(f.path)) || files[fallbackIdx % Math.max(1, files.length)] || { path: 'index.js', shortName: 'index.js', code: '// Source' };
+          const entryFile = pickByRole(/(^|\/)(app|index|main|client)\.(jsx?|tsx?|py|go|rs|java)$/i, 0);
+          const apiFile = pickByRole(/(api|client|request|http|fetch)/i, 1);
+          const routeFile = pickByRole(/(server|route|router|wsgi|asgi)/i, 2);
+          const controllerFile = pickByRole(/(controller|service|handler|core|usecase|reducer)/i, 3);
+          const modelFile = pickByRole(/(model|schema|entity|db|store|prisma|repo)/i, 4);
+
+          const extractPrimarySymbol = (f, fallback) => {
+            const m = (f.code || '').match(/(?:export\s+(?:default\s+)?(?:async\s+)?function\s+([A-Za-z0-9_]+)|const\s+([A-Za-z0-9_]+)\s*=\s*(?:async\s*)?\(|class\s+([A-Za-z0-9_]+)|def\s+([A-Za-z0-9_]+)|mongoose\.model\(\s*['"]([^'"]+)['"]|router\.(get|post|put|delete|patch)\()/);
+            return m ? (m[1] || m[2] || m[3] || m[4] || m[5] || `router.${m[6]}()`) : (f.shortName || fallback);
+          };
+
+          const detailedExplanation = [
+            `${repoCtx.fullName} (${repoCtx.description || `${repoCtx.language} repository`}) is structured as a ${groundedBreakdown.architecture_style}.`,
+            `Frontend layer: ${groundedBreakdown.frontend}.`,
+            `Backend & runtime layer: ${groundedBreakdown.backend} running on ${groundedBreakdown.runtime}.`,
+            `Database & persistence layer: ${groundedBreakdown.database}; external APIs & auth: ${groundedBreakdown.apis_and_services}.`,
+            `Required API keys & environment configuration: ${groundedBreakdown.api_keys_summary}.`,
+          ].join(' ');
 
           dynamicFlow = {
             project_summary: {
-              simple_explanation: `${repoCtx.fullName} is an open-source ${repoCtx.language} project: ${repoCtx.description || 'high-performance software system'}. It provides robust modular architecture for production services.`,
-              real_world_example: 'Like an organized factory assembly line where each station inspects, processes, and packages items before dispatching them.',
-              full_stack_breakdown: {
-                frontend: isNode ? 'React / Vite or Browser Client' : 'CLI / REST API Consumer',
-                backend: `${repoCtx.language} (${isNode ? 'Node.js / Express' : isPython ? 'Python / FastAPI' : 'Standard Library'})`,
-                database: 'PostgreSQL / In-Memory State / Key-Value Store',
-                runtime: isNode ? 'Node.js v20+ / npm / pnpm' : isPython ? 'Python 3.12 / pip / venv' : 'Native Platform Runtime',
-                architecture_style: 'Modular Service Pipeline with Invariant Validation',
-              },
-              why_this_stack_is_best: `The ${repoCtx.language} ecosystem offers non-blocking asynchronous I/O, massive community libraries, and battle-tested stability for high-concurrency network tasks.`,
+              simple_explanation: `${repoCtx.fullName} is a ${groundedBreakdown.architecture_style}: ${repoCtx.description || 'modular software repository'}. Frontend uses ${groundedBreakdown.frontend}, backend runs ${groundedBreakdown.backend}, and persistence uses ${groundedBreakdown.database}.`,
+              detailed_explanation: detailedExplanation,
+              real_world_example: `Think of ${repoCtx.fullName} as a coordinated pipeline where requests enter through ${entryFile.path}, route through ${routeFile.path} and ${controllerFile.path}, and persist state via ${modelFile.path}.`,
+              full_stack_breakdown: groundedBreakdown,
+              why_this_stack_is_best: `Combining ${groundedBreakdown.frontend !== 'None (No browser UI layer in this repo)' ? `${groundedBreakdown.frontend} on the client with ` : ''}${groundedBreakdown.backend} and ${groundedBreakdown.database} keeps data contracts explicit across ${files.map((f) => f.path).join(', ')}.`,
               modern_alternatives: [
                 {
-                  name: 'Rust (Axum + Tokio)',
-                  pros: 'Zero-cost abstractions, memory safety without garbage collection, tiny memory footprint',
-                  cons: 'Steeper learning curve and longer compilation times',
-                  when_to_choose: 'When predictable microsecond latency and zero GC pauses are required.',
+                  name: 'Rust (Axum + Tokio + SQLx)',
+                  pros: 'Compile-time memory safety, zero GC pauses, single static binary deployment',
+                  cons: 'Longer compile times and stricter borrow-checker onboarding',
+                  when_to_choose: 'When sub-millisecond tail latency and minimal memory footprint are mandatory.',
                 },
                 {
-                  name: 'Go (Golang 1.22)',
-                  pros: 'Extremely fast compilation, lightweight goroutines, simple deployment binaries',
-                  cons: 'Less expressive type system and simpler metaprogramming',
-                  when_to_choose: 'When building cloud-native microservices and Kubernetes operators.',
+                  name: 'Go (Golang 1.22 + Fiber/Chi)',
+                  pros: 'Fast compilation, built-in concurrency primitives, straightforward container builds',
+                  cons: 'More verbose error and schema plumbing than dynamic runtimes',
+                  when_to_choose: 'When operating high-throughput cloud microservices.',
                 },
               ],
               deployment_strategy: {
-                recommended_platform: 'Google Cloud Run / AWS ECS / Vercel',
+                recommended_platform: stack.frontend.length && stack.backend.length ? 'Render / Railway / Fly.io (Backend) + Vercel / Netlify (Frontend)' : 'Google Cloud Run / Fly.io / Docker',
                 deploy_steps: [
-                  '1. Create a minimal multi-stage Docker container.',
-                  '2. Set runtime environment variables.',
-                  '3. Deploy to container runtime with automated autoscaling.',
+                  `1. Install dependencies across manifests (${stack.manifests.join(', ') || 'package.json'}).`,
+                  `2. Configure required environment variables: ${stack.api_keys_and_env.join(', ')}.`,
+                  `3. Build and start the service entrypoint (${routeFile.path || entryFile.path}).`,
                 ],
                 dockerfile: isNode
                   ? 'FROM node:20-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --omit=dev\nCOPY . .\nEXPOSE 3000\nCMD ["npm", "start"]'
-                  : 'FROM python:3.12-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install -r requirements.txt\nCOPY . .\nCMD ["python", "main.py"]',
-                cli_deploy_command: `docker build -t ${repoCtx.repo}:latest . && docker run -p 3000:3000 ${repoCtx.repo}:latest`,
-                environment_variables: ['PORT=3000', 'NODE_ENV=production'],
+                  : isPython
+                    ? 'FROM python:3.12-slim\nWORKDIR /app\nCOPY requirements*.txt pyproject.toml* ./\nRUN pip install --no-cache-dir -r requirements.txt || pip install .\nCOPY . .\nCMD ["python", "main.py"]'
+                    : 'FROM alpine:3.20\nWORKDIR /app\nCOPY . .\nCMD ["sh"]',
+                cli_deploy_command: `docker build -t ${repoCtx.repo.toLowerCase()}:latest . && docker run -p 3000:3000 ${repoCtx.repo.toLowerCase()}:latest`,
+                environment_variables: stack.api_keys_and_env,
               },
             },
             steps: [
-              {
-                step_number: 1,
-                node_id: 'STEP-1',
-                phase: 'entrypoint',
-                title: `1. Ingress & Request Parsing (${entryFile.shortName || entryFile.path})`,
-                file_path: entryFile.path,
-                line_range: '1-30',
-                summary: `Entry point for incoming traffic in ${repoCtx.fullName}.`,
-                spoken_narration: langKey === 'hindi'
-                  ? `Step 1: ${entryFile.path} mein request aati hai aur basic parameters parse hote hain.`
-                  : langKey === 'telugu'
-                    ? `Step 1: ${entryFile.path} ద్వారా రిక్వెస్ట్ రిసీవ్ అయ్యి పారామీటర్లను ప్రాసెస్ చేస్తుంది.`
-                    : `Step 1: Ingress requests are accepted and parsed in ${entryFile.path}.`,
-                simple_explanation: 'The front door of this repository where commands or network calls first arrive.',
-                real_world_example: 'Like the main entrance lobby of a building where visitors state their purpose.',
-                what_happens: 'Initializes context and validates incoming arguments.',
-                why_guarded: 'Ensures invalid arguments fail fast before consuming backend resources.',
-                danger_if_removed: 'Application crashes on malformed requests.',
-                symbol_name: entryFile.shortName || 'main()',
-                matched_token: 'module.exports / entry',
-                code_snippet: entryFile.code ? entryFile.code.slice(0, 250) : '// Entry point logic',
-              },
-              {
-                step_number: 2,
-                node_id: 'STEP-2',
-                phase: 'domain',
-                title: `2. Core Domain Logic (${domainFile.shortName || domainFile.path})`,
-                file_path: domainFile.path,
-                line_range: '10-40',
-                summary: 'Executes the primary business logic and routing operations.',
-                spoken_narration: langKey === 'hindi'
-                  ? `Step 2: ${domainFile.path} core logic execute karta hai.`
-                  : langKey === 'telugu'
-                    ? `Step 2: ${domainFile.path} ముఖ్యమైన బిజినెస్ లాజిక్‌ను ఎగ్జిక్యూట్ చేస్తుంది.`
-                    : `Step 2: Core domain operations and routing execute in ${domainFile.path}.`,
-                simple_explanation: 'The primary brain of the repository where the actual work happens.',
-                real_world_example: 'Like the kitchen in a restaurant where the requested meal is prepared.',
-                what_happens: 'Transforms inputs into domain models and executes state transitions.',
-                why_guarded: 'Enforces business rules and state machine consistency.',
-                danger_if_removed: 'The core functionality of the project ceases to work.',
-                symbol_name: domainFile.shortName || 'execute()',
-                matched_token: 'function / class',
-                code_snippet: domainFile.code ? domainFile.code.slice(0, 250) : '// Domain logic',
-              },
-              {
-                step_number: 3,
-                node_id: 'STEP-3',
-                phase: 'guard',
-                title: `3. Safety Fences & Invariant Guards (${guardFile.shortName || guardFile.path})`,
-                file_path: guardFile.path,
-                line_range: '15-45',
-                summary: 'Validates security boundaries, rate limits, and error invariants.',
-                spoken_narration: langKey === 'hindi'
-                  ? `Step 3: ${guardFile.path} safety checks aur guardrails verify karta hai.`
-                  : langKey === 'telugu'
-                    ? `Step 3: ${guardFile.path} సేఫ్టీ చెక్స్ మరియు గార్డ్‌రైల్స్‌ను ధృవీకరిస్తుంది.`
-                    : `Step 3: Safety invariants and boundaries are validated in ${guardFile.path}.`,
-                simple_explanation: 'A safety barrier ensuring no unsafe data damages the system.',
-                real_world_example: 'Like an automated circuit breaker preventing power surges in a house.',
-                what_happens: 'Checks invariants, authentication boundaries, and concurrency locks.',
-                why_guarded: 'Protects against race conditions and unauthorized operations.',
-                danger_if_removed: 'System is vulnerable to state corruption and security leaks.',
-                symbol_name: guardFile.shortName || 'guard()',
-                matched_token: 'if (!valid) throw',
-                code_snippet: guardFile.code ? guardFile.code.slice(0, 250) : '// Guard logic',
-              },
-              {
-                step_number: 4,
-                node_id: 'STEP-4',
-                phase: 'storage',
-                title: `4. State Persistence & Network Outbox (${storageFile.shortName || storageFile.path})`,
-                file_path: storageFile.path,
-                line_range: '1-35',
-                summary: 'Persists changes to storage or dispatches upstream network requests.',
-                spoken_narration: langKey === 'hindi'
-                  ? `Step 4: ${storageFile.path} state ko persist aur save karta hai.`
-                  : langKey === 'telugu'
-                    ? `Step 4: ${storageFile.path} డేటాను స్టోర్ లేదా నెట్‌వర్క్ ద్వారా పంపుతుంది.`
-                    : `Step 4: Data persistence and downstream service dispatch in ${storageFile.path}.`,
-                simple_explanation: 'Saves the result safely so it is not lost when power goes out.',
-                real_world_example: 'Like writing an entry into a ledger book or safe deposit box.',
-                what_happens: 'Performs transactional writes or external HTTP calls.',
-                why_guarded: 'Guarantees durability and prevents data loss.',
-                danger_if_removed: 'Changes are lost immediately when process restarts.',
-                symbol_name: storageFile.shortName || 'persist()',
-                matched_token: 'write / save / fetch',
-                code_snippet: storageFile.code ? storageFile.code.slice(0, 250) : '// Storage logic',
-              },
-              {
-                step_number: 5,
-                node_id: 'STEP-5',
-                phase: 'telemetry',
-                title: `5. Response Dispatch & Telemetry (${telemetryFile.shortName || telemetryFile.path})`,
-                file_path: telemetryFile.path,
-                line_range: '20-50',
-                summary: 'Formats output response, records metrics, and closes connection.',
-                spoken_narration: langKey === 'hindi'
-                  ? `Step 5: ${telemetryFile.path} final response bhejta hai aur metrics record karta hai.`
-                  : langKey === 'telugu'
-                    ? `Step 5: ${telemetryFile.path} చివరి రెస్పాన్స్‌ను పంపి ఆడిట్ రికార్డ్ చేస్తుంది.`
-                    : `Step 5: Response output is dispatched and telemetry logged in ${telemetryFile.path}.`,
-                simple_explanation: 'Sends the finished answer back to the user and writes an audit record.',
-                real_world_example: 'Like handing the customer their receipt and bag at checkout.',
-                what_happens: 'Flushes response stream, updates latency gauges, and emits audit event.',
-                why_guarded: 'Provides observability so engineers know the system is healthy.',
-                danger_if_removed: 'Callers hang indefinitely waiting for completion.',
-                symbol_name: telemetryFile.shortName || 'respond()',
-                matched_token: 'return res / send',
-                code_snippet: telemetryFile.code ? telemetryFile.code.slice(0, 250) : '// Telemetry logic',
-              },
-            ],
+              [entryFile, 'entrypoint', '1. Client / Ingress Entrypoint', 'Initializes the application view or CLI/HTTP entrypoint and dispatches user actions.'],
+              [apiFile, 'domain', '2. API Client & Request Dispatch', 'Serializes outbound requests or parameters and bridges the caller to backend routes.'],
+              [routeFile, 'guard', '3. Server Router & Middleware Guard', 'Mounts middleware (CORS, body parsing, auth checks) and maps endpoints to handlers.'],
+              [controllerFile, 'domain', '4. Controller & Domain Orchestration', 'Executes core business rules, validates inputs, and coordinates state transitions.'],
+              [modelFile, 'storage', '5. Data Model & Persistence Layer', `Defines schemas and persists records to ${groundedBreakdown.database}.`],
+            ].map(([file, phase, label, desc], idx) => {
+              const sym = extractPrimarySymbol(file, `step${idx + 1}()`);
+              const codeLines = (file.code || '').split(/\r?\n/);
+              const endLine = Math.min(codeLines.length || 30, 35);
+              return {
+                step_number: idx + 1,
+                node_id: `STEP-${idx + 1}`,
+                phase,
+                title: `${label} (${file.path})`,
+                file_path: file.path,
+                line_range: `1-${endLine}`,
+                summary: `${desc} Grounded in ${file.path} (${sym}).`,
+                spoken_narration:
+                  langKey === 'hindi'
+                    ? `Step ${idx + 1}: ${file.path} (${sym}) — ${desc}`
+                    : langKey === 'telugu'
+                      ? `Step ${idx + 1}: ${file.path} (${sym}) — ${desc}`
+                      : `Step ${idx + 1}: In ${file.path}, ${sym} handles ${label.replace(/^\d+\.\s*/, '').toLowerCase()}. ${desc}`,
+                simple_explanation: `${desc} Located in ${file.path} around symbol ${sym}.`,
+                real_world_example: `Acts as stage ${idx + 1} of the ${repoCtx.fullName} execution pipeline in ${file.path}.`,
+                what_happens: desc,
+                why_guarded: `Preserves the contract of ${sym} in ${file.path} so callers and downstream modules stay in sync.`,
+                danger_if_removed: `Breaking ${file.path} disrupts ${label.replace(/^\d+\.\s*/, '').toLowerCase()} across ${repoCtx.fullName}.`,
+                symbol_name: sym,
+                matched_token: sym,
+                code_snippet: codeLines.slice(0, 25).join('\n') || '// Source file',
+              };
+            }),
           };
         }
+
+        // Always anchor full_stack_breakdown and environment_variables with deterministic manifest/source truth
+        const llmSummary = dynamicFlow.project_summary || {};
+        const llmStack = llmSummary.full_stack_breakdown || {};
+        const mergedStackBreakdown = {
+          frontend: stack.frontend.length ? `${groundedBreakdown.frontend}${llmStack.frontend && !llmStack.frontend.includes(stack.frontend[0]) ? ` (${llmStack.frontend})` : ''}` : groundedBreakdown.frontend,
+          backend: stack.backend.length ? `${groundedBreakdown.backend}${llmStack.backend && !llmStack.backend.includes(stack.backend[0]) ? ` (${llmStack.backend})` : ''}` : (llmStack.backend || groundedBreakdown.backend),
+          database: stack.database.length ? groundedBreakdown.database : (llmStack.database && !/postgres/i.test(llmStack.database) ? llmStack.database : groundedBreakdown.database),
+          apis_and_services: groundedBreakdown.apis_and_services,
+          api_keys_summary: groundedBreakdown.api_keys_summary,
+          runtime: groundedBreakdown.runtime,
+          architecture_style: llmStack.architecture_style || groundedBreakdown.architecture_style,
+        };
+        dynamicFlow.project_summary = {
+          ...llmSummary,
+          detailed_explanation:
+            llmSummary.detailed_explanation ||
+            `${llmSummary.simple_explanation || ''} Frontend: ${mergedStackBreakdown.frontend}. Backend: ${mergedStackBreakdown.backend}. Database: ${mergedStackBreakdown.database}. API Keys & Env: ${mergedStackBreakdown.api_keys_summary}.`.trim(),
+          full_stack_breakdown: mergedStackBreakdown,
+          api_keys_and_env: stack.api_keys_and_env,
+          detected_stack: stack,
+          deployment_strategy: {
+            ...(llmSummary.deployment_strategy || {}),
+            environment_variables: stack.api_keys_and_env,
+          },
+        };
 
         // Build deterministic streaming TTS URLs and pre-warm Gnani Timbre v2.5 audio in background
         const summaryNarrationText = `${dynamicFlow.project_summary?.simple_explanation || ''} ${dynamicFlow.project_summary?.real_world_example || ''}`.trim();
@@ -2041,6 +2313,7 @@ export function createWhylineApiMiddleware() {
 
         const responsePayload = {
           status: 'ok',
+          source: flowSource,
           repo_name: repoCtx.fullName,
           repo_slug: repoCtx.fullName,
           language: langKey,
@@ -2263,13 +2536,20 @@ export function createWhylineApiMiddleware() {
 
       // GET /api/audio/:audioId
       if (pathname.startsWith('/api/audio/') && method === 'GET') {
-        const requestedName = decodeURIComponent(pathname.replace('/api/audio/', ''));
-        const stem = requestedName.replace(/\.wav$/i, '');
+        let requestedName = '';
+        try {
+          requestedName = decodeURIComponent(pathname.replace('/api/audio/', ''));
+        } catch {
+          return sendJson(res, 400, { error: 'Malformed audio path' });
+        }
+        const safeBase = path.basename(requestedName).replace(/[^a-zA-Z0-9_.-]/g, '');
+        const stem = safeBase.replace(/\.wav$/i, '') || 'fence-001';
+        const audioRoot = path.resolve(AUDIO_DIR) + path.sep;
         const candidates = [
-          path.join(AUDIO_DIR, `${stem}.wav`),
-          path.join(AUDIO_DIR, `${stem.toLowerCase()}.wav`),
-          path.join(AUDIO_DIR, 'fence-001.wav'),
-        ];
+          path.resolve(AUDIO_DIR, `${stem}.wav`),
+          path.resolve(AUDIO_DIR, `${stem.toLowerCase()}.wav`),
+          path.resolve(AUDIO_DIR, 'fence-001.wav'),
+        ].filter((p) => p.startsWith(audioRoot));
 
         const foundFile = candidates.find((p) => fs.existsSync(p));
         if (foundFile) {

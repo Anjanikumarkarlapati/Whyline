@@ -20,6 +20,10 @@ test('parseGitHubRepoInput parses full GitHub URLs and owner/repo shorthands', (
 
   const parsedLocal = parseGitHubRepoInput('HealthConnect');
   assert.equal(parsedLocal.isLocal, true);
+
+  // Rejects path traversal attempts by falling back safely to local sandbox
+  assert.equal(parseGitHubRepoInput('https://github.com/../user').isLocal, true);
+  assert.equal(parseGitHubRepoInput('../secret').isLocal, true);
 });
 
 test('rescoreSpokenTranscript replaces spoken terms with exact AST symbols and dynamic repo files', () => {

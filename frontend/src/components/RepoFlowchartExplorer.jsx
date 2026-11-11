@@ -484,6 +484,17 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
               </div>
             </div>
 
+            {flowData?.project_summary?.detailed_explanation && (
+              <div style={{ paddingTop: '10px', borderTop: '1px solid var(--border-default)' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  End-to-End Architecture &amp; Full-Stack Walkthrough
+                </div>
+                <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.6', color: 'var(--text-primary)' }}>
+                  <FormattedText text={flowData.project_summary.detailed_explanation} />
+                </p>
+              </div>
+            )}
+
             {flowData?.project_summary?.full_stack_breakdown && (
               <div
                 style={{
@@ -502,14 +513,19 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                     Detected Stack:
                   </span>
                   <span className="status-badge status-good" style={{ fontSize: '11px' }}>
-                    {flowData.project_summary.full_stack_breakdown.backend}
+                    FE: {flowData.project_summary.full_stack_breakdown.frontend}
+                  </span>
+                  <span className="status-badge status-good" style={{ fontSize: '11px' }}>
+                    BE: {flowData.project_summary.full_stack_breakdown.backend}
                   </span>
                   <span className="status-badge status-muted" style={{ fontSize: '11px' }}>
-                    {flowData.project_summary.full_stack_breakdown.database}
+                    DB: {flowData.project_summary.full_stack_breakdown.database}
                   </span>
-                  <span className="status-badge status-muted" style={{ fontSize: '11px' }}>
-                    {flowData.project_summary.full_stack_breakdown.architecture_style}
-                  </span>
+                  {(flowData.project_summary.full_stack_breakdown.api_keys_summary || flowData.project_summary.api_keys_and_env?.length > 0) && (
+                    <span className="status-badge status-muted mono-metric" style={{ fontSize: '11px' }}>
+                      Keys/Env: {flowData.project_summary.full_stack_breakdown.api_keys_summary || flowData.project_summary.api_keys_and_env.join(', ')}
+                    </span>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -722,6 +738,15 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                   { label: 'Frontend & UI Layer', value: flowData?.project_summary?.full_stack_breakdown?.frontend || 'React 19 + Vite 6 SPA' },
                   { label: 'Backend & API Runtime', value: flowData?.project_summary?.full_stack_breakdown?.backend || 'Java 21 Spring Boot / Node.js' },
                   { label: 'Database & Persistence', value: flowData?.project_summary?.full_stack_breakdown?.database || 'PostgreSQL 16 + Redis 7' },
+                  { label: 'APIs, Auth & Services', value: flowData?.project_summary?.full_stack_breakdown?.apis_and_services || 'REST / HTTP + JWT Auth' },
+                  {
+                    label: 'API Keys & Environment Variables',
+                    value:
+                      flowData?.project_summary?.full_stack_breakdown?.api_keys_summary ||
+                      flowData?.project_summary?.api_keys_and_env?.join(', ') ||
+                      flowData?.project_summary?.deployment_strategy?.environment_variables?.join(', ') ||
+                      'Standard runtime environment variables',
+                  },
                   { label: 'Architecture Pattern', value: flowData?.project_summary?.full_stack_breakdown?.architecture_style || 'Hexagonal Outbox + Spoken Fences' },
                 ].map((item) => (
                   <div key={item.label} className="dossier-card">

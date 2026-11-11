@@ -95,11 +95,19 @@ async function startServer() {
   const server = http.createServer((req, res) => {
     apiMiddleware(req, res, () => {
       const urlObj = new URL(req.url || '/', `http://localhost:${PORT}`);
-      let relPath = decodeURIComponent(urlObj.pathname);
+      let relPath = '/index.html';
+      try {
+        relPath = decodeURIComponent(urlObj.pathname);
+      } catch {
+        res.statusCode = 400;
+        res.end('Bad Request');
+        return;
+      }
       if (relPath === '/') relPath = '/index.html';
 
-      const candidate = path.join(DIST_DIR, relPath);
-      if (candidate.startsWith(DIST_DIR) && fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+      const distRoot = path.resolve(DIST_DIR) + path.sep;
+      const candidate = path.resolve(DIST_DIR, '.' + relPath);
+      if (candidate.startsWith(distRoot) && fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
         const ext = path.extname(candidate).toLowerCase();
         res.statusCode = 200;
         res.setHeader('Content-Type', MIME_TYPES[ext] || 'application/octet-stream');
