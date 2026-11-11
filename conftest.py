@@ -1,7 +1,9 @@
-"""Root pytest configuration and Windows sandbox ProactorEventLoop self-pipe guard."""
 from __future__ import annotations
 
+import os
 import sys
+
+os.environ.setdefault("WEBHOOK_SECRET", "whyline_test_webhook_secret_local")
 
 
 def _install_windows_iocp_self_pipe_patch() -> None:

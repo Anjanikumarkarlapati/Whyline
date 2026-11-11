@@ -642,10 +642,10 @@ def test_tier5_hook_install_git_hooks_in_empty_directory(tmp_path: Path):
 def test_tier5_cli_and_hooks_subcommands(temp_repo: Path):
     """Verify CLI commands run via subprocess execute and exit cleanly."""
     commands = [
-        ["python", "-m", "backend.whyline.cli_and_hooks", "check-edit", "--repo", str(temp_repo)],
-        ["python", "-m", "backend.whyline.cli_and_hooks", "resume", "--repo", str(temp_repo)],
-        ["python", "-m", "backend.whyline.cli_and_hooks", "pause", "--repo", str(temp_repo)],
-        ["python", "-m", "backend.whyline.cli_and_hooks", "benchmark", "--repo", str(temp_repo)],
+        [sys.executable, "-m", "backend.whyline.cli_and_hooks", "check-edit", "--repo", str(temp_repo)],
+        [sys.executable, "-m", "backend.whyline.cli_and_hooks", "resume", "--repo", str(temp_repo)],
+        [sys.executable, "-m", "backend.whyline.cli_and_hooks", "pause", "--repo", str(temp_repo)],
+        [sys.executable, "-m", "backend.whyline.cli_and_hooks", "benchmark", "--repo", str(temp_repo)],
     ]
     for cmd in commands:
         proc = subprocess.run(cmd, capture_output=True, text=True, check=False)

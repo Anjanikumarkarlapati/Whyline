@@ -65,6 +65,10 @@ function whylineBackendPlugin() {
 
 export default defineConfig({
   plugins: [whylineBackendPlugin(), react()],
+  build: {
+    outDir: path.resolve(__dirname, 'dist'),
+    emptyOutDir: true,
+  },
   server: {
     port: 3000,
     host: '0.0.0.0',

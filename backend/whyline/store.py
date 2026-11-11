@@ -61,6 +61,18 @@ class WhyLineStore:
         if not self.scorecard_path.exists():
             self.run_benchmark_scorecard(fences)
 
+        confirmed_wav = self.audio_dir / "fence-001_confirmed.wav"
+        if not confirmed_wav.exists():
+            try:
+                self.speech_client.synthesize(
+                    text="Gateway router retry count 5 unchandi, v2 gateway cutover varaku idi avasaram.",
+                    output_dir=self.audio_dir,
+                    file_stem="fence-001_confirmed",
+                    language="te-IN",
+                )
+            except Exception:
+                pass
+
         return fences
 
     def get_fences(self) -> list[dict]:

@@ -12,7 +12,6 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import tree_sitter as ts
-import tree_sitter_language_pack as tslp
 
 ANOMALY_MAGIC_LITERAL = "MAGIC_LITERAL_CONTROL_FLOW"
 ANOMALY_THREAD_HALT = "EXPLICIT_THREAD_HALT"
@@ -20,9 +19,16 @@ ANOMALY_SWALLOWED_EXCEPTION = "SWALLOWED_EXCEPTION"
 ANOMALY_VALIDATION_BYPASS = "VALIDATION_BYPASS"
 ANOMALY_REVERT_COMMIT = "REVERT_COMMIT"
 
-# Initialize Tree-sitter parsers for Java and Python
-_JAVA_LANG = tslp.get_language("java")
-_PYTHON_LANG = tslp.get_language("python")
+try:
+    import tree_sitter_language_pack as tslp
+    _JAVA_LANG = tslp.get_language("java")
+    _PYTHON_LANG = tslp.get_language("python")
+except Exception:
+    import tree_sitter_java as tsjava
+    import tree_sitter_python as tspy
+    _JAVA_LANG = ts.Language(tsjava.language())
+    _PYTHON_LANG = ts.Language(tspy.language())
+
 _JAVA_PARSER = ts.Parser(_JAVA_LANG)
 _PYTHON_PARSER = ts.Parser(_PYTHON_LANG)
 

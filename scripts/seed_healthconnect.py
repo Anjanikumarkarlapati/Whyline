@@ -56,7 +56,10 @@ def seed_healthconnect(force: bool = True) -> Path:
                     return REPO_DIR
             except Exception:
                 pass
-        shutil.rmtree(REPO_DIR, onexc=_remove_readonly)
+        if sys.version_info >= (3, 12):
+            shutil.rmtree(REPO_DIR, onexc=_remove_readonly)
+        else:
+            shutil.rmtree(REPO_DIR, onerror=_remove_readonly)
     REPO_DIR.mkdir(parents=True, exist_ok=True)
 
     subprocess.run(["git", "init", "-b", "main"], cwd=REPO_DIR, check=True, capture_output=True)
