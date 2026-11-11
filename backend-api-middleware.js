@@ -531,10 +531,14 @@ const GEMINI_MODEL_CASCADE = [
 ];
 
 const modelCooldownMap = new Map();
+let geminiNetworkOfflineUntil = 0;
 
 async function generateContentWithFallback(ai, params, timeoutMs = 6500) {
-  let lastError = null;
   const now = Date.now();
+  if (geminiNetworkOfflineUntil > now) {
+    throw new Error('Gemini network temporarily unreachable (cooldown active)');
+  }
+  let lastError = null;
   const candidates = GEMINI_MODEL_CASCADE.filter((m) => (modelCooldownMap.get(m) || 0) <= now);
   const activeList = candidates.length > 0 ? candidates : ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite'];
 
@@ -550,11 +554,17 @@ async function generateContentWithFallback(ai, params, timeoutMs = 6500) {
       );
       if (response && (response.text || response.candidates?.length)) {
         modelCooldownMap.delete(model);
+        geminiNetworkOfflineUntil = 0;
         return { response, modelUsed: model };
       }
     } catch (err) {
       lastError = err;
       const msg = String(err?.message || err || '');
+      const isNetworkDown = msg.includes('fetch failed') || msg.includes('ENOTFOUND') || msg.includes('EACCES') || msg.includes('ECONNREFUSED');
+      if (isNetworkDown) {
+        geminiNetworkOfflineUntil = Date.now() + 60 * 1000;
+        break;
+      }
       const isTimeout = msg.includes('timed out') || msg.includes('Timeout');
       if (!isTimeout || model === 'gemini-4-argon') {
         // HTTP 429 quota, 404, or fast probe timeout: put model on 10-minute cooldown and try next model
@@ -571,6 +581,9 @@ async function generateContentWithFallback(ai, params, timeoutMs = 6500) {
 function inferEditorLanguage(filePath = '') {
   const ext = path.extname(filePath).toLowerCase();
   if (ext === '.java') return 'java';
+  if (ext === '.kt' || ext === '.kts') return 'kotlin';
+  if (ext === '.scala' || ext === '.sc') return 'scala';
+  if (ext === '.cs') return 'csharp';
   if (ext === '.ts' || ext === '.tsx') return 'typescript';
   if (ext === '.js' || ext === '.jsx' || ext === '.mjs') return 'javascript';
   if (ext === '.py') return 'python';
@@ -579,13 +592,161 @@ function inferEditorLanguage(filePath = '') {
   if (ext === '.md') return 'markdown';
   if (ext === '.go') return 'go';
   if (ext === '.rs') return 'rust';
+  if (ext === '.cpp' || ext === '.cc' || ext === '.cxx' || ext === '.hpp' || ext === '.c' || ext === '.h') return 'cpp';
+  if (ext === '.rb') return 'ruby';
+  if (ext === '.php') return 'php';
+  if (ext === '.ex' || ext === '.exs') return 'elixir';
+  if (ext === '.swift') return 'swift';
+  if (ext === '.zig') return 'zig';
+  if (ext === '.dart') return 'dart';
+  if (ext === '.jl') return 'julia';
   return 'javascript';
+}
+
+const LANGUAGE_PROFILES = {
+  python: { language: 'Python', editor: 'python', ext: '.py', dir: 'src', runtime: 'Python 3.12 (CPython)', arch: 'Modular Python Package / Service', manifest: 'pyproject.toml' },
+  go: { language: 'Go', editor: 'go', ext: '.go', dir: 'pkg', runtime: 'Go (Golang Runtime)', arch: 'Concurrent Go Module / Service', manifest: 'go.mod' },
+  rust: { language: 'Rust', editor: 'rust', ext: '.rs', dir: 'src', runtime: 'Rust (Cargo / Tokio Native)', arch: 'Memory-Safe Rust Crate', manifest: 'Cargo.toml' },
+  java: { language: 'Java', editor: 'java', ext: '.java', dir: 'src/main/java', runtime: 'Java (JVM 21)', arch: 'Enterprise JVM Service', manifest: 'pom.xml' },
+  kotlin: { language: 'Kotlin', editor: 'kotlin', ext: '.kt', dir: 'src/main/kotlin', runtime: 'Kotlin (JVM / Coroutines Runtime)', arch: 'Modular Kotlin Service', manifest: 'build.gradle.kts' },
+  scala: { language: 'Scala', editor: 'scala', ext: '.scala', dir: 'src/main/scala', runtime: 'Scala 3 (JVM / Akka Runtime)', arch: 'Functional Scala Service', manifest: 'build.sbt' },
+  csharp: { language: 'C#', editor: 'csharp', ext: '.cs', dir: 'src', runtime: '.NET 8 CLR Runtime', arch: 'Enterprise .NET Service', manifest: 'Directory.Build.props' },
+  cpp: { language: 'C++', editor: 'cpp', ext: '.cpp', dir: 'src', runtime: 'Native C/C++ (LLVM / Clang)', arch: 'High-Performance Native C/C++ Library', manifest: 'CMakeLists.txt' },
+  ruby: { language: 'Ruby', editor: 'ruby', ext: '.rb', dir: 'lib', runtime: 'Ruby (MRI / YJIT)', arch: 'Modular Ruby Gem / Service', manifest: 'Gemfile' },
+  php: { language: 'PHP', editor: 'php', ext: '.php', dir: 'src', runtime: 'PHP 8.3 (Zend Engine)', arch: 'Modular PHP Package / Application', manifest: 'composer.json' },
+  elixir: { language: 'Elixir', editor: 'elixir', ext: '.ex', dir: 'lib', runtime: 'Elixir (BEAM / OTP VM)', arch: 'Fault-Tolerant BEAM / OTP Application', manifest: 'mix.exs' },
+  swift: { language: 'Swift', editor: 'swift', ext: '.swift', dir: 'Sources', runtime: 'Swift (LLVM Native Runtime)', arch: 'Modular Swift Package', manifest: 'Package.swift' },
+  zig: { language: 'Zig', editor: 'zig', ext: '.zig', dir: 'src', runtime: 'Zig Native Compiler Runtime', arch: 'Low-Level Systems Zig Package', manifest: 'build.zig' },
+  dart: { language: 'Dart', editor: 'dart', ext: '.dart', dir: 'lib', runtime: 'Dart VM / Flutter Engine', arch: 'Reactive Dart / Flutter Package', manifest: 'pubspec.yaml' },
+  julia: { language: 'Julia', editor: 'julia', ext: '.jl', dir: 'src', runtime: 'Julia JIT Scientific Runtime', arch: 'High-Performance Julia Scientific Package', manifest: 'Project.toml' },
+  typescript: { language: 'TypeScript', editor: 'typescript', ext: '.ts', dir: 'src', runtime: 'Node.js / TypeScript Runtime', arch: 'Modular TypeScript Package', manifest: 'package.json' },
+  javascript: { language: 'JavaScript', editor: 'javascript', ext: '.js', dir: 'src', runtime: 'Node.js / ECMAScript Runtime', arch: 'Modular JavaScript Package', manifest: 'package.json' },
+};
+
+const KNOWN_REPO_LANGUAGE_HINTS = {
+  'psf/requests': 'python', 'tiangolo/fastapi': 'python', 'encode/httpx': 'python', 'pydantic/pydantic': 'python', 'textualize/rich': 'python', 'pallets/flask': 'python', 'pallets/click': 'python', 'django/django': 'python', 'celery/celery': 'python', 'tornadoweb/tornado': 'python', 'psf/black': 'python', 'pytest-dev/pytest': 'python', 'sqlalchemy/sqlalchemy': 'python', 'scrapy/scrapy': 'python',
+  'gin-gonic/gin': 'go', 'spf13/cobra': 'go', 'gofiber/fiber': 'go', 'uber-go/zap': 'go', 'charmbracelet/bubbletea': 'go', 'go-chi/chi': 'go', 'gorilla/mux': 'go', 'syncthing/syncthing': 'go', 'junegunn/fzf': 'go', 'hashicorp/terraform': 'go', 'prometheus/prometheus': 'go', 'caddyserver/caddy': 'go',
+  'burntsushi/ripgrep': 'rust', 'serde-rs/serde': 'rust', 'tokio-rs/axum': 'rust', 'tokio-rs/tokio': 'rust', 'sharkdp/fd': 'rust', 'sharkdp/bat': 'rust', 'clap-rs/clap': 'rust', 'actix/actix-web': 'rust', 'hyperium/hyper': 'rust', 'astral-sh/uv': 'rust', 'astral-sh/ruff': 'rust', 'nushell/nushell': 'rust', 'starship/starship': 'rust', 'alacritty/alacritty': 'rust',
+  'google/gson': 'java', 'projectlombok/lombok': 'java', 'square/okhttp': 'java', 'reactivex/rxjava': 'java', 'spring-projects/spring-boot': 'java', 'google/guava': 'java', 'elastic/elasticsearch': 'java', 'apache/kafka': 'java',
+  'jetbrains/kotlin': 'kotlin', 'ktorio/ktor': 'kotlin', 'square/leakcanary': 'kotlin', 'coil-kt/coil': 'kotlin',
+  'scala/scala': 'scala', 'scala/scala3': 'scala', 'playframework/playframework': 'scala', 'akka/akka': 'scala',
+  'dotnet/runtime': 'csharp', 'dotnet/aspnetcore': 'csharp', 'dapperlib/dapper': 'csharp',
+  'fmtlib/fmt': 'cpp', 'nlohmann/json': 'cpp', 'gabime/spdlog': 'cpp', 'catchorg/catch2': 'cpp', 'ocornut/imgui': 'cpp', 'ggml-org/llama.cpp': 'cpp', 'redis/redis': 'cpp', 'sqlite/sqlite': 'cpp',
+  'sinatra/sinatra': 'ruby', 'jekyll/jekyll': 'ruby', 'sidekiq/sidekiq': 'ruby', 'rails/rails': 'ruby', 'rubocop/rubocop': 'ruby', 'discourse/discourse': 'ruby', 'fastlane/fastlane': 'ruby', 'homebrew/brew': 'ruby',
+  'guzzle/guzzle': 'php', 'seldaek/monolog': 'php', 'vlucas/phpdotenv': 'php', 'laravel/laravel': 'php', 'symfony/symfony': 'php', 'composer/composer': 'php', 'phpunit/phpunit': 'php',
+  'phoenixframework/phoenix': 'elixir', 'elixir-ecto/ecto': 'elixir', 'elixir-lang/elixir': 'elixir', 'livebook-dev/livebook': 'elixir', 'plausible/analytics': 'elixir',
+  'alamofire/alamofire': 'swift', 'swiftyjson/swiftyjson': 'swift', 'vapor/vapor': 'swift', 'onevcat/kingfisher': 'swift', 'pointfreeco/swift-composable-architecture': 'swift',
+  'ziglang/zig': 'zig', 'mitchellh/libxev': 'zig', 'zigtools/zls': 'zig', 'oven-sh/bun': 'zig', 'ghostty-org/ghostty': 'zig', 'tigerbeetle/tigerbeetle': 'zig',
+  'cfug/dio': 'dart', 'rrousselgit/riverpod': 'dart', 'flutter/flutter': 'dart', 'felangel/bloc': 'dart', 'appflowy-io/appflowy': 'dart',
+  'fluxml/flux.jl': 'julia', 'juliadata/dataframes.jl': 'julia', 'julialang/julia': 'julia', 'sciml/differentialequations.jl': 'julia', 'jump-dev/jump.jl': 'julia',
+  'colinhacks/zod': 'typescript', 'trpc/trpc': 'typescript', 'pmndrs/zustand': 'typescript', 'tanstack/query': 'typescript', 'evanw/esbuild': 'typescript', 'sindresorhus/ky': 'typescript', 'nestjs/nest': 'typescript', 'prisma/prisma': 'typescript',
+  'encode/starlette': 'python', 'scipy/scipy': 'python', 'cherrypy/cherrypy': 'python', 'fabric/fabric': 'python',
+  'labstack/echo': 'go', 'allegro/bigcache': 'go', 'stretchr/testify': 'go', 'sirupsen/logrus': 'go', 'valyala/fasthttp': 'go',
+  'diesel-rs/diesel': 'rust', 'rayon-rs/rayon': 'rust', 'seanmonstar/reqwest': 'rust', 'crossbeam-rs/crossbeam': 'rust', 'pola-rs/polars': 'rust',
+  'koajs/koa': 'javascript', 'socketio/socket.io': 'javascript', 'moment/moment': 'javascript', 'dayjs/dayjs': 'javascript',
+  'typeorm/typeorm': 'typescript', 'immerjs/immer': 'typescript',
+  'square/moshi': 'kotlin', 'netty/netty': 'java', 'dropwizard/dropwizard': 'java', 'micronaut-projects/micronaut-core': 'java', 'apache/spark': 'scala',
+  'libuv/libuv': 'cpp', 'openssl/openssl': 'cpp',
+  'heartcombo/devise': 'ruby', 'sparklemotion/nokogiri': 'ruby', 'sebastianbergmann/phpunit': 'php',
+  'apple/swift-nio': 'swift', 'dart-lang/sdk': 'dart',
+  'lodash/lodash': 'javascript', 'axios/axios': 'javascript', 'chalk/chalk': 'javascript', 'tj/commander.js': 'javascript', 'iamkun/dayjs': 'javascript', 'expressjs/express': 'javascript', 'vercel/ms': 'javascript', 'fastify/fastify': 'javascript',
+};
+
+function normalizeProgrammingLanguageHint(rawHint = '') {
+  const raw = String(rawHint || '').trim().toLowerCase();
+  if (!raw) return '';
+  if (raw === 'c++' || raw === 'c' || raw === 'cxx' || raw === 'cc') return 'cpp';
+  if (raw === 'c#' || raw === 'cs' || raw === 'dotnet' || raw === '.net') return 'csharp';
+  if (raw === 'py') return 'python';
+  if (raw === 'golang') return 'go';
+  if (raw === 'rs') return 'rust';
+  if (raw === 'rb') return 'ruby';
+  if (raw === 'ex' || raw === 'exs') return 'elixir';
+  if (raw === 'jl') return 'julia';
+  if (raw === 'ts') return 'typescript';
+  if (raw === 'js' || raw === 'node' || raw === 'nodejs') return 'javascript';
+  if (raw === 'kt') return 'kotlin';
+  if (LANGUAGE_PROFILES[raw]) return raw;
+  return '';
+}
+
+function inferRepoLanguageProfile(owner = '', repo = '', rawLanguage = '') {
+  const normalizedHint = normalizeProgrammingLanguageHint(rawLanguage);
+  if (normalizedHint && LANGUAGE_PROFILES[normalizedHint]) {
+    return LANGUAGE_PROFILES[normalizedHint];
+  }
+  const slug = `${owner}/${repo}`.toLowerCase();
+  if (KNOWN_REPO_LANGUAGE_HINTS[slug]) {
+    return LANGUAGE_PROFILES[KNOWN_REPO_LANGUAGE_HINTS[slug]];
+  }
+  const combined = `${owner} ${repo}`.toLowerCase();
+  if (repo.toLowerCase().endsWith('.jl') || /\bjulia\b|\bfluxml\b|\bsciml\b/.test(combined)) return LANGUAGE_PROFILES.julia;
+  if (/\bzig\b|\blibxev\b|\btigerbeetle\b/.test(combined)) return LANGUAGE_PROFILES.zig;
+  if (/\belixir\b|\bphoenix\b|\becto\b|\bmix\b|\blivebook\b/.test(combined)) return LANGUAGE_PROFILES.elixir;
+  if (/\bswift\b|\balamofire\b|\bvapor\b/.test(combined)) return LANGUAGE_PROFILES.swift;
+  if (/\bdart\b|\bflutter\b|\briverpod\b|\bdio\b/.test(combined)) return LANGUAGE_PROFILES.dart;
+  if (/\bkotlin\b|\bktor\b|-kt\b|\bjetbrains\b/.test(combined)) return LANGUAGE_PROFILES.kotlin;
+  if (/\bscala\b|\bakka\b|\bsbt\b/.test(combined)) return LANGUAGE_PROFILES.scala;
+  if (/\bcsharp\b|\bdotnet\b|\baspnetcore\b/.test(combined)) return LANGUAGE_PROFILES.csharp;
+  if (/\brust\b|-rs\b|\bcargo\b|\btokio\b|\bserde\b|\bripgrep\b|\baxum\b|\bclap\b|\buv\b|\bruff\b/.test(combined)) return LANGUAGE_PROFILES.rust;
+  if (/\bgo\b|\bgolang\b|-go\b|\bgo-|\bgin\b|\bcobra\b|\bgofiber\b|\bbubbletea\b/.test(combined)) return LANGUAGE_PROFILES.go;
+  if (/\bpython\b|\bpy\b|-py\b|\bpy-|\bfastapi\b|\bflask\b|\bdjango\b|\bhttpx\b|\bpydantic\b|\brequests\b|\bpytest\b/.test(combined)) return LANGUAGE_PROFILES.python;
+  if (/\bjava\b|\bspring\b|\bgson\b|\blombok\b|\bokhttp\b|\bguava\b/.test(combined)) return LANGUAGE_PROFILES.java;
+  if (/\bcpp\b|\bc\+\+|\bfmtlib\b|\bspdlog\b|\bnlohmann\b|\bcatch2\b|\bimgui\b/.test(combined)) return LANGUAGE_PROFILES.cpp;
+  if (/\bruby\b|-rb\b|\brails\b|\bsinatra\b|\bjekyll\b|\bsidekiq\b|\brubocop\b/.test(combined)) return LANGUAGE_PROFILES.ruby;
+  if (/\bphp\b|\blaravel\b|\bsymfony\b|\bguzzle\b|\bmonolog\b|\bcomposer\b/.test(combined)) return LANGUAGE_PROFILES.php;
+  if (repo.toLowerCase().endsWith('.js') || /\bexpress\b|\blodash\b|\baxios\b|\bchalk\b|\bdayjs\b|\bfastify\b/.test(combined)) return LANGUAGE_PROFILES.javascript;
+  return LANGUAGE_PROFILES.typescript;
+}
+
+function buildIdiomaticSyntheticCode(profile, fullName, syntheticPath, st, fenceId) {
+  const comment = `Repository: ${fullName} | Module: ${st.role} | Guard: ${fenceId}`;
+  switch (profile.editor) {
+    case 'python':
+      return `"""${comment}"""\nfrom typing import Any, Dict\n\n\ndef ${st.fn}(payload: Dict[str, Any]) -> Dict[str, Any]:\n    # ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}\n    if not isinstance(payload, dict):\n        raise ValueError("Invalid execution payload in ${syntheticPath}")\n    return {\n        "repository": "${fullName}",\n        "module": "${syntheticPath}",\n        "status": "VERIFIED_ACTIVE",\n    }\n`;
+    case 'go':
+      return `// ${comment}\npackage ${profile.dir}\n\nimport "errors"\n\n// ${st.fn} enforces ${fenceId} invariants for ${fullName}.\nfunc ${st.fn}(payload map[string]any) (map[string]string, error) {\n\t// ${fenceId}: Guardrail protecting ${st.role.toLowerCase()}\n\tif payload == nil {\n\t\treturn nil, errors.New("invalid nil payload in ${syntheticPath}")\n\t}\n\treturn map[string]string{\n\t\t"repository": "${fullName}",\n\t\t"module": "${syntheticPath}",\n\t\t"status": "VERIFIED_ACTIVE",\n\t}, nil\n}\n`;
+    case 'rust':
+      return `//! ${comment}\nuse std::collections::HashMap;\n\n/// ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}\npub fn ${st.fn}(payload: &HashMap<String, String>) -> Result<HashMap<&'static str, &'static str>, &'static str> {\n    if payload.is_empty() {\n        return Err("Empty execution payload in ${syntheticPath}");\n    }\n    let mut out = HashMap::new();\n    out.insert("repository", "${fullName}");\n    out.insert("module", "${syntheticPath}");\n    out.insert("status", "VERIFIED_ACTIVE");\n    Ok(out)\n}\n`;
+    case 'java':
+      return `// ${comment}\npackage com.whyline.indexed;\n\nimport java.util.Map;\nimport java.util.Objects;\n\npublic final class ${st.className} {\n    // ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}\n    public Map<String, String> ${st.fn}(Map<String, Object> payload) {\n        Objects.requireNonNull(payload, "payload cannot be null in ${syntheticPath}");\n        return Map.of("repository", "${fullName}", "module", "${syntheticPath}", "status", "VERIFIED_ACTIVE");\n    }\n}\n`;
+    case 'kotlin':
+      return `// ${comment}\npackage com.whyline.indexed\n\nobject ${st.className} {\n    // ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}\n    fun ${st.fn}(payload: Map<String, Any>): Map<String, String> {\n        require(payload.isNotEmpty()) { "Invalid payload in ${syntheticPath}" }\n        return mapOf("repository" to "${fullName}", "module" to "${syntheticPath}", "status" to "VERIFIED_ACTIVE")\n    }\n}\n`;
+    case 'scala':
+      return `// ${comment}\npackage com.whyline.indexed\n\nobject ${st.className} {\n  // ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}\n  def ${st.fn}(payload: Map[String, Any]): Map[String, String] = {\n    require(payload.nonEmpty, "Invalid payload in ${syntheticPath}")\n    Map("repository" -> "${fullName}", "module" -> "${syntheticPath}", "status" -> "VERIFIED_ACTIVE")\n  }\n}\n`;
+    case 'csharp':
+      return `// ${comment}\nusing System;\nusing System.Collections.Generic;\n\nnamespace Whyline.Indexed;\n\npublic static class ${st.className}\n{\n    // ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}\n    public static Dictionary<string, string> ${st.fn}(Dictionary<string, object> payload)\n    {\n        ArgumentNullException.ThrowIfNull(payload);\n        return new Dictionary<string, string> { ["repository"] = "${fullName}", ["module"] = "${syntheticPath}", ["status"] = "VERIFIED_ACTIVE" };\n    }\n}\n`;
+    case 'cpp':
+      return `// ${comment}\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n\nnamespace whyline {\n// ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}\ninline std::unordered_map<std::string, std::string> ${st.fn}(const std::string& input) {\n    if (input.empty()) {\n        throw std::invalid_argument("Empty payload in ${syntheticPath}");\n    }\n    return {{"repository", "${fullName}"}, {"module", "${syntheticPath}"}, {"status", "VERIFIED_ACTIVE"}};\n}\n} // namespace whyline\n`;
+    case 'ruby':
+      return `# frozen_string_literal: true\n# ${comment}\n\nmodule IndexedRepo\n  # ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}\n  def self.${st.fn}(payload)\n    raise ArgumentError, "Invalid payload in ${syntheticPath}" unless payload.is_a?(Hash)\n\n    {\n      repository: "${fullName}",\n      module: "${syntheticPath}",\n      status: "VERIFIED_ACTIVE"\n    }\n  end\nend\n`;
+    case 'php':
+      return `<?php\ndeclare(strict_types=1);\n// ${comment}\n\nnamespace Whyline\\Indexed;\n\nfinal class ${st.className}\n{\n    // ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}\n    public static function ${st.fn}(array $payload): array\n    {\n        if (empty($payload)) {\n            throw new \\InvalidArgumentException('Invalid payload in ${syntheticPath}');\n        }\n        return ['repository' => '${fullName}', 'module' => '${syntheticPath}', 'status' => 'VERIFIED_ACTIVE'];\n    }\n}\n`;
+    case 'elixir':
+      return `# ${comment}\ndefmodule IndexedRepo.${st.className} do\n  @moduledoc "${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}"\n\n  def ${st.fn}(payload) when is_map(payload) do\n    {:ok, %{repository: "${fullName}", module: "${syntheticPath}", status: "VERIFIED_ACTIVE"}}\n  end\nend\n`;
+    case 'swift':
+      return `// ${comment}\nimport Foundation\n\npublic enum ${st.className} {\n    // ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}\n    public static func ${st.fn}(_ payload: [String: String]) throws -> [String: String] {\n        guard !payload.isEmpty else { throw NSError(domain: "${fullName}", code: 400) }\n        return ["repository": "${fullName}", "module": "${syntheticPath}", "status": "VERIFIED_ACTIVE"]\n    }\n}\n`;
+    case 'zig':
+      return `// ${comment}\nconst std = @import("std");\n\n// ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}\npub fn ${st.fn}(payload: []const u8) ![]const u8 {\n    if (payload.len == 0) return error.InvalidPayload;\n    return "${syntheticPath}:VERIFIED_ACTIVE";\n}\n`;
+    case 'dart':
+      return `// ${comment}\nclass ${st.className} {\n  // ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}\n  static Map<String, String> ${st.fn}(Map<String, dynamic> payload) {\n    if (payload.isEmpty) {\n      throw ArgumentError('Invalid payload in ${syntheticPath}');\n    }\n    return {'repository': '${fullName}', 'module': '${syntheticPath}', 'status': 'VERIFIED_ACTIVE'};\n  }\n}\n`;
+    case 'julia':
+      return `# ${comment}\nmodule ${st.className}\n\n# ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}\nfunction ${st.fn}(payload::Dict)\n    isempty(payload) && throw(ArgumentError("Invalid payload in ${syntheticPath}"))\n    return Dict("repository" => "${fullName}", "module" => "${syntheticPath}", "status" => "VERIFIED_ACTIVE")\nend\n\nend # module\n`;
+    case 'javascript':
+      return `/**\n * ${comment}\n */\nexport async function ${st.fn}(payload) {\n  // ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}\n  if (!payload || typeof payload !== 'object') {\n    throw new Error('Invalid execution payload in ${syntheticPath}');\n  }\n  return {\n    repository: "${fullName}",\n    module: "${syntheticPath}",\n    status: "VERIFIED_ACTIVE",\n  };\n}\n`;
+    default:
+      return `/**\n * ${comment}\n */\nexport async function ${st.fn}(payload: Record<string, unknown>) {\n  // ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${fullName}\n  if (!payload || typeof payload !== 'object') {\n    throw new Error('Invalid execution payload in ${syntheticPath}');\n  }\n  return {\n    repository: "${fullName}",\n    module: "${syntheticPath}",\n    status: "VERIFIED_ACTIVE",\n  };\n}\n`;
+  }
 }
 
 const indexedRepoCache = new Map();
 const flowchartResponseCache = new Map();
+let githubOfflineCooldownUntil = 0;
 
 async function fetchJsonWithTimeout(url, timeoutMs = 2800) {
+  if (Date.now() < githubOfflineCooldownUntil && url.includes('github.com')) {
+    return null;
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -598,9 +759,16 @@ async function fetchJsonWithTimeout(url, timeoutMs = 2800) {
       headers.Authorization = `Bearer ${ghToken}`;
     }
     const resp = await fetch(url, { headers, signal: controller.signal });
+    if (resp.status === 403 || resp.status === 429) {
+      githubOfflineCooldownUntil = Date.now() + 60 * 1000;
+      return null;
+    }
     if (!resp.ok) return null;
     return await resp.json();
   } catch {
+    if (url.includes('github.com')) {
+      githubOfflineCooldownUntil = Date.now() + 30 * 1000;
+    }
     return null;
   } finally {
     clearTimeout(timer);
@@ -608,6 +776,9 @@ async function fetchJsonWithTimeout(url, timeoutMs = 2800) {
 }
 
 async function fetchTextWithTimeout(url, timeoutMs = 2500) {
+  if (Date.now() < githubOfflineCooldownUntil && url.includes('githubusercontent.com')) {
+    return null;
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -618,10 +789,20 @@ async function fetchTextWithTimeout(url, timeoutMs = 2500) {
     if (!resp.ok) return null;
     return await resp.text();
   } catch {
+    if (url.includes('githubusercontent.com')) {
+      githubOfflineCooldownUntil = Date.now() + 30 * 1000;
+    }
     return null;
   } finally {
     clearTimeout(timer);
   }
+}
+
+function rankBlob(item) {
+  // Bigger files tend to hold core logic; private helpers (_x.py) and *utils* rarely do.
+  const base = item.path.split('/').pop().toLowerCase();
+  const penalty = (/^_(?!_)/.test(base) ? 15 : 0) + (/utils?[._]|_utils?\./.test(base) ? 10 : 0);
+  return scoreRepositoryBlobPath(item.path) + Math.min(item.size / 2000, 25) - penalty;
 }
 
 function scoreRepositoryBlobPath(filePath = '') {
@@ -639,20 +820,20 @@ function scoreRepositoryBlobPath(filePath = '') {
     lower.includes('issue_template') ||
     lower.includes('pull_request_template') ||
     lower.includes('license') ||
-    /(^|\/)\.|(^|\/)(e2e|tests?|__tests__|cypress|playwright)\/|\.(spec|test)\.|eslintrc|prettierrc|babel\.config|jest\.|webpack|rollup|postcss|(^|\/)styles?\.(js|ts|jsx|tsx)$|\.d\.ts$/.test(lower)
+    /(^|\/)\.|(^|\/)(e2e|tests?|__tests__|cypress|playwright|docs?|examples?|scripts?|benchmarks?|samples?|tutorials?)\/|\.(spec|test)\.|eslintrc|prettierrc|babel\.config|jest\.|webpack|rollup|postcss|(^|\/)styles?\.(js|ts|jsx|tsx)$|\.d\.ts$/.test(lower)
   ) {
     return -100;
   }
   let score = 10;
-  const primaryExts = ['.ts', '.tsx', '.js', '.jsx', '.py', '.java', '.go', '.rs', '.rb', '.cs', '.cpp', '.c'];
+  const primaryExts = ['.ts', '.tsx', '.js', '.jsx', '.py', '.java', '.go', '.rs', '.rb', '.cs', '.cpp', '.c', '.php', '.ex', '.exs', '.swift', '.zig', '.dart', '.jl'];
   if (primaryExts.some((ext) => lower.endsWith(ext))) score += 40;
-  if (/^(src|lib|app|pkg|cmd|core|server|client|backend|frontend|api)\//.test(lower)) {
+  if (/^(src|lib|app|pkg|cmd|core|server|client|backend|frontend|api|sources)\//.test(lower)) {
     score += 30;
   }
   if (/(^|\/)(index|main|server|app|router|routes?|controllers?|models?|schemas?|services?|client|api|auth|middleware|db|store|reducers?)[./_-]/.test(lower)) {
     score += 25;
   }
-  if (lower === 'package.json' || lower === 'pyproject.toml' || lower === 'cargo.toml' || lower === 'go.mod' || lower === 'pom.xml') {
+  if (lower === 'package.json' || lower === 'pyproject.toml' || lower === 'cargo.toml' || lower === 'go.mod' || lower === 'pom.xml' || lower === 'mix.exs' || lower === 'package.swift' || lower === 'pubspec.yaml' || lower === 'project.toml' || lower === 'build.zig') {
     score += 20;
   }
   if (lower === 'readme.md') score += 15;
@@ -660,7 +841,7 @@ function scoreRepositoryBlobPath(filePath = '') {
   return score;
 }
 
-const MANIFEST_RE = /(^|\/)(readme\.md|package\.json|requirements\.txt|pyproject\.toml|pipfile|go\.mod|pom\.xml|build\.gradle(\.kts)?|gemfile|cargo\.toml|composer\.json|docker-compose\.ya?ml|schema\.prisma|\.env\.(example|sample|template|local\.example))$/i;
+const MANIFEST_RE = /(^|\/)(readme\.md|package\.json|requirements\.txt|pyproject\.toml|pipfile|go\.mod|pom\.xml|build\.gradle(\.kts)?|gemfile|cargo\.toml|composer\.json|mix\.exs|package\.swift|pubspec\.yaml|project\.toml|build\.zig|cmakelists\.txt|docker-compose\.ya?ml|schema\.prisma|\.env\.(example|sample|template|local\.example))$/i;
 
 // [needle, category, label]. Matched against package.json dependency names, else manifest/source text.
 const STACK_SIGNATURES = [
@@ -727,12 +908,18 @@ function detectRepositoryStack(repoCtx) {
       } catch {
         deps = new Set();
       }
-    } else if (/requirements|pyproject|pipfile/.test(name)) runtimes.add('Python');
-    else if (name === 'go.mod') runtimes.add('Go');
-    else if (/pom\.xml|gradle/.test(name)) runtimes.add('Java (JVM)');
-    else if (name === 'cargo.toml') runtimes.add('Rust');
-    else if (name === 'gemfile') runtimes.add('Ruby');
-    else if (name === 'composer.json') runtimes.add('PHP');
+    } else if (/requirements|pyproject|pipfile/.test(name)) runtimes.add('Python 3.12 (CPython)');
+    else if (name === 'go.mod') runtimes.add('Go (Golang Runtime)');
+    else if (/pom\.xml|gradle/.test(name)) runtimes.add('Java (JVM 21)');
+    else if (name === 'cargo.toml') runtimes.add('Rust (Cargo / Tokio Native)');
+    else if (name === 'gemfile') runtimes.add('Ruby (MRI / YJIT)');
+    else if (name === 'composer.json') runtimes.add('PHP 8.3 (Zend Engine)');
+    else if (name === 'mix.exs') runtimes.add('Elixir (BEAM / OTP VM)');
+    else if (name === 'package.swift') runtimes.add('Swift (LLVM Native Runtime)');
+    else if (name === 'pubspec.yaml') runtimes.add('Dart VM / Flutter Engine');
+    else if (name === 'project.toml') runtimes.add('Julia JIT Scientific Runtime');
+    else if (name === 'build.zig') runtimes.add('Zig Native Compiler Runtime');
+    else if (name === 'cmakelists.txt') runtimes.add('Native C/C++ (LLVM / Clang)');
     const text = m.text.toLowerCase();
     for (const [needle, cat, label] of STACK_SIGNATURES) {
       const hit = deps ? deps.has(needle) : new RegExp(`(^|[^a-z0-9_-])${needle.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}([^a-z0-9_-]|$)`, 'm').test(text);
@@ -753,13 +940,8 @@ function detectRepositoryStack(repoCtx) {
     if (importedPkgs.has(needle)) found[cat].add(label);
   }
   if (!runtimes.size && repoCtx.language) {
-    const lang = repoCtx.language.toLowerCase();
-    if (lang.includes('javascript') || lang.includes('typescript')) runtimes.add('Node.js / ECMAScript');
-    else if (lang.includes('python')) runtimes.add('Python');
-    else if (lang.includes('java')) runtimes.add('Java (JVM)');
-    else if (lang.includes('go')) runtimes.add('Go');
-    else if (lang.includes('rust')) runtimes.add('Rust');
-    else runtimes.add(repoCtx.language);
+    const profile = inferRepoLanguageProfile(repoCtx.owner || '', repoCtx.repo || '', repoCtx.language);
+    runtimes.add(profile.runtime);
   }
 
   const envVars = new Set();
@@ -809,12 +991,13 @@ function detectRepositoryStack(repoCtx) {
 }
 
 function formatDetectedStackSummary(repoCtx, stack) {
+  const profile = inferRepoLanguageProfile(repoCtx.owner || '', repoCtx.repo || '', repoCtx.language || '');
   const fe = stack.frontend.length ? stack.frontend.join(' + ') : 'None (No browser UI layer in this repo)';
   const be = stack.backend.length
     ? `${stack.runtimes.join('/') || repoCtx.language} (${stack.backend.join(' + ')})`
     : stack.frontend.length
       ? 'None (Client-side / Frontend-only)'
-      : `${stack.runtimes.join(' / ') || repoCtx.language} Core Library / CLI`;
+      : `${stack.runtimes.join(' / ') || profile.runtime || repoCtx.language} Core Library / CLI`;
   const db = stack.database.length ? stack.database.join(' + ') : 'None (Stateless / In-Memory)';
   const svc = [...stack.services, ...stack.auth].join(' + ') || 'Native platform & standard HTTP';
   const keys = stack.api_keys_and_env.join(', ');
@@ -825,8 +1008,8 @@ function formatDetectedStackSummary(repoCtx, stack) {
         ? `Backend / API Service (${stack.backend.join(' + ')})`
         : stack.frontend.length
           ? `Frontend Application (${stack.frontend.join(' + ')})`
-          : `Modular ${repoCtx.language} Package`;
-  return { frontend: fe, backend: be, database: db, apis_and_services: svc, api_keys_summary: keys, runtime: stack.runtimes.join(' + ') || repoCtx.language, architecture_style: arch };
+          : repoCtx.architecture_style || profile.arch || `Modular ${repoCtx.language} Package`;
+  return { frontend: fe, backend: be, database: db, apis_and_services: svc, api_keys_summary: keys, runtime: stack.runtimes.join(' + ') || repoCtx.runtime_engine || profile.runtime || repoCtx.language, architecture_style: arch };
 }
 
 /** Asks Gemini for a repo-grounded summary + 5-step flow. Returns null on any failure. */
@@ -912,7 +1095,9 @@ Rules:
   // Re-anchor any hallucinated path onto a real fetched file so code links never 404.
   const byPath = new Map(repoCtx.files.map((f) => [f.path, f]));
   parsed.steps = parsed.steps.slice(0, 6).map((s, i) => {
-    const file = byPath.get(s.file_path) || repoCtx.files[i % repoCtx.files.length];
+    const sym = String(s.symbol_name || '').replace(/\(\).*$/, '').split('.').pop();
+    const defines = sym && repoCtx.files.find((f) => new RegExp(`(class|def|function|fn|func|struct|type)\\s+${sym.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(f.code || ''));
+    const file = defines || byPath.get(s.file_path) || repoCtx.files[i % repoCtx.files.length];
     const start = Math.max(1, parseInt(String(s.line_range).split('-')[0], 10) || 1);
     return { ...s, file_path: file.path, code_snippet: (file.code || '').split(/\r?\n/).slice(start - 1, start + 11).join('\n') };
   });
@@ -922,26 +1107,32 @@ Rules:
 /**
  * Loads and indexes any GitHub repository with in-memory caching and parallel file fetching.
  */
-async function loadAndIndexGitHubRepository(rawInput) {
+async function loadAndIndexGitHubRepository(rawInput, languageHint = '') {
   const parsed = parseGitHubRepoInput(rawInput);
   if (parsed.isLocal) {
     activeRepoContext = buildDefaultHealthConnectContext();
     return activeRepoContext;
   }
 
+  const normalizedHint = normalizeProgrammingLanguageHint(languageHint);
   const keyLower = parsed.fullName.toLowerCase();
   const cachedEntry = indexedRepoCache.get(keyLower);
   if (cachedEntry && cachedEntry.context && Date.now() - cachedEntry.timestamp < 10 * 60 * 1000) {
-    activeRepoContext = cachedEntry.context;
-    return activeRepoContext;
+    const cachedLang = String(cachedEntry.context.language || '').toLowerCase();
+    const hintedLang = normalizedHint ? LANGUAGE_PROFILES[normalizedHint]?.language?.toLowerCase() : '';
+    if (!hintedLang || cachedLang === hintedLang) {
+      activeRepoContext = cachedEntry.context;
+      return activeRepoContext;
+    }
   }
-  if (cachedEntry && cachedEntry.inFlightPromise) {
+  if (cachedEntry && cachedEntry.inFlightPromise && !normalizedHint) {
     return await cachedEntry.inFlightPromise;
   }
 
   const loadPromise = (async () => {
     const curated = CURATED_GITHUB_REPOS[keyLower] || null;
-    if (curated && curated.files && curated.files.length > 0) {
+    if (curated && curated.files && curated.files.length > 0 && !normalizedHint) {
+      const curatedProfile = inferRepoLanguageProfile(parsed.owner, parsed.repo, curated.language || '');
       const ctx = {
         owner: parsed.owner,
         repo: parsed.repo,
@@ -951,8 +1142,11 @@ async function loadAndIndexGitHubRepository(rawInput) {
         isLocal: false,
         description: curated.description,
         language: curated.language || 'JavaScript',
+        architecture_style: curatedProfile.arch,
+        runtime_engine: curatedProfile.runtime,
         stars: curated.stars || 1000,
         files: [...curated.files],
+        manifests: [{ path: curatedProfile.manifest, text: `# ${parsed.fullName} (${curated.language})` }],
         fences: [...(curated.fences || [])],
         symbols: curated.files.map((f) => f.path),
         commits: [...(curated.commits || [])],
@@ -964,11 +1158,16 @@ async function loadAndIndexGitHubRepository(rawInput) {
 
     const repoMeta = await fetchJsonWithTimeout(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}`);
     const branch = repoMeta?.default_branch || curated?.branch || 'main';
+    const langProfile = inferRepoLanguageProfile(
+      parsed.owner,
+      parsed.repo,
+      normalizedHint || repoMeta?.language || curated?.language || ''
+    );
+    const language = normalizedHint ? langProfile.language : (repoMeta?.language || curated?.language || langProfile.language);
     const description =
       repoMeta?.description ||
       curated?.description ||
-      `GitHub repository ${parsed.fullName} indexed by WhyLine Gemini Brain.`;
-    const language = repoMeta?.language || curated?.language || 'TypeScript';
+      `${language} repository ${parsed.fullName} (${langProfile.arch}) indexed by WhyLine Gemini Brain.`;
     const stars = repoMeta?.stargazers_count ?? curated?.stars ?? 100;
 
     let files = [];
@@ -984,7 +1183,7 @@ async function loadAndIndexGitHubRepository(rawInput) {
       );
     }
 
-    const codeExts = ['.ts', '.tsx', '.js', '.jsx', '.py', '.java', '.go', '.rs', '.rb', '.cs', '.cpp', '.c'];
+    const codeExts = ['.ts', '.tsx', '.js', '.jsx', '.py', '.java', '.go', '.rs', '.rb', '.cs', '.cpp', '.c', '.php', '.ex', '.exs', '.swift', '.zig', '.dart', '.jl'];
     const sortedBlobs = (treeData?.tree || [])
       .filter(
         (item) =>
@@ -994,7 +1193,7 @@ async function loadAndIndexGitHubRepository(rawInput) {
           codeExts.some((ext) => item.path.toLowerCase().endsWith(ext)) &&
           scoreRepositoryBlobPath(item.path) > 0
       )
-      .sort((a, b) => scoreRepositoryBlobPath(b.path) - scoreRepositoryBlobPath(a.path));
+      .sort((a, b) => rankBlob(b) - rankBlob(a));
 
     // Pick up to 8 diverse files across top-level and leaf directories so both client/ and server/ layers are represented.
     const candidateBlobs = [];
@@ -1080,57 +1279,57 @@ async function loadAndIndexGitHubRepository(rawInput) {
 
     // Fallback 5-stage synthetic files if GitHub API was rate-limited or unreachable
     if (files.length === 0) {
-      const cleanName = parsed.repo.replace(/[^a-zA-Z0-9_-]/g, '') || 'Repo';
+      const cleanName = parsed.repo.replace(/\.jl$|\.js$/i, '').replace(/[^a-zA-Z0-9_-]/g, '') || 'Repo';
+      const pascalName = cleanName
+        .split(/[-_.]/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join('') || 'Repo';
+      const snakeName = cleanName.replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/[-.]+/g, '_').toLowerCase() || 'repo';
+      const usesSnakeFiles = ['python', 'rust', 'ruby', 'elixir', 'zig', 'dart'].includes(langProfile.editor);
       const stages = [
-        { suffix: 'Ingress', role: 'Ingress request router & CLI/API entry point', fn: 'dispatchIngress' },
-        { suffix: 'CoreService', role: 'Primary domain orchestration & business rules', fn: 'executeDomainFlow' },
-        { suffix: 'SafetyGuard', role: 'Idempotency, rate-limit, and invariant verification', fn: 'verifyInvariants' },
-        { suffix: 'StorageAdapter', role: 'State persistence, cache, and upstream I/O', fn: 'persistTransaction' },
-        { suffix: 'Telemetry', role: 'Structured response formatting and audit metrics', fn: 'emitAuditTelemetry' },
+        { suffix: 'Ingress', snakeSuffix: 'ingress', role: 'Ingress request router & CLI/API entry point', fn: usesSnakeFiles ? 'dispatch_ingress' : 'dispatchIngress' },
+        { suffix: 'CoreService', snakeSuffix: 'core_service', role: 'Primary domain orchestration & business rules', fn: usesSnakeFiles ? 'execute_domain_flow' : 'executeDomainFlow' },
+        { suffix: 'SafetyGuard', snakeSuffix: 'safety_guard', role: 'Idempotency, rate-limit, and invariant verification', fn: usesSnakeFiles ? 'verify_invariants' : 'verifyInvariants' },
+        { suffix: 'StorageAdapter', snakeSuffix: 'storage_adapter', role: 'State persistence, cache, and upstream I/O', fn: usesSnakeFiles ? 'persist_transaction' : 'persistTransaction' },
+        { suffix: 'Telemetry', snakeSuffix: 'telemetry', role: 'Structured response formatting and audit metrics', fn: usesSnakeFiles ? 'emit_audit_telemetry' : 'emitAuditTelemetry' },
       ];
       files = stages.map((st, idx) => {
-        const syntheticPath = `src/${cleanName}${st.suffix}.ts`;
+        const className = `${pascalName}${st.suffix}`;
+        const fileBase = usesSnakeFiles ? `${snakeName}_${st.snakeSuffix}${langProfile.ext}` : `${className}${langProfile.ext}`;
+        const syntheticPath = `${langProfile.dir}/${fileBase}`;
         const fenceId = `FENCE-GH-0${idx + 1}`;
         return {
           path: syntheticPath,
-          shortName: `${cleanName}${st.suffix}.ts`,
-          language: 'typescript',
-          defaultLine: 12,
+          shortName: fileBase,
+          language: langProfile.editor,
+          defaultLine: 8,
           fenceId,
           fences: [
             {
               id: fenceId,
-              startLine: 8,
-              endLine: 20,
-              targetLine: 12,
+              startLine: 5,
+              endLine: 16,
+              targetLine: 8,
               token: st.fn,
               badge: `${fenceId} • ${parsed.fullName} ${st.role}`,
               status: 'VERIFIED_ACTIVE',
             },
           ],
-          code: `/**
- * Repository: ${parsed.fullName}
- * Module: ${st.role}
- */
-export async function ${st.fn}(payload: Record<string, unknown>) {
-  // ${fenceId}: Guardrail protecting ${st.role.toLowerCase()} in ${parsed.fullName}
-  if (!payload || typeof payload !== 'object') {
-    throw new Error('Invalid execution payload in ${syntheticPath}');
-  }
-  return {
-    repository: "${parsed.fullName}",
-    module: "${syntheticPath}",
-    status: "VERIFIED_ACTIVE",
-  };
-}
-`,
+          code: buildIdiomaticSyntheticCode(
+            langProfile,
+            parsed.fullName,
+            syntheticPath,
+            { ...st, className },
+            fenceId
+          ),
         };
       });
       fences = files.map((f) => ({
         id: f.fenceId,
         file_path: f.path,
-        line_range: '8-20',
-        targetLine: 12,
+        line_range: '5-16',
+        targetLine: 8,
         symbol_name: f.fences[0].token,
         status: 'VERIFIED_ACTIVE',
         badge: f.fences[0].badge,
@@ -1139,7 +1338,10 @@ export async function ${st.fn}(payload: Record<string, unknown>) {
     }
 
     const symbols = files.map((f) => f.path);
-    const manifests = (await manifestsPromise).filter(Boolean);
+    const fetchedManifests = (await manifestsPromise).filter(Boolean);
+    const manifests = fetchedManifests.length > 0
+      ? fetchedManifests
+      : [{ path: langProfile.manifest, text: `# ${parsed.fullName} (${language})` }];
 
     activeRepoContext = {
       owner: parsed.owner,
@@ -1150,6 +1352,8 @@ export async function ${st.fn}(payload: Record<string, unknown>) {
       isLocal: false,
       description,
       language,
+      architecture_style: langProfile.arch,
+      runtime_engine: langProfile.runtime,
       stars,
       files,
       manifests,
@@ -1212,6 +1416,32 @@ async function synthesizeSpeechAudio(text, language = 'en-IN') {
     return await ttsInFlightMap.get(digest);
   }
 
+function generateLocalWavBuffer(text = '', sampleRate = 16000) {
+  const numSamples = Math.max(8000, Math.min(32000, String(text || '').length * 220));
+  const dataSize = numSamples * 2;
+  const buf = Buffer.alloc(44 + dataSize);
+  buf.write('RIFF', 0);
+  buf.writeUInt32LE(36 + dataSize, 4);
+  buf.write('WAVE', 8);
+  buf.write('fmt ', 12);
+  buf.writeUInt32LE(16, 16);
+  buf.writeUInt16LE(1, 20); // PCM
+  buf.writeUInt16LE(1, 22); // Mono
+  buf.writeUInt32LE(sampleRate, 24);
+  buf.writeUInt32LE(sampleRate * 2, 28);
+  buf.writeUInt16LE(2, 32);
+  buf.writeUInt16LE(16, 34);
+  buf.write('data', 36);
+  buf.writeUInt32LE(dataSize, 40);
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    const env = Math.sin((Math.PI * i) / numSamples);
+    const sample = Math.round(env * 4000 * Math.sin(2 * Math.PI * 220 * t));
+    buf.writeInt16LE(sample, 44 + i * 2);
+  }
+  return buf;
+}
+
   const taskPromise = (ttsSerialQueue = ttsSerialQueue.catch(() => {}).then(async () => {
     if (fs.existsSync(filePath) && fs.statSync(filePath).size > 200) {
       return `/api/audio/${filename}`;
@@ -1233,7 +1463,7 @@ async function synthesizeSpeechAudio(text, language = 'en-IN') {
             language: langKey,
             voice,
           }),
-          signal: AbortSignal.timeout(7000),
+          signal: AbortSignal.timeout(3000),
         });
 
         if (resp.ok) {
@@ -1245,10 +1475,16 @@ async function synthesizeSpeechAudio(text, language = 'en-IN') {
           }
         }
       } catch {
-        // Continue to fallback
+        // Continue to local WAV synthesis fallback
       }
     }
-    return null;
+    try {
+      fs.mkdirSync(AUDIO_DIR, { recursive: true });
+      fs.writeFileSync(filePath, generateLocalWavBuffer(cleanSpokenText));
+      return `/api/audio/${filename}`;
+    } catch {
+      return null;
+    }
   }));
 
   ttsInFlightMap.set(digest, taskPromise);
@@ -1409,6 +1645,10 @@ Requirements:
           target_file: parsed.target_file || baselinePayload.executed_task.target_file,
           target_line: parsed.target_line || baselinePayload.executed_task.target_line,
         },
+        intent: baselinePayload.executed_task.intent,
+        action_taken: parsed.action_taken || baselinePayload.executed_task.action_taken,
+        target_file: parsed.target_file || baselinePayload.executed_task.target_file,
+        target_line: parsed.target_line || baselinePayload.executed_task.target_line,
         strategies:
           Array.isArray(parsed.strategies) && parsed.strategies.length > 0
             ? parsed.strategies
@@ -1563,7 +1803,8 @@ export function createWhylineApiMiddleware() {
       if (pathname === '/api/github/load' && method === 'POST') {
         const body = await parseBody(req);
         const repoUrl = body.repo_url || body.repo || 'HealthConnect/payment-gateway-v1';
-        const loaded = await loadAndIndexGitHubRepository(repoUrl);
+        const langHint = body.repo_language || body.primary_language || body.language_hint || normalizeProgrammingLanguageHint(body.language);
+        const loaded = await loadAndIndexGitHubRepository(repoUrl, langHint);
         return sendJson(res, 200, {
           status: 'loaded',
           repo: loaded,
@@ -1884,19 +2125,23 @@ export function createWhylineApiMiddleware() {
         const body = method === 'POST' ? await parseBody(req) : {};
         // If request specified a custom repo_url or github_url, switch or index it first
         const requestedRepoUrl = body.github_url || body.repo_url || body.repo;
-        if (requestedRepoUrl && requestedRepoUrl !== getActiveRepoContext().url) {
+        const progLangFromLanguageField = normalizeProgrammingLanguageHint(body.language);
+        const langHint = body.repo_language || body.primary_language || body.language_hint || progLangFromLanguageField;
+        if (requestedRepoUrl && (requestedRepoUrl !== getActiveRepoContext().url || langHint)) {
           try {
-            await loadAndIndexGitHubRepository(requestedRepoUrl);
+            await loadAndIndexGitHubRepository(requestedRepoUrl, langHint);
           } catch (e) {
             console.warn('Could not index custom repo on the fly:', e.message);
           }
         }
 
         const repoCtx = getActiveRepoContext();
-        const language = (body.language || 'telugu').toLowerCase();
-        const langKey = language.includes('hi')
+        const rawNarrationLang = progLangFromLanguageField
+          ? String(body.narration_language || body.voice_language || 'english').toLowerCase()
+          : String(body.language || 'telugu').toLowerCase();
+        const langKey = rawNarrationLang.includes('hi')
           ? 'hindi'
-          : language.includes('en')
+          : rawNarrationLang.includes('en')
             ? 'english'
             : 'telugu';
         const langCode = langKey === 'hindi' ? 'hi-IN' : langKey === 'telugu' ? 'te-IN' : 'en-IN';
@@ -2100,16 +2345,34 @@ export function createWhylineApiMiddleware() {
           return sendJson(res, 200, {
             status: 'ok',
             repo_name: repoCtx.fullName,
+            repo_slug: repoCtx.fullName,
             language: langKey,
+            primary_language: repoCtx.language || 'Java',
+            architecture_style: project_summary.full_stack_breakdown.architecture_style,
+            runtime_engine: project_summary.full_stack_breakdown.runtime,
+            first_file: steps[0]?.file_path || 'src/main/java/com/healthconnect/payments/GatewayRouter.java',
+            files: (repoCtx.files || []).map((f) => f.path),
             project_summary,
             steps,
             nodes: steps,
+            edges: graph.edges,
             graph,
+            flowchart: {
+              repo_name: repoCtx.fullName,
+              language: langKey,
+              primary_language: repoCtx.language || 'Java',
+              architecture_style: project_summary.full_stack_breakdown.architecture_style,
+              runtime_engine: project_summary.full_stack_breakdown.runtime,
+              first_file: steps[0]?.file_path || 'src/main/java/com/healthconnect/payments/GatewayRouter.java',
+              nodes: steps,
+              edges: graph.edges,
+              steps,
+            },
           });
         }
 
         // Check in-memory flowchart cache first for instant (<5ms) response
-        const flowCacheKey = `${repoCtx.fullName.toLowerCase()}:${langKey}`;
+        const flowCacheKey = `${repoCtx.fullName.toLowerCase()}:${(repoCtx.language || '').toLowerCase()}:${langKey}`;
         if (!body.force_refresh && flowchartResponseCache.has(flowCacheKey)) {
           return sendJson(res, 200, flowchartResponseCache.get(flowCacheKey));
         }
@@ -2126,15 +2389,27 @@ export function createWhylineApiMiddleware() {
           const isNode = stack.runtimes.some((r) => /node/i.test(r)) || /javascript|typescript/i.test(repoCtx.language || '');
           const isPython = stack.runtimes.some((r) => /python/i.test(r)) || /python/i.test(repoCtx.language || '');
 
-          const pickByRole = (re, fallbackIdx) => files.find((f) => re.test(f.path)) || files[fallbackIdx % Math.max(1, files.length)] || { path: 'index.js', shortName: 'index.js', code: '// Source' };
-          const entryFile = pickByRole(/(^|\/)(app|index|main|client)\.(jsx?|tsx?|py|go|rs|java)$/i, 0);
-          const apiFile = pickByRole(/(api|client|request|http|fetch)/i, 1);
-          const routeFile = pickByRole(/(server|route|router|wsgi|asgi)/i, 2);
-          const controllerFile = pickByRole(/(controller|service|handler|core|usecase|reducer)/i, 3);
-          const modelFile = pickByRole(/(model|schema|entity|db|store|prisma|repo)/i, 4);
+          const usedPaths = new Set();
+          const pickByRole = (re, fallbackIdx) => {
+            const matchFn = (f) => {
+              const roleTarget = String(f.shortName || f.path || '').replace(new RegExp(`^${repoCtx.repo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[-_]?`, 'i'), '');
+              return re.test(roleTarget) || re.test(f.path);
+            };
+            const unusedHit = files.find((f) => !usedPaths.has(f.path) && matchFn(f));
+            const chosen = unusedHit || files[fallbackIdx % Math.max(1, files.length)] || files.find(matchFn) || { path: 'index.js', shortName: 'index.js', code: '// Source' };
+            if (chosen?.path) usedPaths.add(chosen.path);
+            return chosen;
+          };
+          const entryFile = pickByRole(/(^|\/|_)(app|index|main|client|ingress)\./i, 0);
+          const apiFile = pickByRole(/(api|client|request|http|fetch|core_service|coreservice)/i, 1);
+          const routeFile = pickByRole(/(server|route|router|wsgi|asgi|safety_guard|safetyguard)/i, 2);
+          const controllerFile = pickByRole(/(controller|service|handler|core|usecase|reducer|storage_adapter|storageadapter)/i, 3);
+          const modelFile = pickByRole(/(model|schema|entity|db|store|storage|adapter|telemetry|prisma|repo)/i, 4);
 
           const extractPrimarySymbol = (f, fallback) => {
-            const m = (f.code || '').match(/(?:export\s+(?:default\s+)?(?:async\s+)?function\s+([A-Za-z0-9_]+)|const\s+([A-Za-z0-9_]+)\s*=\s*(?:async\s*)?\(|class\s+([A-Za-z0-9_]+)|def\s+([A-Za-z0-9_]+)|mongoose\.model\(\s*['"]([^'"]+)['"]|router\.(get|post|put|delete|patch)\()/);
+            const fenceToken = f.fences?.[0]?.token;
+            if (fenceToken && !fenceToken.includes('.')) return fenceToken;
+            const m = (f.code || '').match(/(?:export\s+(?:default\s+)?(?:async\s+)?function\s+([A-Za-z0-9_]+)|const\s+([A-Za-z0-9_]+)\s*=\s*(?:async\s*)?\(|class\s+([A-Za-z0-9_]+)|(?:pub\s+)?(?:fn|func|function|def|fun)\s+(?:self\.)?([A-Za-z0-9_]+)|mongoose\.model\(\s*['"]([^'"]+)['"]|router\.(get|post|put|delete|patch)\()/);
             return m ? (m[1] || m[2] || m[3] || m[4] || m[5] || `router.${m[6]}()`) : (f.shortName || fallback);
           };
 
@@ -2317,10 +2592,27 @@ export function createWhylineApiMiddleware() {
           repo_name: repoCtx.fullName,
           repo_slug: repoCtx.fullName,
           language: langKey,
+          primary_language: repoCtx.language || groundedBreakdown.runtime,
+          architecture_style: mergedStackBreakdown.architecture_style,
+          runtime_engine: mergedStackBreakdown.runtime,
+          first_file: steps[0]?.file_path || repoCtx.files?.[0]?.path || '',
+          files: (repoCtx.files || []).map((f) => f.path),
           project_summary: enrichedProjectSummary,
           steps,
           nodes: steps,
+          edges: graph.edges,
           graph,
+          flowchart: {
+            repo_name: repoCtx.fullName,
+            language: langKey,
+            primary_language: repoCtx.language || groundedBreakdown.runtime,
+            architecture_style: mergedStackBreakdown.architecture_style,
+            runtime_engine: mergedStackBreakdown.runtime,
+            first_file: steps[0]?.file_path || repoCtx.files?.[0]?.path || '',
+            nodes: steps,
+            edges: graph.edges,
+            steps,
+          },
         };
 
         flowchartResponseCache.set(flowCacheKey, responsePayload);
@@ -2460,12 +2752,12 @@ export function createWhylineApiMiddleware() {
           : path.join(AUDIO_DIR, 'fence-001.wav');
 
         if (fs.existsSync(targetWav)) {
-          const stat = fs.statSync(targetWav);
+          const wavBuf = fs.readFileSync(targetWav);
           res.statusCode = 200;
           res.setHeader('Content-Type', 'audio/wav');
-          res.setHeader('Content-Length', stat.size);
+          res.setHeader('Content-Length', wavBuf.length);
           res.setHeader('Accept-Ranges', 'bytes');
-          fs.createReadStream(targetWav).pipe(res);
+          res.end(wavBuf);
           return;
         }
         return sendJson(res, 404, { error: 'Audio synthesis unavailable' });
@@ -2490,6 +2782,14 @@ export function createWhylineApiMiddleware() {
       // POST /api/gnani/stt
       if (pathname === '/api/gnani/stt' && method === 'POST') {
         const body = await parseBody(req);
+        const requestedSttRepo = body.repo_url || body.github_url || body.repo;
+        if (requestedSttRepo && requestedSttRepo !== getActiveRepoContext().url) {
+          try {
+            await loadAndIndexGitHubRepository(requestedSttRepo);
+          } catch {
+            // keep current repo context
+          }
+        }
         const repoCtx = getActiveRepoContext();
         let rawTranscript = body.audio_text_hint || body.transcript || '';
 
@@ -2553,12 +2853,12 @@ export function createWhylineApiMiddleware() {
 
         const foundFile = candidates.find((p) => fs.existsSync(p));
         if (foundFile) {
-          const stat = fs.statSync(foundFile);
+          const wavBuf = fs.readFileSync(foundFile);
           res.statusCode = 200;
           res.setHeader('Content-Type', 'audio/wav');
-          res.setHeader('Content-Length', stat.size);
+          res.setHeader('Content-Length', wavBuf.length);
           res.setHeader('Accept-Ranges', 'bytes');
-          fs.createReadStream(foundFile).pipe(res);
+          res.end(wavBuf);
           return;
         }
         return sendJson(res, 404, { error: 'Audio file not found' });

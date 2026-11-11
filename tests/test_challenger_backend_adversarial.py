@@ -19,12 +19,14 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+import conftest as _root_conftest  # Ensures Windows IOCP self-pipe guard is active
 from backend.app import app, store, REPO_DIR
 
 
 @pytest.fixture(scope="module")
 def client() -> TestClient:
-    return TestClient(app)
+    with TestClient(app) as tc:
+        yield tc
 
 
 # ============================================================================

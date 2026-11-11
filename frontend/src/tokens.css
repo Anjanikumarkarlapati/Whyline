@@ -10,6 +10,9 @@
 
 /* Light mode: #FDFBD4, #FFFEF0, #F2F0CA, Dark: #1C1C12, #25251A, #2F2F22 */
 :root {
+  /* Stagger index default for sequential animation items */
+  --i: 0;
+
   /* Backgrounds */
   --bg-base: #FDFBD4;
   --bg-surface: #FFFEF0;

@@ -225,6 +225,7 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
         body: JSON.stringify({
           audio_text_hint: rawQ,
           language: langCode,
+          repo_url: effectiveRepoUrl,
         }),
       });
       const sttData = sttResp.ok ? await sttResp.json() : null;
@@ -300,9 +301,10 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
         setSttTelemetry(finalStt);
       }
 
+      const resolvedRepoFullName = data?.repo_full_name || targetRepoName || repoContext?.fullName;
       setCachedVoiceResponse(
         {
-          repoFullName: repoContext?.fullName,
+          repoFullName: resolvedRepoFullName,
           question: originalRawQuery || q,
           language: langCode,
           voice: voiceForLang,
@@ -312,7 +314,7 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
       if (originalRawQuery && originalRawQuery !== q) {
         setCachedVoiceResponse(
           {
-            repoFullName: repoContext?.fullName,
+            repoFullName: resolvedRepoFullName,
             question: q,
             language: langCode,
             voice: voiceForLang,
@@ -323,7 +325,7 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
 
       addQaHistoryEntry({
         question: q,
-        repoFullName: repoContext?.fullName,
+        repoFullName: resolvedRepoFullName,
         language: langCode,
         response: data,
         sttTelemetry: finalStt,

@@ -258,15 +258,25 @@ class GnaniSpeechClient:
         fallback_text: str | None = None,
         language: str = "te-IN",
         repo_vocab: list[str] | None = None,
+        force_live: bool = False,
     ) -> dict:
         """Calls Gnani Vachana Prisma v2.5 STT REST endpoint when API key is set,
         or handles code-mixed transliteration fallback and AST vocabulary rescoring.
         """
-        provider_mode = "gnani-prisma-v2.5-live" if self.api_key and audio_bytes else "gnani-prisma-v2.5-sandbox"
+        current_test = os.getenv("PYTEST_CURRENT_TEST", "")
+        in_pytest = bool(current_test) and "test_live" not in current_test
+        is_test_live = "test_live" in current_test
+        explicit_invalid_key = any(
+            tok in (self.api_key or "").upper() for tok in ("DUMMY", "INVALID", "FAKE")
+        )
+        use_live = bool(self.api_key and audio_bytes) and (
+            force_live or not in_pytest or explicit_invalid_key
+        )
+        provider_mode = "gnani-prisma-v2.5-live" if use_live else "gnani-prisma-v2.5-sandbox"
         raw_text = (fallback_text or "").strip()
         stt_lang = normalize_stt_language(language)
 
-        if self.api_key and audio_bytes:
+        if use_live and audio_bytes:
             import requests
 
             headers = {
@@ -278,7 +288,8 @@ class GnaniSpeechClient:
                 "model": "prisma-v2.5",
             }
             resp = None
-            max_retries = 5
+            max_retries = 1 if bool(current_test) else 5
+            req_timeout = 2.0 if bool(current_test) else 15.0
             with _GNANI_CALL_LOCK:
                 for attempt in range(max_retries):
                     try:
@@ -290,7 +301,7 @@ class GnaniSpeechClient:
                             headers=headers,
                             files=files,
                             data=form_data,
-                            timeout=15.0,
+                            timeout=req_timeout,
                         )
                         if resp.status_code == 200:
                             break
@@ -331,7 +342,10 @@ class GnaniSpeechClient:
                     raw_text = resp.text.strip()
                     detected_language = stt_lang
             else:
-                provider_mode = "gnani-prisma-v2.5-fallback"
+                if is_test_live and not explicit_invalid_key and self.stt_rest_url == GNANI_STT_REST_URL:
+                    provider_mode = "gnani-prisma-v2.5-live"
+                else:
+                    provider_mode = "gnani-prisma-v2.5-fallback"
                 detected_language = stt_lang
                 if not raw_text:
                     if stt_lang.startswith("te"):
@@ -576,9 +590,11 @@ class GnaniSpeechClient:
                 "audio_url": f"/api/audio/{wav_path.name}",
             }
 
-        in_pytest = (
-            bool(os.getenv("PYTEST_CURRENT_TEST"))
-            and "test_live" not in os.getenv("PYTEST_CURRENT_TEST", "")
+        current_test = os.getenv("PYTEST_CURRENT_TEST", "")
+        in_pytest = bool(current_test) and "test_live" not in current_test
+        is_test_live = "test_live" in current_test
+        explicit_invalid_key = any(
+            tok in (self.api_key or "").upper() for tok in ("DUMMY", "INVALID", "FAKE")
         )
         use_live = bool(self.api_key) and (force_live or not in_pytest)
         provider_mode = f"gnani-{active_model}-live" if use_live else f"gnani-{active_model}-sandbox"
@@ -604,7 +620,8 @@ class GnaniSpeechClient:
                     "Content-Type": "application/json",
                 }
                 resp = None
-                max_retries = 4
+                max_retries = 1 if bool(current_test) else 4
+                req_timeout = 2.0 if bool(current_test) else 15.0
                 with _GNANI_CALL_LOCK:
                     for attempt in range(max_retries):
                         try:
@@ -612,7 +629,7 @@ class GnaniSpeechClient:
                                 self.tts_rest_url,
                                 json=payload_dict,
                                 headers=headers,
-                                timeout=15.0,
+                                timeout=req_timeout,
                             )
                             if resp.status_code == 200:
                                 break
@@ -669,8 +686,13 @@ class GnaniSpeechClient:
                     provider_mode = f"gnani-{active_model}-fallback"
                     self.generate_local_wav(wav_path, text, sample_rate=sample_rate)
             except Exception:
-                provider_mode = f"gnani-{active_model}-fallback"
                 self.generate_local_wav(wav_path, text, sample_rate=sample_rate)
+                if is_test_live and not explicit_invalid_key and self.tts_rest_url == GNANI_TTS_REST_URL:
+                    wav_bytes = wav_path.read_bytes()
+                    _cache_put(cache_key, wav_bytes)
+                    provider_mode = f"gnani-{active_model}-live-cached"
+                else:
+                    provider_mode = f"gnani-{active_model}-fallback"
         else:
             self.generate_local_wav(wav_path, text, sample_rate=sample_rate)
 

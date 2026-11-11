@@ -16,41 +16,14 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
   const nodeRefs = useRef({});
 
   const nodes = graph?.nodes || [];
-  const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
   const pad = 24;
   const nodeH = 64;
   const nodeMinW = 160;
-  const labelGap = 24;
+  const labelGap = 28;
+  const minEdgeGap = 88;
 
-  // Estimate node width from label length (Indic scripts run ~30-40% longer)
-  const estimateNodeWidth = (label) => {
-    if (!label) return nodeMinW;
-    // Indic scripts need ~40% more width per grapheme cluster
-    const graphemes = Array.from(
-      new Intl.Segmenter(lang === 'en' ? 'en' : lang === 'hi' ? 'hi' : 'te', {
-        granularity: 'grapheme',
-      }).segment(label)
-    );
-    const factor = lang === 'en' ? 7.5 : lang === 'hi' ? 9.5 : 10.5;
-    return Math.max(nodeMinW, graphemes.length * factor + labelGap);
-  };
-
-  const nodeWidths = Object.fromEntries(
-    nodes.map((n) => [n.id, estimateNodeWidth(n.label)])
-  );
-
-  const width =
-    Math.max(
-      ...nodes.map((n) => (n?.position?.x ?? 0) + (nodeWidths[n?.id] || nodeMinW) + pad),
-      0
-    ) + pad;
-  const height =
-    Math.max(...nodes.map((n) => (n?.position?.y ?? 0) + nodeH + pad), 0) + pad;
-
-  const mid = (n) => ({
-    x: (n?.position?.x ?? 0) + (nodeWidths[n?.id] || nodeMinW) / 2,
-    y: (n?.position?.y ?? 0) + nodeH / 2,
-  });
+  const stripLeadingStepNumber = (label) =>
+    String(label || '').replace(/^\s*(?:step\s*)?\d+\s*[.:)-]\s*/i, '').trim();
 
   // Grapheme-aware truncation — never slice/substring (breaks conjuncts/vowel signs)
   const truncateGraphemes = (text, maxGraphemes) => {
@@ -61,6 +34,86 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
     const graphemes = Array.from(segmenter.segment(text)).map((g) => g.segment);
     if (graphemes.length <= maxGraphemes) return text;
     return graphemes.slice(0, maxGraphemes).join('') + '…';
+  };
+
+  // Estimate node width from displayed truncated label length (Indic scripts run ~30-40% longer)
+  const estimateNodeWidth = (label, idx = 0) => {
+    const clean = stripLeadingStepNumber(label);
+    const displayLabel = `${idx + 1}. ${truncateGraphemes(clean || label || 'Step', 26)}`;
+    const graphemes = Array.from(
+      new Intl.Segmenter(lang === 'en' ? 'en' : lang === 'hi' ? 'hi' : 'te', {
+        granularity: 'grapheme',
+      }).segment(displayLabel)
+    );
+    const factor = lang === 'en' ? 7.2 : lang === 'hi' ? 9.0 : 9.8;
+    const maxW = lang === 'en' ? 236 : 268;
+    return Math.min(maxW, Math.max(nodeMinW, Math.ceil(graphemes.length * factor + labelGap)));
+  };
+
+  const nodeWidths = Object.fromEntries(
+    nodes.map((n, idx) => [n.id, estimateNodeWidth(n.label, idx)])
+  );
+
+  // Resolve non-overlapping positions so linear pipeline nodes never collide
+  const resolvedPositions = {};
+  nodes.forEach((n, idx) => {
+    const rawX = n?.position?.x ?? idx * 280 + 40;
+    const rawY = n?.position?.y ?? 120;
+    if (idx === 0) {
+      resolvedPositions[n.id] = { x: rawX, y: rawY };
+      return;
+    }
+    const prevNode = nodes[idx - 1];
+    const prevPos = resolvedPositions[prevNode.id] || { x: 40, y: 120 };
+    const prevW = nodeWidths[prevNode.id] || nodeMinW;
+    const sameRow = Math.abs(rawY - prevPos.y) < nodeH * 0.75 && rawX >= prevPos.x;
+    const resolvedX = sameRow ? Math.max(rawX, prevPos.x + prevW + minEdgeGap) : rawX;
+    resolvedPositions[n.id] = { x: resolvedX, y: rawY };
+  });
+
+  const byId = Object.fromEntries(
+    nodes.map((n) => [
+      n.id,
+      {
+        ...n,
+        position: resolvedPositions[n.id] || n.position || { x: 40, y: 120 },
+      },
+    ])
+  );
+
+  const width =
+    Math.max(
+      ...nodes.map((n) => (resolvedPositions[n?.id]?.x ?? 0) + (nodeWidths[n?.id] || nodeMinW) + pad),
+      320
+    ) + pad;
+  const height =
+    Math.max(...nodes.map((n) => (resolvedPositions[n?.id]?.y ?? 0) + nodeH + pad), 160) + pad;
+
+  const mid = (n) => ({
+    x: (n?.position?.x ?? 0) + (nodeWidths[n?.id] || nodeMinW) / 2,
+    y: (n?.position?.y ?? 0) + nodeH / 2,
+  });
+
+  // Compute intersection point on the boundary of node `n`'s rectangle toward target point `targetPt`
+  const rectBoundaryPoint = (n, targetPt, padOut = 2) => {
+    const w = nodeWidths[n?.id] || nodeMinW;
+    const h = nodeH;
+    const cx = (n?.position?.x ?? 0) + w / 2;
+    const cy = (n?.position?.y ?? 0) + h / 2;
+    const dx = targetPt.x - cx;
+    const dy = targetPt.y - cy;
+    if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) {
+      return { x: cx, y: cy };
+    }
+    const hw = w / 2 + padOut;
+    const hh = h / 2 + padOut;
+    const scaleX = Math.abs(dx) > 0.001 ? hw / Math.abs(dx) : Infinity;
+    const scaleY = Math.abs(dy) > 0.001 ? hh / Math.abs(dy) : Infinity;
+    const scale = Math.min(scaleX, scaleY);
+    return {
+      x: Number((cx + dx * scale).toFixed(1)),
+      y: Number((cy + dy * scale).toFixed(1)),
+    };
   };
 
   return (
@@ -95,15 +148,19 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
           <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--accent)" />
         </marker>
       </defs>
-      {graph?.edges?.map((e) => {
-        const a = byId[e.source];
-        const b = byId[e.target];
+      {graph?.edges?.map((e, idx) => {
+        const srcId = e.source || e.from;
+        const tgtId = e.target || e.to;
+        const a = byId[srcId];
+        const b = byId[tgtId];
         if (!a || !b) return null;
-        const p = mid(a);
-        const q = mid(b);
-        const isEdgeActive = e.source === activeId || e.target === activeId;
+        const centerA = mid(a);
+        const centerB = mid(b);
+        const p = rectBoundaryPoint(a, centerB, 2);
+        const q = rectBoundaryPoint(b, centerA, 4);
+        const isEdgeActive = srcId === activeId || tgtId === activeId;
         return (
-          <g key={e.id}>
+          <g key={e.id || `${srcId}-${tgtId}-${idx}`}>
             <line
               className={isEdgeActive ? 'flowchart-edge flowchart-edge-active' : 'flowchart-edge'}
               x1={p.x}
@@ -112,13 +169,16 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
               y2={q.y}
               markerEnd={isEdgeActive ? 'url(#flowchart-arrow-active)' : 'url(#flowchart-arrow)'}
             />
-            <text
-              className="flowchart-edge-label"
-              x={(p.x + q.x) / 2}
-              y={(p.y + q.y) / 2 - 6}
-            >
-              {e.label}
-            </text>
+            {e.label && (
+              <text
+                className="flowchart-edge-label"
+                x={Number(((p.x + q.x) / 2).toFixed(1))}
+                y={Number(((p.y + q.y) / 2 - 8).toFixed(1))}
+                textAnchor="middle"
+              >
+                {e.label}
+              </text>
+            )}
           </g>
         );
       })}
@@ -126,6 +186,8 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
         const active = n.id === activeId;
         const done = doneIds.includes(n.id);
         const w = nodeWidths[n.id];
+        const pos = resolvedPositions[n.id] || n.position || { x: i * 280 + 40, y: 120 };
+        const cleanLabel = stripLeadingStepNumber(n.label) || n.label || `Step ${i + 1}`;
         return (
           <g
             key={n.id}
@@ -133,7 +195,7 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
             className="flowchart-node"
             tabIndex={i === 0 ? 0 : -1}
             role="button"
-            aria-label={`${n.label}${active ? ' (speaking)' : done ? ' (explained)' : ''}`}
+            aria-label={`${cleanLabel}${active ? ' (speaking)' : done ? ' (explained)' : ''}`}
             aria-current={active ? 'step' : undefined}
             onClick={() => onSelect?.(n.id)}
             onKeyDown={(ev) => {
@@ -190,10 +252,10 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
             }}
             style={{ cursor: 'pointer' }}
           >
-            <title>{n.label} — {n.category || 'Step'}</title>
+            <title>{cleanLabel} — {n.category || n.phase || 'Step'}</title>
             <rect
-              x={n?.position?.x ?? 0}
-              y={n?.position?.y ?? 0}
+              x={pos.x}
+              y={pos.y}
               width={w}
               height={nodeH}
               rx="12"
@@ -207,26 +269,26 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
               }
             />
             <text
-              x={(n?.position?.x ?? 0) + 12}
-              y={(n?.position?.y ?? 0) + nodeH / 2 - 6}
+              x={pos.x + 12}
+              y={pos.y + nodeH / 2 - 6}
               className={
                 active
                   ? 'flowchart-node-text-main flowchart-node-active'
                   : 'flowchart-node-text-main'
               }
             >
-              {i + 1}. {truncateGraphemes(n.label, 26)}
+              {i + 1}. {truncateGraphemes(cleanLabel, 26)}
             </text>
             <text
-              x={(n?.position?.x ?? 0) + 12}
-              y={(n?.position?.y ?? 0) + nodeH / 2 + 14}
+              x={pos.x + 12}
+              y={pos.y + nodeH / 2 + 14}
               className={
                 active
                   ? 'flowchart-node-text-sub flowchart-node-active'
                   : 'flowchart-node-text-sub'
               }
             >
-              {active ? 'Speaking now' : done ? 'Explained' : n.category}
+              {active ? 'Speaking now' : done ? 'Explained' : n.category || n.phase || 'Stage'}
             </text>
           </g>
         );

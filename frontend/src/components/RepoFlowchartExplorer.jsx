@@ -54,8 +54,11 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
   const walkthroughTimerRef = useRef(null);
   const walkthroughActiveRef = useRef(false);
   const lastScannedKeyRef = useRef('');
+  const lastScannedLangRef = useRef('');
 
   const langCode = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
+  const cleanStepTitle = (title) =>
+    String(title || '').replace(/^\s*(?:step\s*)?\d+\s*[.:)-]\s*/i, '').trim() || title;
 
   const normalizeRepoKey = (urlStr = '') =>
     String(urlStr || '')
@@ -69,8 +72,9 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
     if (repoContext?.url) {
       const nextKey = normalizeRepoKey(repoContext.url);
       setGithubUrl(repoContext.url);
-      if (nextKey && nextKey !== lastScannedKeyRef.current) {
-        fetchFlowchartScan(repoContext.url, langCode, true);
+      if (nextKey && (nextKey !== lastScannedKeyRef.current || langCode !== lastScannedLangRef.current)) {
+        const isRepoSwitch = Boolean(lastScannedKeyRef.current && nextKey !== lastScannedKeyRef.current);
+        fetchFlowchartScan(repoContext.url, langCode, isRepoSwitch);
       }
     }
   }, [repoContext?.url]);
@@ -137,7 +141,9 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
 
   const fetchFlowchartScan = async (targetUrl, targetLangCode, autoPlayWalkthrough = false) => {
     const resolvedUrl = targetUrl || githubUrl;
+    const resolvedLang = targetLangCode || langCode;
     lastScannedKeyRef.current = normalizeRepoKey(resolvedUrl);
+    lastScannedLangRef.current = resolvedLang;
     stopVoiceWalkthrough();
     setLoading(true);
     setVoiceAgentStatus('Building Flowchart...');
@@ -147,7 +153,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           github_url: resolvedUrl,
-          language: targetLangCode || langCode,
+          language: resolvedLang,
         }),
       });
       const json = await resp.json();
@@ -168,7 +174,11 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
   };
 
   useEffect(() => {
-    fetchFlowchartScan(githubUrl, langCode, false);
+    const activeUrl = repoContext?.url || githubUrl;
+    const nextKey = normalizeRepoKey(activeUrl);
+    if (nextKey !== lastScannedKeyRef.current || langCode !== lastScannedLangRef.current) {
+      fetchFlowchartScan(activeUrl, langCode, false);
+    }
     return () => stopVoiceWalkthrough();
   }, [lang]);
 
@@ -1006,7 +1016,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                     </div>
 
                     <div style={{ fontWeight: 600, fontSize: '14px', lineHeight: 1.3 }}>
-                      {step.title}
+                      {cleanStepTitle(step.title)}
                     </div>
 
                     {step.simple_explanation && (
@@ -1083,7 +1093,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                   Stage {currentStep.step_number} of {steps.length} • {currentStep.phase}
                 </div>
                 <h3 className="card-title" style={{ marginTop: '4px' }}>
-                  Step {currentStep.step_number}: {currentStep.title}
+                  Step {currentStep.step_number}: {cleanStepTitle(currentStep.title)}
                 </h3>
               </div>
               <StatusBadge status={currentStep.status} />

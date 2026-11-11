@@ -133,9 +133,14 @@ export default function AskRepoPage() {
       <RepoFlowchartExplorer
         onSelectStep={(step) => {
           if (step?.file_path) {
+            const parsedLine =
+              step.line_start ||
+              step.target_line ||
+              parseInt(String(step.line_range || '1').split('-')[0], 10) ||
+              1;
             selectLocation({
               file: step.file_path,
-              line: step.line_start || 1,
+              line: parsedLine,
             });
           }
         }}

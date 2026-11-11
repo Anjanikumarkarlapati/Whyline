@@ -22,7 +22,7 @@ import { useI18n } from '../i18n';
  */
 export default function StatusBadge({ status, hideIfDefault = false }) {
   const { t } = useI18n();
-  const norm = (status || '').toUpperCase();
+  const norm = (status || 'VERIFIED_ACTIVE').toUpperCase();
 
   if (norm === 'VERIFIED_ACTIVE' || norm === 'GOOD' || norm === 'ONLINE' || norm === 'ACTIVE') {
     if (hideIfDefault) {

@@ -225,8 +225,12 @@ export function rescoreSpokenTranscript(rawInput, language = 'te-IN', customSymb
     language: normalizedLang,
     raw_transcript: rawTranscript,
     rescored_transcript: rescored,
+    rescored,
+    transcript: rescored,
     ast_replacements: replacements,
+    replacements,
     detected_intent: detectedIntent,
+    intent: detectedIntent,
     confidence: 0.98,
     latency_ms: 112,
   };
@@ -236,8 +240,11 @@ export function rescoreSpokenTranscript(rawInput, language = 'te-IN', customSymb
  * Classifies the developer's spoken question into an executable architectural task intent.
  */
 export function classifyTaskIntent(text = '') {
-  const q = String(text).toLowerCase();
-  if (q.includes('dicom') || q.includes('shader') || q.includes('sleep(120)') || q.includes('120')) {
+  const q = String(text || '').trim().toLowerCase();
+  if (!q) {
+    return 'FIX_PAYMENT_DOUBLE_CHARGE_SAFELY';
+  }
+  if (q.includes('dicom') || q.includes('shader') || q.includes('sleep(120)') || q.includes('120ms') || q.includes('adreno')) {
     return 'INSPECT_DICOM_SHADER_FENCE';
   }
   if (q.includes('jwt') || q.includes('clock') || q.includes('skew') || q.includes('180')) {
@@ -248,25 +255,43 @@ export function classifyTaskIntent(text = '') {
     q.includes('double charge') ||
     q.includes('gatewayrouter') ||
     q.includes('gateway router') ||
-    q.includes('idempotency') ||
-    q.includes('retrycount') ||
-    q.includes('retry count')
+    q.includes('settlement') ||
+    q.includes('razorpay') ||
+    q.includes('payment') ||
+    (q.includes('idempotency') && (q.includes('gateway') || q.includes('charge'))) ||
+    ((q.includes('retrycount') || q.includes('retry count')) &&
+      (q.includes('gateway') || q.includes('application.yml') || q.includes('application yml') || q.includes('midnight')))
   ) {
     return 'FIX_PAYMENT_DOUBLE_CHARGE_SAFELY';
   }
   if (q.includes('cutover') || q.includes('upgrade to v2') || q.includes('expire')) {
     return 'EVALUATE_GATEWAY_V2_CUTOVER';
   }
-  if (q.includes('middleware') || q.includes('express') || q.includes('app.use') || q.includes('lazyrouter')) {
+  if (q.includes('middleware') || q.includes('express') || q.includes('app.use') || q.includes('lazyrouter') || q.includes('routing') || q.includes('router')) {
     return 'ANALYZE_HTTP_ROUTING_PIPELINE';
   }
-  if (q.includes('retry-after') || q.includes('backoff') || q.includes('fetch') || q.includes('ky.ts')) {
+  if (q.includes('retry-after') || q.includes('backoff') || q.includes('fetch') || q.includes('ky.ts') || q.includes('retry') || q.includes('idempotency')) {
     return 'ANALYZE_RESILIENCE_AND_RETRY_FLOW';
   }
-  if (q.includes('cli') || q.includes('decorator') || q.includes('basecommand') || q.includes('click') || q.includes('make_context')) {
+  if (q.includes('cli') || q.includes('decorator') || q.includes('basecommand') || q.includes('click') || q.includes('make_context') || q.includes('command')) {
     return 'ANALYZE_CLI_COMMAND_DISPATCH';
   }
-  return 'FIX_PAYMENT_DOUBLE_CHARGE_SAFELY';
+  if (q.includes('cargo.toml') || q.includes('package.json') || q.includes('go.mod') || q.includes('pyproject.toml') || q.includes('manifest') || q.includes('dependency') || q.includes('lockfile')) {
+    return 'VERIFY_DEPENDENCY_AND_LOCKFILE_INVARIANT';
+  }
+  if (q.includes('concurrency') || q.includes('thread') || q.includes('mutex') || q.includes('lock') || q.includes('race') || q.includes('async') || q.includes('channel')) {
+    return 'ANALYZE_CONCURRENCY_AND_LOCK_SAFETY';
+  }
+  if (q.includes('database') || q.includes('storage') || q.includes('cache') || q.includes('sql') || q.includes('redis') || q.includes('state') || q.includes('persistence')) {
+    return 'ANALYZE_STORAGE_AND_STATE_LAYER';
+  }
+  if (q.includes('auth') || q.includes('token') || q.includes('security') || q.includes('permission') || q.includes('signature') || q.includes('crypto')) {
+    return 'AUDIT_AUTH_AND_SECURITY_BOUNDARY';
+  }
+  if (q.includes('error') || q.includes('exception') || q.includes('crash') || q.includes('timeout') || q.includes('fallback') || q.includes('bug') || q.includes('fix')) {
+    return 'DIAGNOSE_ERROR_HANDLING_AND_RESILIENCE';
+  }
+  return 'ANALYZE_REPOSITORY_ARCHITECTURE';
 }
 
 /**
@@ -357,6 +382,10 @@ export function executeCopilotTaskForQuestion(
         fence_id: fenceId,
         guardrail_status: `INDEXED_${repoContext.files.length}_FILES`,
       },
+      intent,
+      action_taken: `Analyzed ${repoContext.fullName} (${primaryFile.path}:${targetLine}) & synthesized voice answer in ${langLabel}`,
+      target_file: primaryFile.path,
+      target_line: targetLine,
       spoken_reply: spokenAnswer,
       spoken_answer: spokenAnswer,
       detailed_answer: ` Gemini Brain inspected **${repoContext.fullName}** across ${repoContext.files.length} indexed files. Primary match located in \`${primaryFile.path}\` (lines ${snippetStart + 1}-${snippetEnd}).`,
@@ -445,6 +474,10 @@ export function executeCopilotTaskForQuestion(
         fence_id: 'FENCE-003',
         guardrail_status: 'PROTECTED_BY_FENCE_003',
       },
+      intent,
+      action_taken: 'Verified FENCE-003 GPU frame-pacing invariant & generated non-blocking Vulkan fence patch',
+      target_file: 'src/main/java/com/healthconnect/imaging/DicomShaderPipeline.java',
+      target_line: 9,
       spoken_reply: spokenAnswer,
       spoken_answer: spokenAnswer,
       guardrail_rule: 'FENCE-003: Keep Thread.sleep(120) in DicomShaderPipeline.java until Adreno driver >= v512.6.',
@@ -524,6 +557,10 @@ export function executeCopilotTaskForQuestion(
         fence_id: 'FENCE-004',
         guardrail_status: 'PROTECTED_BY_FENCE_004',
       },
+      intent,
+      action_taken: 'Audited FENCE-004 180s NTP tolerance & synthesized JTI replay-cache guard',
+      target_file: 'src/main/java/com/healthconnect/auth/JwtClockSkewFilter.java',
+      target_line: 6,
       spoken_reply: spokenAnswer,
       spoken_answer: spokenAnswer,
       guardrail_rule: 'FENCE-004: Preserve clockSkewSeconds = 180 in JwtClockSkewFilter.java for disconnected rural clinics.',
@@ -604,6 +641,10 @@ export function executeCopilotTaskForQuestion(
       fence_id: 'FENCE-001',
       guardrail_status: 'PROTECTED_BY_FENCE_001',
     },
+    intent,
+    action_taken: 'Synthesized X-Idempotency-Key deduplication patch while preserving FENCE-001 (retryCount = 5)',
+    target_file: 'src/main/java/com/healthconnect/payments/GatewayRouter.java',
+    target_line: 23,
     spoken_reply: spokenAnswer,
     spoken_answer: spokenAnswer,
     guardrail_rule: 'FENCE-001: Preserve retryCount = 5 and timeoutMs = 4500 in GatewayRouter.java while gateway.version == v1.',

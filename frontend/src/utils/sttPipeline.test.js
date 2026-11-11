@@ -66,6 +66,18 @@ test('classifyTaskIntent routes spoken questions to the right architectural task
     classifyTaskIntent('Fix double-charge bug in GatewayRouter.java retryCount = 5'),
     'FIX_PAYMENT_DOUBLE_CHARGE_SAFELY'
   );
+  assert.equal(
+    classifyTaskIntent('Why is retry count locked in Cargo.toml for ripgrep?'),
+    'ANALYZE_RESILIENCE_AND_RETRY_FLOW'
+  );
+  assert.equal(
+    classifyTaskIntent('How does mutex concurrency work across worker threads?'),
+    'ANALYZE_CONCURRENCY_AND_LOCK_SAFETY'
+  );
+  assert.equal(
+    classifyTaskIntent('Explain the overall repository architecture'),
+    'ANALYZE_REPOSITORY_ARCHITECTURE'
+  );
 });
 
 test('executeCopilotTaskForQuestion executes the asked task for both default and custom GitHub repos', () => {
@@ -110,6 +122,9 @@ test('executeCopilotTaskForQuestion executes the asked task for both default and
   );
   assert.equal(expressTask.repo_full_name, 'expressjs/express');
   assert.equal(expressTask.executed_task.target_file, 'lib/application.js');
+  assert.equal(expressTask.target_file, 'lib/application.js');
+  assert.ok(expressTask.action_taken.includes('expressjs/express'));
+  assert.equal(typeof expressTask.target_line, 'number');
   assert.ok(expressTask.spoken_reply.includes('expressjs/express'));
   assert.ok(expressTask.referenced_files.length >= 1);
 });

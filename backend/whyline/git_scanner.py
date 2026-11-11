@@ -29,7 +29,14 @@ PRUNED_DIRECTORIES = {
     ".vscode",
     ".git_scanner_cache",
     ".cache",
+    "graphify-out",
+    "demo_videos",
+    "artifacts",
+    "test-results",
+    "playwright-report",
 }
+
+_SCAN_CACHE: dict[tuple[str, str, int, bool], tuple[float, dict[str, Any]]] = {}
 
 LANGUAGE_CONFIG: dict[str, tuple[str, str]] = {
     ".py": ("Python", "#545333"),
@@ -40,6 +47,26 @@ LANGUAGE_CONFIG: dict[str, tuple[str, str]] = {
     ".ts": ("TypeScript/TSX", "#3B6E91"),
     ".tsx": ("TypeScript/TSX", "#3B6E91"),
     ".java": ("Java", "#6B6A55"),
+    ".kt": ("Kotlin", "#6B6A55"),
+    ".kts": ("Kotlin", "#6B6A55"),
+    ".scala": ("Scala", "#6B6A55"),
+    ".cs": ("C#", "#6B6A55"),
+    ".go": ("Go", "#3B6E91"),
+    ".rs": ("Rust", "#8F5A08"),
+    ".cpp": ("C/C++", "#6B6A55"),
+    ".cc": ("C/C++", "#6B6A55"),
+    ".cxx": ("C/C++", "#6B6A55"),
+    ".c": ("C/C++", "#6B6A55"),
+    ".h": ("C/C++", "#6B6A55"),
+    ".hpp": ("C/C++", "#6B6A55"),
+    ".rb": ("Ruby", "#B3261E"),
+    ".php": ("PHP", "#6B6A55"),
+    ".ex": ("Elixir", "#545333"),
+    ".exs": ("Elixir", "#545333"),
+    ".swift": ("Swift", "#8F5A08"),
+    ".zig": ("Zig", "#8F5A08"),
+    ".dart": ("Dart", "#3B6E91"),
+    ".jl": ("Julia", "#545333"),
     ".sql": ("SQL", "#878672"),
     ".md": ("Markdown/Docs", "#A9A890"),
     ".rst": ("Markdown/Docs", "#A9A890"),
@@ -376,10 +403,15 @@ def _group_architectural_components(repo_dir: Path, scanned_files: list[tuple[st
     return components
 
 
-def _generate_flowchart_graph(repo_dir: Path, scanned_files: list[tuple[str, Path]]) -> dict[str, Any]:
-    file_lines_map: dict[str, int] = {}
-    for rel_path, abs_path in scanned_files:
-        file_lines_map[rel_path] = _count_file_lines(abs_path)
+def _generate_flowchart_graph(
+    repo_dir: Path,
+    scanned_files: list[tuple[str, Path]],
+    file_lines_map: dict[str, int] | None = None,
+) -> dict[str, Any]:
+    if file_lines_map is None:
+        file_lines_map = {}
+        for rel_path, abs_path in scanned_files:
+            file_lines_map[rel_path] = _count_file_lines(abs_path)
 
     is_whyline_repo = (
         (repo_dir / "backend" / "app.py").exists()
@@ -520,10 +552,16 @@ def _generate_flowchart_graph(repo_dir: Path, scanned_files: list[tuple[str, Pat
     service_nodes = []
     data_nodes = []
 
+    code_extensions = {
+        ".py", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".java",
+        ".kt", ".kts", ".scala", ".cs", ".go", ".rs", ".cpp", ".cc",
+        ".cxx", ".c", ".h", ".hpp", ".rb", ".php", ".ex", ".exs",
+        ".swift", ".zig", ".dart", ".jl",
+    }
     for rel_path, abs_path in scanned_files[:15]:
         lines = file_lines_map.get(rel_path, 0)
         ext = abs_path.suffix.lower()
-        if ext in {".py", ".js", ".jsx", ".ts", ".tsx", ".java"}:
+        if ext in code_extensions:
             node_id = f"node-{re.sub(r'[^a-zA-Z0-9]', '-', rel_path)}"
             category = "entry_point" if any(k in rel_path.lower() for k in ("main", "app", "index", "server")) else "backend_service"
             node_item = {
@@ -648,7 +686,14 @@ def scan_repository(
         repo_name = repo_dir.name or "Whyline"
 
     # Walk directory to index files
+    cache_key = (repo_dir.as_posix(), branch, max_depth, include_anomalies)
+    cached_entry = _SCAN_CACHE.get(cache_key)
+    if cached_entry and (datetime.now(timezone.utc).timestamp() - cached_entry[0]) < 15.0:
+        import copy
+        return copy.deepcopy(cached_entry[1])
+
     scanned_files: list[tuple[str, Path]] = []
+    file_lines_map: dict[str, int] = {}
     lang_line_counts: Counter[str] = Counter()
     lang_file_counts: Counter[str] = Counter()
     lang_colors: dict[str, str] = {}
@@ -674,6 +719,7 @@ def scan_repository(
             if ext in LANGUAGE_CONFIG:
                 lang_name, color = LANGUAGE_CONFIG[ext]
                 lines = _count_file_lines(file_path)
+                file_lines_map[rel_path] = lines
                 lang_line_counts[lang_name] += lines
                 lang_file_counts[lang_name] += 1
                 lang_colors[lang_name] = color
@@ -713,11 +759,11 @@ def scan_repository(
     components = _group_architectural_components(repo_dir, scanned_files)
 
     # Flowchart graph generation
-    flowchart_graph = _generate_flowchart_graph(repo_dir, scanned_files)
+    flowchart_graph = _generate_flowchart_graph(repo_dir, scanned_files, file_lines_map)
 
     scan_ts = datetime.now(timezone.utc).isoformat()
 
-    return {
+    result_payload = {
         "status": "success",
         "scan_timestamp": scan_ts,
         "repo_metadata": {
@@ -743,3 +789,6 @@ def scan_repository(
         },
         "flowchart_graph": flowchart_graph,
     }
+    import copy
+    _SCAN_CACHE[cache_key] = (datetime.now(timezone.utc).timestamp(), result_payload)
+    return copy.deepcopy(result_payload)
