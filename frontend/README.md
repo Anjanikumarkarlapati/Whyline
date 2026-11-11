@@ -7,7 +7,7 @@ WhyLine Frontend Studio delivers a serene, distraction-free environment for insp
 
 ---
 
-## 🎨 Visual Identity & Design Tokens
+## Visual Identity & Design Tokens
 
 WhyLine Studio strictly follows the **Architecture-Studio Field Report Aesthetic** inspired by engineering field journals:
 
@@ -33,7 +33,7 @@ WhyLine Studio strictly follows the **Architecture-Studio Field Report Aesthetic
 
 ---
 
-## 🗺️ 4-Page Core Information Architecture
+## 4-Page Core Information Architecture
 
 ```mermaid
 graph LR
@@ -59,7 +59,7 @@ graph LR
 
 ---
 
-## 🧩 Key Components
+## Key Components
 
 ### 1. Monaco Code Studio (`MonacoCodeStudio.jsx`)
 - Full Monaco code editor customized with the WhyLine Cream-and-Olive theme (`monacoTheme.js`).
@@ -80,7 +80,7 @@ graph LR
 
 ---
 
-## 🌐 Multilingual Voice & i18n Architecture (`src/i18n.js`)
+## Multilingual Voice & i18n Architecture (`src/i18n.js`)
 
 WhyLine provides full trilingual parity across UI strings and voice models:
 
@@ -94,7 +94,7 @@ Language preference is persisted in `localStorage` under `whyline_lang` and sync
 
 ---
 
-## 🛠️ Development & Build Commands
+## Development & Build Commands
 
 ```bash
 # Navigate to frontend directory

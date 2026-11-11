@@ -8,13 +8,12 @@
 <b>Voice-Native Chesterton's Fence • Multilingual Spoken Guardrails • Interactive Architectural Flowcharts • FastMCP Agent Interception</b>
 </p>
 
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](#-license)
-[![Security Audit Passed](https://img.shields.io/badge/Security%20Audit-Zero%20Secrets%20Verified-brightgreen.svg)](#-enterprise-security--zero-secret-guarantee)
-[![WCAG 2.2 AA](https://img.shields.io/badge/A11y-WCAG%202.2%20AA%20Compliant-brightgreen.svg)](#-architecture-studio-visual-system)
-[![Voice Stack](https://img.shields.io/badge/Voice%20Stack-Gnani%20Vachana%20AI-blue.svg)](#-multilingual-voice-pipeline-gnani-ai)
-[![Intelligence](https://img.shields.io/badge/LLM-Google%20Gemini%203.8%20Flash-orange.svg)](#-sub-50ms-architectural-intelligence--flowcharts)
-[![Performance](https://img.shields.io/badge/Scan%20Latency-47ms%20Cold%20%7C%2011ms%20Warm-success.svg)](#-performance-benchmarks--50-repository-audit)
-[![Protocol](https://img.shields.io/badge/Protocol-Model%20Context%20Protocol%20(MCP)-purple.svg)](#-model-context-protocol-mcp-server)
+[![Security Audit Passed](https://img.shields.io/badge/Security%20Audit-Zero%20Secrets%20Verified-brightgreen.svg)](#enterprise-security--zero-secret-guarantee)
+[![WCAG 2.2 AA](https://img.shields.io/badge/A11y-WCAG%202.2%20AA%20Compliant-brightgreen.svg)](#architecture-studio-visual-system)
+[![Voice Stack](https://img.shields.io/badge/Voice%20Stack-Gnani%20Vachana%20AI-blue.svg)](#multilingual-voice-pipeline-gnani-ai)
+[![Intelligence](https://img.shields.io/badge/LLM-Google%20Gemini%203.8%20Flash-orange.svg)](#sub-50ms-architectural-intelligence--flowcharts)
+[![Performance](https://img.shields.io/badge/Scan%20Latency-47ms%20Cold%20%7C%2011ms%20Warm-success.svg)](#performance-benchmarks--50-repository-audit)
+[![Protocol](https://img.shields.io/badge/Protocol-Model%20Context%20Protocol%20(MCP)-purple.svg)](#model-context-protocol-mcp-server)
 
 **GitHub Repository**: [https://github.com/Anjanikumarkarlapati/Whyline](https://github.com/Anjanikumarkarlapati/Whyline)
 
@@ -22,7 +21,7 @@
 
 ---
 
-## 🌟 Executive Overview: The "Why" Crisis in Autonomous Software Engineering
+## Executive Overview: The "Why" Crisis in Autonomous Software Engineering
 
 Modern software systems are shaped by hard-earned, undocumented production realities:
 - Hardcoded retry delays shielding rate-limited legacy payment gateways.
@@ -41,7 +40,7 @@ When autonomous AI coding agents (**Claude Code**, **Cursor**, **GitHub Copilot*
 
 ---
 
-## 🏛️ System Architecture
+## System Architecture
 
 ```mermaid
 flowchart TB
@@ -97,16 +96,16 @@ flowchart TB
 
 ---
 
-## ✨ Core Pillars & Capabilities
+## Core Pillars & Capabilities
 
-### 1. ⚡ Sub-50ms Architectural Flowchart & Mind Map Explorer
+### 1. Sub-50ms Architectural Flowchart & Mind Map Explorer
 WhyLine parses and explains any public or private GitHub repository with deep architectural clarity:
 - **Instant AST Extraction**: Indexes repository structures and builds a 5-step operational pipeline in **47ms cold** and **11ms warm** via memory-optimized caching.
 - **Dual Visual Modes**: Seamlessly switch between a sequential 5-phase breakdown and an interactive full-screen **SVG Node-Link Graph / Radial Mind Map**.
 - **Full-Stack Analysis**: Detailed breakdowns of architectural tiers (Ingress, Application Core, Persistence, Asynchronous Queues, Observability), complete with trade-off justifications and framework alternatives.
 - **Production Deployment Playbooks**: Contextual recommendations across Docker multi-stage builds, Kubernetes manifests, Serverless functions, and Cloudflare/Vercel edge architectures.
 
-### 2. 🎙️ Multilingual Spoken Fences & Voice Walkthrough (Gnani AI)
+### 2. Multilingual Spoken Fences & Voice Walkthrough (Gnani AI)
 WhyLine connects spoken human context directly to source code:
 - **Dedicated Neural Personas**:
   - **English (`en-IN`)**: *Pranav* — Authoritative, crisp, studio-grade delivery.
@@ -119,14 +118,14 @@ WhyLine connects spoken human context directly to source code:
   - *"టైమౌట్ మిల్లీసెకన్లు"* $\rightarrow$ `timeoutMs = 4500`
 - **Auto-Play Voice Walkthrough**: Automatically narrates repository flows from Step 1 through Step 5 upon loading, supported by client-side Web Speech fallback.
 
-### 3. 🛡️ Autonomous Agent Interception (FastMCP & Git Hooks)
+### 3. Autonomous Agent Interception (FastMCP & Git Hooks)
 WhyLine safeguards repositories against uncoordinated agent refactorings:
 - **`check_fences`**: Queries whether target files contain active spoken fences before edits are applied.
 - **`verify_diff_against_fences`**: Evaluates git diff hunks against AST anchor tokens, allowing safe modifications while rejecting violations.
 - **`log_or_resume_context`**: Preserves dead-end investigation history across branch checkouts.
 - **Pre-Commit Enforcement**: Rejects git commits that violate active spoken fences, providing the author's recorded rationale directly in the terminal.
 
-### 4. 🎨 Field-Report Aesthetic & Hallmark Floor Compliance
+### 4. Field-Report Aesthetic & Hallmark Floor Compliance
 Designed according to strict visual craftsmanship standards:
 - **Warm Field-Report Palette**: Warm Canvas (`#FDFBD4`), Paper Surface (`#FFFEF0`), Deep Olive Ink (`#2A2919`), Khaki Borders (`#D9D7B6`), and Muted Olive Accents (`#545333`).
 - **Hallmark Floor Rules**: Zero card drop-shadows, zero layout shifts, zero `transition: all`, pill-shaped interactive controls, and accessible focus outlines.
@@ -134,7 +133,7 @@ Designed according to strict visual craftsmanship standards:
 
 ---
 
-## 📊 Performance Benchmarks & 50-Repository Audit
+## Performance Benchmarks & 50-Repository Audit
 
 WhyLine was rigorously evaluated across **50 diverse GitHub repositories** (spanning JavaScript, TypeScript, Python, Go, Java, and C++):
 
@@ -156,7 +155,7 @@ WhyLine was rigorously evaluated across **50 diverse GitHub repositories** (span
 
 ---
 
-## 🔒 Enterprise Security & Zero-Secret Guarantee
+## Enterprise Security & Zero-Secret Guarantee
 
 WhyLine strictly prevents credentials and sensitive context from entering version control:
 - **Automated Secret Scanner (`scripts/scan_secrets.py`)**: Continuously audits repositories against 11 high-entropy secret patterns (Google Gemini keys, Gnani tokens, Supabase credentials, GitHub PATs, private keys).
@@ -170,7 +169,7 @@ WhyLine strictly prevents credentials and sensitive context from entering versio
 
 ---
 
-## 🚀 Quick Start & Installation
+## Quick Start & Installation
 
 ### Prerequisites
 - **Node.js**: v18.0.0 or higher
@@ -217,7 +216,7 @@ whyline check-staged
 
 ---
 
-## 🧪 Verification & Test Battery
+## Verification & Test Battery
 
 ```bash
 # 1. Run unit & invariant test suites
@@ -238,16 +237,12 @@ npm run build
 
 ---
 
-## 📚 Subsystem Documentation
+## Subsystem Documentation
 
-- 🐍 [**Backend Engine Architecture** (`backend/README.md`)](backend/README.md): Tree-sitter AST detection, pgvector RRF hybrid search, invariant test generation.
-- ⚛️ [**Frontend Studio Architecture** (`frontend/README.md`)](frontend/README.md): React 18, Vite, Monaco Editor gutter pins, interactive SVG canvas.
-- 🔌 [**Model Context Protocol (MCP) Guide** (`mcp/README.md`)](mcp/README.md): FastMCP tool definitions, Cursor/Claude integration, pre-commit hooks.
-- 📖 [**Visual Step-by-Step Guide** (`STEP_BY_STEP_VISUAL_GUIDE.md`)](STEP_BY_STEP_VISUAL_GUIDE.md): Complete interface walkthrough and user flows.
-- 📊 [**50-Repository Audit Report** (`whyline_50_repo_audit_report.md`)](whyline_50_repo_audit_report.md): In-depth audit matrix across 50 production repositories.
+- [**Backend Engine Architecture** (`backend/README.md`)](backend/README.md): Tree-sitter AST detection, pgvector RRF hybrid search, invariant test generation.
+- [**Frontend Studio Architecture** (`frontend/README.md`)](frontend/README.md): React 18, Vite, Monaco Editor gutter pins, interactive SVG canvas.
+- [**Model Context Protocol (MCP) Guide** (`mcp/README.md`)](mcp/README.md): FastMCP tool definitions, Cursor/Claude integration, pre-commit hooks.
+- [**Visual Step-by-Step Guide** (`STEP_BY_STEP_VISUAL_GUIDE.md`)](STEP_BY_STEP_VISUAL_GUIDE.md): Complete interface walkthrough and user flows.
+- [**50-Repository Audit Report** (`whyline_50_repo_audit_report.md`)](whyline_50_repo_audit_report.md): In-depth audit matrix across 50 production repositories.
 
----
 
-## 📄 License
-
-Distributed under the **MIT License**. Engineered for reliable, voice-native software architecture.

@@ -6,7 +6,7 @@ The WhyLine backend powers the core intelligence behind WhyLine Studio. It inspe
 
 ---
 
-## 🏛️ Architecture & Core Subsystems
+## Architecture & Core Subsystems
 
 ```mermaid
 flowchart TD
@@ -49,7 +49,7 @@ The backend is organized into 5 primary services:
 
 ---
 
-## 📁 Directory Structure
+## Directory Structure
 
 ```
 backend/
@@ -81,7 +81,7 @@ backend/
 
 ---
 
-## 📡 REST API Reference
+## REST API Reference
 
 The backend exposes a FastAPI REST API (default `http://127.0.0.1:8000`).
 
@@ -106,7 +106,7 @@ The backend exposes a FastAPI REST API (default `http://127.0.0.1:8000`).
 
 ---
 
-## 🔍 Tree-sitter AST Anomaly Detector
+## Tree-sitter AST Anomaly Detector
 
 WhyLine flags 5 high-risk code smells where undocumented workarounds typically hide:
 
@@ -125,7 +125,7 @@ This guarantees fence tracking survives refactorings, line number shifts, and co
 
 ---
 
-## 🧠 Dual-Source Hybrid RAG & pgvector RRF
+## Dual-Source Hybrid RAG & pgvector RRF
 
 When answering developer queries, WhyLine computes reciprocal rank fusion across both full-text keyword search and semantic vector similarity:
 
@@ -140,7 +140,7 @@ $$RRF(d) = \frac{1}{k + r_{FTS}(d)} + \frac{1}{k + r_{vector}(d)}$$
 
 ---
 
-## ⚙️ Environment Configuration (`.env`)
+## Environment Configuration (`.env`)
 
 ```ini
 # Gnani Vachana AI Speech Credentials
@@ -161,7 +161,7 @@ WHYLINE_WEBHOOK_SECRET=your-random-webhook-secret-here
 
 ---
 
-## 🧪 Testing & Verification
+## Testing & Verification
 
 ```bash
 # 1. Run all backend tests

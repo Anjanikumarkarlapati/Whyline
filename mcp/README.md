@@ -5,7 +5,7 @@
 
 ---
 
-## 🎯 Purpose & Threat Model
+## Purpose & Threat Model
 
 Autonomous AI coding agents frequently optimize codebases by removing "ugly" patterns:
 - Reducing retry counts (`retryCount = 5` $\rightarrow$ `retryCount = 1`).
@@ -42,7 +42,7 @@ sequenceDiagram
 
 ---
 
-## 🛠️ MCP Tool Definitions
+## MCP Tool Definitions
 
 WhyLine registers 4 standard tools using the FastMCP framework:
 
@@ -102,7 +102,7 @@ Retrieves audio postmortem metadata for a given fence ID.
 
 ---
 
-## 🔌 Client Installation & Configuration
+## Client Installation & Configuration
 
 ### 1. Claude Desktop
 Add to your `claude_desktop_config.json`:
@@ -153,7 +153,7 @@ Add to `mcp_config.json`:
 
 ---
 
-## 🪝 Git Pre-Commit Hook Integration
+## Git Pre-Commit Hook Integration
 
 WhyLine installs a deterministic git pre-commit hook that guards staged files before `git commit` completes.
 
@@ -181,7 +181,7 @@ git diff HEAD~1 | whyline check -
 
 ---
 
-## 🧪 Testing the MCP Server
+## Testing the MCP Server
 
 ```bash
 # Test MCP tool execution under Pytest
