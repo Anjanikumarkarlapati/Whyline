@@ -204,23 +204,9 @@
    Fallbacks are mandatory (see @supports, prefers-reduced-transparency, etc.).
    ========================================================================== */
 
-/* L0 Canvas — flat page background, faint fixed radial ambient glow, no animation */
+/* L0 Canvas — flat page background, route-specific RouteBackdrop handles ambience */
 .l0 {
   position: relative;
-}
-
-/* Ambient glow pseudo-layer — fixed radial glow behind canvas content */
-.l0::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: radial-gradient(
-    600px 600px at 50% 30%,
-    color-mix(in srgb, var(--accent-wash) 35%, transparent),
-    transparent 60%
-  );
-  pointer-events: none;
 }
 
 @supports not((backdrop-filter: blur(0))) {
