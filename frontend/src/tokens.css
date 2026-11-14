@@ -1847,8 +1847,9 @@ a:focus-visible {
   letter-spacing: 0.01em;
 }
 
-/* Segmented Control (Language Switcher) */
+/* Segmented Control (Motion-Canvas Sliding Spring Pill) */
 .segmented-control {
+  position: relative;
   display: inline-flex;
   align-items: center;
   padding: 3px;
@@ -1863,7 +1864,36 @@ a:focus-visible {
   border-color: rgba(217, 215, 182, 0.16);
 }
 
+.segmented-thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  border-radius: 999px;
+  background: var(--bg-surface);
+  box-shadow: 0 2px 6px rgba(42, 41, 25, 0.14);
+  transition: transform 240ms var(--ease-spring), width 240ms var(--ease-spring), opacity 150ms ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+[data-theme="dark"] .segmented-thumb {
+  background: var(--accent);
+}
+
+.segmented-control.is-pulsing .segmented-thumb {
+  animation: langThumbPulse 260ms var(--ease-out);
+}
+
+@keyframes langThumbPulse {
+  0% { filter: brightness(1); }
+  50% { filter: brightness(1.12); }
+  100% { filter: brightness(1); }
+}
+
 .segmented-option {
+  position: relative;
+  z-index: 1;
   min-height: 30px;
   padding: 0 10px;
   border: 0;
@@ -1875,22 +1905,32 @@ a:focus-visible {
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  transition: background-color var(--dur-mid) var(--ease-out), color var(--dur-mid) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  transition: color var(--dur-mid) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 
 .segmented-option:hover {
   color: var(--text-primary);
 }
 
+.segmented-option:active {
+  transform: scale(0.96);
+}
+
 .segmented-option.is-active {
-  background: var(--bg-surface);
   color: var(--text-primary);
-  box-shadow: 0 1px 4px rgba(42, 41, 25, 0.12);
 }
 
 [data-theme="dark"] .segmented-option.is-active {
-  background: var(--accent);
   color: var(--on-accent);
+}
+
+.lang-morphing .main-content {
+  animation: langContentMorph 240ms var(--ease-out);
+}
+
+@keyframes langContentMorph {
+  0% { opacity: 0.72; transform: translateY(3px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 /* View Transitions fallback */

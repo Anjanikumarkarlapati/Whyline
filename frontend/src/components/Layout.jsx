@@ -15,6 +15,7 @@ import {
 import { useI18n } from '../i18n';
 import { useVoiceAgent } from '../context/VoiceAgentContext';
 import WhyLineLogo from './WhyLineLogo';
+import LanguageSegmentedBar from './LanguageSegmentedBar';
 import RouteBackdrop from './RouteBackdrop';
 import VoiceAgentPicker from './VoiceAgentPicker';
 import LanguageVoiceToast from './LanguageVoiceToast';
@@ -144,19 +145,7 @@ export default function Layout({ theme, onToggleTheme }) {
           </nav>
 
           <div className="topbar-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-            <div className="segmented-control" role="group" aria-label={t('languageLabel')}>
-              {LANG_OPTIONS.map((opt) => (
-                <button
-                  key={opt.code}
-                  type="button"
-                  className={`segmented-option ${lang === opt.code ? 'is-active' : ''}`}
-                  aria-pressed={lang === opt.code}
-                  onClick={() => setLang(opt.code)}
-                >
-                  {opt.shortLabel}
-                </button>
-              ))}
-            </div>
+            <LanguageSegmentedBar />
 
             <div style={{ position: 'relative' }}>
               <button
@@ -282,19 +271,7 @@ export default function Layout({ theme, onToggleTheme }) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div className="segmented-control" role="group" aria-label={t('languageLabel')}>
-                {LANG_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.code}
-                    type="button"
-                    className={`segmented-option ${lang === opt.code ? 'is-active' : ''}`}
-                    aria-pressed={lang === opt.code}
-                    onClick={() => setLang(opt.code)}
-                  >
-                    {opt.shortLabel}
-                  </button>
-                ))}
-              </div>
+              <LanguageSegmentedBar />
               <button type="button" className="btn btn-secondary" onClick={onToggleTheme}>
                 {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
                 <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>

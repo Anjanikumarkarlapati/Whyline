@@ -13,6 +13,7 @@ import {
   UserCircle,
 } from '@phosphor-icons/react';
 import { useI18n } from '../i18n';
+import LanguageSegmentedBar from '../components/LanguageSegmentedBar';
 import VoiceAgentPicker from '../components/VoiceAgentPicker';
 import StatusBadge from '../components/StatusBadge';
 import { FormattedText } from '../components/CodeText';
@@ -138,23 +139,7 @@ export default function SettingsPage() {
               {t('voicePickerSubtitle')}
             </p>
           </div>
-          <div className="segmented-control" role="group" aria-label={t('languageLabel')}>
-            {[
-              { code: 'en', label: 'English' },
-              { code: 'te', label: 'తెలుగు' },
-              { code: 'hi', label: 'हिन्दी' },
-            ].map((opt) => (
-              <button
-                key={opt.code}
-                type="button"
-                className={`segmented-option ${lang === opt.code ? 'is-active' : ''}`}
-                aria-pressed={lang === opt.code}
-                onClick={() => setLang(opt.code)}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          <LanguageSegmentedBar />
         </div>
         <VoiceAgentPicker variant="panel" />
       </section>
