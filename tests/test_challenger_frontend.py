@@ -124,19 +124,15 @@ def test_trilingual_api_requests_not_defaulting_to_telugu():
 
 
 def test_trilingual_dictionary_parity():
-    """Verify that all keys in English translations exist in Telugu and Hindi."""
-    i18n_path = FRONTEND_SRC / "i18n.js"
-    content = i18n_path.read_text(encoding="utf-8")
+    """Verify that all keys in English translations exist in Telugu and Hindi JSON files."""
+    i18n_dir = FRONTEND_SRC / "i18n"
+    en = json.loads((i18n_dir / "en.json").read_text(encoding="utf-8"))
+    te = json.loads((i18n_dir / "te.json").read_text(encoding="utf-8"))
+    hi = json.loads((i18n_dir / "hi.json").read_text(encoding="utf-8"))
 
-    en_match = re.search(r"en:\s*\{(.*?)\},\s*\n\s*te:", content, re.DOTALL)
-    te_match = re.search(r"te:\s*\{(.*?)\},\s*\n\s*hi:", content, re.DOTALL)
-    hi_match = re.search(r"hi:\s*\{(.*?)\},\s*\n\s*\};", content, re.DOTALL)
-
-    assert en_match and te_match and hi_match, "Failed to parse TRANSLATIONS dictionaries"
-
-    en_keys = set(re.findall(r"^\s*([a-zA-Z0-9_]+)\s*:", en_match.group(1), re.MULTILINE))
-    te_keys = set(re.findall(r"^\s*([a-zA-Z0-9_]+)\s*:", te_match.group(1), re.MULTILINE))
-    hi_keys = set(re.findall(r"^\s*([a-zA-Z0-9_]+)\s*:", hi_match.group(1), re.MULTILINE))
+    en_keys = set(en.keys())
+    te_keys = set(te.keys())
+    hi_keys = set(hi.keys())
 
     missing_te = en_keys - te_keys
     missing_hi = en_keys - hi_keys
@@ -146,12 +142,9 @@ def test_trilingual_dictionary_parity():
 
 
 def test_trilingual_all_used_keys_defined():
-    """Verify that every t('key') call in JSX components exists in TRANSLATIONS.en."""
-    i18n_path = FRONTEND_SRC / "i18n.js"
-    content = i18n_path.read_text(encoding="utf-8")
-
-    en_match = re.search(r"en:\s*\{(.*?)\},\s*\n\s*te:", content, re.DOTALL)
-    en_keys = set(re.findall(r"^\s*([a-zA-Z0-9_]+)\s*:", en_match.group(1), re.MULTILINE))
+    """Verify that every t('key') call in JSX components exists in en.json."""
+    en = json.loads((FRONTEND_SRC / "i18n" / "en.json").read_text(encoding="utf-8"))
+    en_keys = set(en.keys())
 
     used_keys = set()
     for jsx_path in FRONTEND_SRC.rglob("*.jsx"):
@@ -160,7 +153,7 @@ def test_trilingual_all_used_keys_defined():
             used_keys.add(m)
 
     missing = used_keys - en_keys
-    assert not missing, f"Keys used in JSX but missing from TRANSLATIONS.en: {missing}"
+    assert not missing, f"Keys used in JSX but missing from en.json: {missing}"
 
 
 def test_localstorage_persistence_in_i18n():

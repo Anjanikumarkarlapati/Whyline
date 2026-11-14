@@ -65,7 +65,7 @@ export default function LoginPage({ theme = 'light', onToggleTheme }) {
     }
     setStep(LOAD_STEPS.length);
     await sleep(450);
-    navigate('/');
+    navigate('/ask');
   };
 
   return (

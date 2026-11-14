@@ -1,14 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="28" height="28">
-  <title>WhyLine</title>
-  <rect width="28" height="28" rx="6" fill="#545333"/>
-  <!-- fence pickets -->
-  <rect x="3"  y="9"  width="3.5" height="12" rx="0.8" fill="#FDFBD4" opacity="0.9"/>
-  <rect x="8"  y="7"  width="3.5" height="14" rx="0.8" fill="#FDFBD4" opacity="0.9"/>
-  <rect x="13" y="9"  width="3.5" height="12" rx="0.8" fill="#FDFBD4" opacity="0.9"/>
-  <!-- amber speaking picket -->
-  <rect x="18" y="7"  width="3.5" height="14" rx="0.8" fill="#D9A520"/>
-  <!-- rail -->
-  <rect x="2.5" y="18" width="23" height="2.5" rx="0.8" fill="#FDFBD4" opacity="0.55"/>
-  <!-- sound wave -->
-  <path d="M 23 10 Q 25.5 14 23 18" stroke="#D9A520" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="WhyLine Studio">
+  <defs>
+    <linearGradient id="wlPrism" x1="4" y1="2" x2="32" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6B7045"/>
+      <stop offset="55%" stop-color="#545333"/>
+      <stop offset="100%" stop-color="#3A3A24"/>
+    </linearGradient>
+    <linearGradient id="wlSheen" x1="6" y1="2" x2="26" y2="18" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FDFBD4" stop-opacity="0.52"/>
+      <stop offset="100%" stop-color="#FDFBD4" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="1.5" y="1.5" width="33" height="33" rx="10" fill="url(#wlPrism)" stroke="#D9D7B6" stroke-opacity="0.45" stroke-width="1.2"/>
+  <path d="M3 10C3 5.5 6.5 2.5 11 2.5H25C29.5 2.5 33 5.5 33 10V13C24 16 12 16 3 13V10Z" fill="url(#wlSheen)"/>
+  <!-- Guardrail pickets -->
+  <rect x="8.5" y="10.5" width="2.6" height="14" rx="1.3" fill="#FDFBD4" fill-opacity="0.92"/>
+  <rect x="14" y="9.5" width="2.6" height="16" rx="1.3" fill="#FDFBD4"/>
+  <!-- Speaking amber picket -->
+  <rect x="19.5" y="7.5" width="2.8" height="20" rx="1.4" fill="#D9A520"/>
+  <rect x="25" y="10.5" width="2.6" height="14" rx="1.3" fill="#FDFBD4" fill-opacity="0.92"/>
+  <!-- Horizontal fence rail -->
+  <path d="M6.5 17.5H29.5" stroke="#FDFBD4" stroke-opacity="0.55" stroke-width="1.4" stroke-linecap="round"/>
+  <!-- Acoustic wave crest -->
+  <path d="M8.5 25.5C12.5 22.8 16 27.6 19.5 25.2C22.5 23.1 25.2 26.2 28 24.4" stroke="#D9A520" stroke-width="1.7" stroke-linecap="round"/>
 </svg>

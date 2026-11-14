@@ -1436,6 +1436,7 @@ a.btn:active {
 }
 
 :root {
+  --stagger: 0;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-fast: 120ms;
   --dur-mid: 220ms;
@@ -1733,4 +1734,210 @@ a:focus-visible {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* =========================================================================
+ * Step 2: Liquid-Glass WhyLine Logo, View Transitions & Segmented Switcher
+ * ========================================================================= */
+.whyline-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  user-select: none;
+}
+
+.whyline-logo-prism {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.52),
+    0 4px 12px -3px rgba(42, 41, 25, 0.24);
+  transition: transform var(--dur-mid) var(--ease-out), box-shadow var(--dur-mid) var(--ease-out);
+}
+
+.whyline-logo:hover .whyline-logo-prism {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 8px 18px -4px rgba(42, 41, 25, 0.28);
+}
+
+.whyline-logo-prism::after {
+  content: '';
+  position: absolute;
+  inset: -40% -80%;
+  background: linear-gradient(115deg, transparent 35%, rgba(253, 251, 212, 0.34) 50%, transparent 65%);
+  transform: translateX(-60%);
+  transition: transform 600ms var(--ease-out);
+  pointer-events: none;
+}
+
+.whyline-logo:hover .whyline-logo-prism::after,
+.whyline-logo.is-speaking .whyline-logo-prism::after {
+  transform: translateX(65%);
+}
+
+.whyline-logo-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.wl-prism-bg {
+  fill: var(--accent);
+  stroke: rgba(217, 215, 182, 0.45);
+  stroke-width: 1.2;
+}
+
+.wl-prism-sheen {
+  fill: rgba(253, 251, 212, 0.24);
+}
+
+.wl-picket {
+  fill: var(--on-accent);
+  opacity: 0.92;
+}
+
+.wl-picket-hot {
+  fill: var(--amber);
+}
+
+.wl-rail {
+  stroke: var(--on-accent);
+  opacity: 0.55;
+}
+
+.wl-wave {
+  stroke: var(--amber);
+  fill: none;
+}
+
+.whyline-logo.is-speaking .wl-picket-hot {
+  animation: wlPulse 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes wlPulse {
+  from { opacity: 0.72; transform: scaleY(0.92); transform-origin: center; }
+  to { opacity: 1; transform: scaleY(1.05); transform-origin: center; }
+}
+
+.whyline-wordmark-wrap {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.whyline-wordmark {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 1.125rem;
+  letter-spacing: -0.04em;
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.whyline-logo-lg .whyline-wordmark {
+  font-size: 1.55rem;
+}
+
+.whyline-word-why {
+  color: var(--text-primary);
+}
+
+.whyline-word-line {
+  color: var(--accent);
+}
+
+.whyline-tagline {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+/* Segmented Control (Language Switcher) */
+.segmented-control {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 999px;
+  background: rgba(84, 83, 51, 0.08);
+  border: 1px solid rgba(84, 83, 51, 0.14);
+}
+
+[data-theme="dark"] .segmented-control {
+  background: rgba(253, 251, 212, 0.07);
+  border-color: rgba(217, 215, 182, 0.16);
+}
+
+.segmented-option {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--dur-mid) var(--ease-out), color var(--dur-mid) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.segmented-option:hover {
+  color: var(--text-primary);
+}
+
+.segmented-option.is-active {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: 0 1px 4px rgba(42, 41, 25, 0.12);
+}
+
+[data-theme="dark"] .segmented-option.is-active {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* View Transitions fallback */
+@keyframes vtFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+::view-transition-new(root) {
+  animation: vtFadeIn var(--dur-mid) var(--ease-out) both;
+}
+
+.landing-pillar-link {
+  transition: transform var(--dur-mid) var(--ease-out), border-color var(--dur-mid) var(--ease-out);
+}
+.landing-pillar-link:hover {
+  transform: translateY(-2px);
+  border-color: rgba(84, 83, 51, 0.3);
+}
+
+/* Voice Agent Picker Live Waveform */
+.voice-live-wave .wave-bar {
+  display: inline-block;
+  width: 3px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--accent);
+  animation: voiceWavePulse 680ms var(--ease-out) infinite alternate;
+}
+
+@keyframes voiceWavePulse {
+  from { transform: scaleY(0.35); opacity: 0.6; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+.voice-agent-card:hover {
+  transform: translateY(-2px);
 }

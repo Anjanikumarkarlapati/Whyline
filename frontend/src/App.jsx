@@ -1,87 +1,85 @@
-import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { I18nProvider } from './i18n';
 import { WorkbenchProvider } from './context/WorkbenchContext';
+import { VoiceAgentProvider } from './context/VoiceAgentContext';
 import Layout from './components/Layout';
-import LoginPage from './pages/LoginPage';
-import AskRepoPage from './pages/AskRepoPage';
-import AnswersPage from './pages/AnswersPage';
-import FlowchartsPage from './pages/FlowchartsPage';
-import LegacyRedirect from './components/LegacyRedirect';
-import ErrorBoundary from './components/ErrorBoundary';
 import RouteAnnouncer from './components/RouteAnnouncer';
+import LegacyRedirect from './components/LegacyRedirect';
 
-function getInitialTheme() {
-  if (typeof window !== 'undefined') {
-    const params = new URLSearchParams(window.location.search);
-    const urlTheme = params.get('theme');
-    if (urlTheme === 'dark' || urlTheme === 'light') {
-      return urlTheme;
-    }
-    const saved = window.localStorage?.getItem('whyline-theme');
-    if (saved === 'dark' || saved === 'light') {
-      return saved;
-    }
-  }
-  return 'light';
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const AskRepoPage = lazy(() => import('./pages/AskRepoPage'));
+const FlowchartsPage = lazy(() => import('./pages/FlowchartsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+
+function RouteSkeleton() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px 0' }} aria-busy="true" aria-label="Loading page">
+      <div className="skeleton-shimmer" style={{ height: '36px', width: '42%' }} />
+      <div className="skeleton-shimmer" style={{ height: '140px', width: '100%' }} />
+      <div className="skeleton-shimmer" style={{ height: '96px', width: '80%' }} />
+    </div>
+  );
 }
 
 export default function App() {
-  const [theme, setTheme] = useState(getInitialTheme);
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem('whyline_theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+      return 'light';
+    } catch {
+      return 'light';
+    }
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    document.documentElement.setAttribute('data-mode', theme);
     try {
-      window.localStorage?.setItem('whyline-theme', theme);
+      localStorage.setItem('whyline_theme', theme);
     } catch {
-      // Ignore storage error
+      // ignore storage errors
     }
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
+  const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
 
   return (
     <I18nProvider>
-      {/* Atmospheric Topographic Field-Grid Background (Aurelia / ui-gradients) */}
-      <div className="cartographic-field-bg" aria-hidden="true" />
-      {/* Directional OKLCH Ambient Illumination Cone */}
-      <div className="ambient-mesh-glow" aria-hidden="true" />
-      {/* Archival Tactile Dither Grain Overlay (dither-fx) */}
-      <div className="dither-grain-overlay" aria-hidden="true" />
-
-      <div id="route-announcer" className="route-announcer" aria-live="polite" aria-atomic="true" />
-      <BrowserRouter>
-        <ErrorBoundary>
-          <WorkbenchProvider>
+      <VoiceAgentProvider>
+        <WorkbenchProvider>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <RouteAnnouncer />
-            <Routes>
-              <Route path="/login" element={<LoginPage theme={theme} onToggleTheme={toggleTheme} />} />
-              <Route element={<Layout theme={theme} onToggleTheme={toggleTheme} />}>
-                {/* 3 Beginner-Friendly Developer Pages */}
-                <Route path="/" element={<AskRepoPage />} />
-                <Route path="/ask" element={<AskRepoPage />} />
-                <Route path="/answers" element={<AnswersPage theme={theme} />} />
-                <Route path="/flowcharts" element={<FlowchartsPage />} />
+            <Suspense fallback={<RouteSkeleton />}>
+              <Routes>
+                <Route path="/" element={<Layout theme={theme} onToggleTheme={toggleTheme} />}>
+                  <Route index element={<LandingPage />} />
+                  <Route path="connect" element={<LoginPage theme={theme} onToggleTheme={toggleTheme} />} />
+                  <Route path="ask" element={<AskRepoPage />} />
+                  <Route path="flow" element={<FlowchartsPage />} />
+                  <Route path="settings" element={<SettingsPage theme={theme} onToggleTheme={toggleTheme} />} />
 
-                {/* Legacy & Direct Compatibility Routes */}
-                <Route path="/studio" element={<AnswersPage theme={theme} />} />
-                <Route path="/copilot" element={<LegacyRedirect to="/" />} />
-                <Route path="/fences" element={<LegacyRedirect to="/answers" />} />
-                <Route path="/memory" element={<LegacyRedirect to="/flowcharts" />} />
-                <Route path="/git" element={<LegacyRedirect to="/flowcharts" />} />
-                <Route path="/incidents" element={<LegacyRedirect to="/flowcharts" />} />
-                <Route path="/settings" element={<LegacyRedirect to="/" />} />
-
-                {/* Catch-all fallback */}
-                <Route path="*" element={<LegacyRedirect to="/" />} />
-              </Route>
-            </Routes>
-          </WorkbenchProvider>
-        </ErrorBoundary>
-      </BrowserRouter>
+                  {/* Backward-compatible route aliases */}
+                  <Route path="login" element={<LegacyRedirect to="/connect" />} />
+                  <Route path="voice-copilot" element={<LegacyRedirect to="/ask" />} />
+                  <Route path="answers" element={<LegacyRedirect to="/ask" />} />
+                  <Route path="flowcharts" element={<LegacyRedirect to="/flow" />} />
+                  <Route path="workbench" element={<LegacyRedirect to="/ask" />} />
+                  <Route path="fences" element={<LegacyRedirect to="/ask" />} />
+                  <Route path="incidents" element={<LegacyRedirect to="/ask" />} />
+                  <Route path="memory" element={<LegacyRedirect to="/ask" />} />
+                  <Route path="typography" element={<LegacyRedirect to="/settings" />} />
+                  <Route path="*" element={<LegacyRedirect to="/" />} />
+                </Route>
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </WorkbenchProvider>
+      </VoiceAgentProvider>
     </I18nProvider>
   );
 }
