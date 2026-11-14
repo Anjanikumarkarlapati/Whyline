@@ -11,17 +11,10 @@ import {
 import { useVoiceAgent } from '../context/VoiceAgentContext';
 
 function getBeginnerRoleMeta(step = {}, idx = 0, total = 1) {
-  const text = `${step.title || ''} ${step.category || ''} ${step.phase || ''} ${step.file_path || ''}`.toLowerCase();
+  const titleAndCat = `${step.title || ''} ${step.category || ''} ${step.phase || ''}`.toLowerCase();
+  const fullText = `${titleAndCat} ${step.file_path || ''}`.toLowerCase();
 
-  if (idx === 0 || /entry|route|server|app|index|main|page|ui/.test(text)) {
-    return {
-      role: 'Front Door (Entry Point)',
-      input: 'User action or incoming HTTP request',
-      output: 'Validated request passed to the next module',
-      why: 'Without an entry point, requests have nowhere to land or be routed to the right handler.',
-    };
-  }
-  if (/auth|guard|fence|check|policy|valid|middleware|security/.test(text)) {
+  if (/fence|guard|auth|check|policy|valid|middleware|security|jwt|token/.test(titleAndCat)) {
     return {
       role: 'Safety & Security Guard',
       input: 'Incoming data or proposed code change',
@@ -29,7 +22,15 @@ function getBeginnerRoleMeta(step = {}, idx = 0, total = 1) {
       why: 'Protects critical rules and stops unsafe or unauthorized changes before they reach data.',
     };
   }
-  if (/db|sql|store|cache|vector|pg|memory|repo|model|schema/.test(text)) {
+  if (idx === 0 || /entry|route|server|app|index|main|page|ui|checkout|dispatch/.test(titleAndCat)) {
+    return {
+      role: 'Front Door (Entry Point)',
+      input: 'User action or incoming HTTP request',
+      output: 'Validated request passed to the next module',
+      why: 'Without an entry point, requests have nowhere to land or be routed to the right handler.',
+    };
+  }
+  if (/db|sql|store|cache|vector|pg|memory|repo|model|schema|outbox|dedup/.test(fullText)) {
     return {
       role: 'Filing Cabinet (Data & Memory)',
       input: 'Structured query or record to save',
@@ -37,15 +38,15 @@ function getBeginnerRoleMeta(step = {}, idx = 0, total = 1) {
       why: 'Keeps repository history, answers, and state durable instead of losing everything on refresh.',
     };
   }
-  if (/voice|tts|stt|gnani|audio|ai|llm|gemini|api|external/.test(text)) {
+  if (/voice|tts|stt|gnani|audio|ai|llm|gemini|api|external|gpu|dicom/.test(fullText)) {
     return {
-      role: 'Specialist Helper (Voice / AI API)',
-      input: 'Text prompt, audio clip, or context',
-      output: 'Spoken audio or analyzed explanation',
-      why: 'Connects your app to specialized speech and reasoning engines without bloating core code.',
+      role: 'Specialist Helper (API / Engine)',
+      input: 'Text prompt, payload, or media frame',
+      output: 'Processed output or external service response',
+      why: 'Connects your app to specialized engines without bloating core business logic.',
     };
   }
-  if (idx === total - 1 || /deploy|build|test|audit|output|render|response/.test(text)) {
+  if (idx === total - 1 || /deploy|build|test|audit|output|render|response/.test(fullText)) {
     return {
       role: 'Final Delivery & Verification',
       input: 'Processed result from core modules',

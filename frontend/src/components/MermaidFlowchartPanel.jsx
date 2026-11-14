@@ -15,6 +15,7 @@ const BEGINNER_LAYER_HINTS = {
   auth: 'Security guard: checks login, tokens, and permissions.',
   core: 'Brain: runs the main business rules and guardrails.',
   data: 'Filing cabinet: reads and saves records in databases.',
+  ext: 'Helpers: talks to third-party APIs or AI voice models.',
   external: 'Helpers: talks to third-party APIs or AI voice models.',
   deploy: 'Engine room: builds, bundles, and hosts the app.',
 };
@@ -52,6 +53,7 @@ export default function MermaidFlowchartPanel({
   mermaidCode,
   flowData,
   steps = [],
+  activeStepIndex = -1,
   onSelectStep,
   onFallbackToLinear,
   zoom = 1,
@@ -66,6 +68,7 @@ export default function MermaidFlowchartPanel({
   const [isRendering, setIsRendering] = useState(false);
   const [themeRevision, setThemeRevision] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
+  const [focusedLayer, setFocusedLayer] = useState(null);
 
   const effectiveCode = useMemo(() => {
     const clean = stripMermaidFences(mermaidCode);
@@ -197,6 +200,34 @@ export default function MermaidFlowchartPanel({
     }
   }, [panelMode, zoom]);
 
+  // Sync active node highlight & optional layer focus across complex Mermaid diagrams
+  useEffect(() => {
+    const host = svgHostRef.current;
+    if (!host || panelMode !== 'diagram') return;
+    const nodeEls = host.querySelectorAll('g.node, .node');
+    nodeEls.forEach((nodeEl) => {
+      nodeEl.classList.remove('is-active-mermaid-node');
+      const nodeId = nodeEl.getAttribute('data-id') || nodeEl.id || '';
+      const nodeText = nodeEl.textContent || '';
+
+      if (activeStepIndex >= 0 && steps.length > 0) {
+        const matched = findMatchingStepForMermaidNode(nodeId, nodeText, steps);
+        if (matched === activeStepIndex) {
+          nodeEl.classList.add('is-active-mermaid-node');
+        }
+      }
+
+      if (focusedLayer) {
+        const hasLayerClass = nodeEl.classList.contains(focusedLayer) ||
+          nodeEl.closest?.(`.cluster.${focusedLayer}, g.${focusedLayer}`) ||
+          nodeText.toLowerCase().includes(focusedLayer);
+        nodeEl.style.opacity = hasLayerClass ? '1' : '0.32';
+      } else {
+        nodeEl.style.opacity = '1';
+      }
+    });
+  }, [panelMode, activeStepIndex, steps, focusedLayer, themeRevision, retryCount, isRendering]);
+
   function activateNodeElement(nodeEl) {
     if (!nodeEl || !steps.length || !onSelectStep) return;
     const nodeId = nodeEl.getAttribute('data-id') || nodeEl.id || '';
@@ -301,21 +332,29 @@ export default function MermaidFlowchartPanel({
           minWidth: 0,
         }}
       >
-        {layers.map((layer) => (
-          <div
-            key={layer.key}
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '8px',
-              padding: '8px 10px',
-              borderRadius: '12px',
-              background: `var(${layer.bgVar})`,
-              border: `1.5px solid var(${layer.borderVar})`,
-              color: 'var(--layer-node-text)',
-              minWidth: 0,
-            }}
-          >
+        {layers.map((layer) => {
+          const isFocused = focusedLayer === layer.key;
+          return (
+            <button
+              key={layer.key}
+              type="button"
+              onClick={() => setFocusedLayer((prev) => (prev === layer.key ? null : layer.key))}
+              aria-pressed={isFocused}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+                padding: '8px 10px',
+                borderRadius: '12px',
+                background: `var(${layer.bgVar})`,
+                border: isFocused ? '2px solid var(--accent)' : `1.5px solid var(${layer.borderVar})`,
+                color: 'var(--layer-node-text)',
+                minWidth: 0,
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast) ease',
+              }}
+            >
             <span
               aria-hidden="true"
               style={{
@@ -377,8 +416,9 @@ export default function MermaidFlowchartPanel({
                 </div>
               )}
             </div>
-          </div>
-        ))}
+          </button>
+          );
+        })}
       </div>
 
       {/* Render Error Alert + Automatic Raw Code & Linear SVG Fallback */}

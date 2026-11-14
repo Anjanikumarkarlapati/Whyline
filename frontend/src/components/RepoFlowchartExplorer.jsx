@@ -42,7 +42,13 @@ const normalizeRepoKey = (urlStr = '') =>
     .replace(/\.git$/, '')
     .replace(/\/+$/, '');
 
-export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber }) {
+export default function RepoFlowchartExplorer({
+  onSelectStep,
+  selectedStepNumber,
+  onFlowDataChange,
+  externalActiveStepIdx,
+  onActiveStepIdxChange,
+}) {
   const { lang, setLang } = useI18n();
   const { repoContext, loadGitHubRepo } = useWorkbenchSelection();
   const { selectedAgent } = useVoiceAgent();
@@ -76,7 +82,24 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
   const [flowData, setFlowData] = useState(() => flowchartClientCache.get(initialCacheKey) || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [activeStepIdx, setActiveStepIdx] = useState(0);
+  const [activeStepIdx, setActiveStepIdxState] = useState(0);
+  const setActiveStepIdx = (next) => {
+    setActiveStepIdxState((prev) => {
+      const val = typeof next === 'function' ? next(prev) : next;
+      onActiveStepIdxChange?.(val);
+      return val;
+    });
+  };
+
+  useEffect(() => {
+    if (typeof externalActiveStepIdx === 'number' && externalActiveStepIdx !== activeStepIdx) {
+      setActiveStepIdxState(externalActiveStepIdx);
+    }
+  }, [externalActiveStepIdx]);
+
+  useEffect(() => {
+    onFlowDataChange?.(flowData);
+  }, [flowData, onFlowDataChange]);
   const [isWalkthroughPlaying, setIsWalkthroughPlaying] = useState(false);
   const [voiceAgentStatus, setVoiceAgentStatus] = useState('Ready');
   const [viewMode, setViewMode] = useState('graph'); // 'steps' | 'graph' | 'dossier'
@@ -1183,10 +1206,10 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
             onSelectStep={(step, idx) => {
               stopVoiceWalkthrough();
               setActiveStepIdx(idx);
-              if (onSelectStep) onSelectStep(step);
+              if (onSelectStep) onSelectStep(step, { userInitiated: true });
             }}
             onInspectCode={(step) => {
-              if (onSelectStep) onSelectStep(step);
+              if (onSelectStep) onSelectStep(step, { userInitiated: true });
             }}
           />
         )}
