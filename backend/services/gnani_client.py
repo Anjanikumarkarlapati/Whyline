@@ -116,6 +116,110 @@ def normalize_gnani_language(language: str) -> str:
     return "english"
 
 
+_BCP47_MAP = {
+    "te": "te-IN",
+    "telugu": "te-IN",
+    "hi": "hi-IN",
+    "hindi": "hi-IN",
+    "en": "en-IN",
+    "english": "en-IN",
+    "ta": "ta-IN",
+    "tamil": "ta-IN",
+    "kn": "kn-IN",
+    "kannada": "kn-IN",
+    "ml": "ml-IN",
+    "malayalam": "ml-IN",
+    "mr": "mr-IN",
+    "marathi": "mr-IN",
+    "bn": "bn-IN",
+    "bengali": "bn-IN",
+    "gu": "gu-IN",
+    "gujarati": "gu-IN",
+    "pa": "pa-IN",
+    "punjabi": "pa-IN",
+}
+
+
+def to_gnani_api_language_code(language: str) -> str:
+    """Maps short or full language names to official Gnani Vachana BCP-47 locale codes."""
+    raw = (language or "en-IN").strip()
+    low = raw.lower()
+    if low in ("auto", "indic-auto"):
+        return "auto"
+    if "-" in raw and len(raw) >= 4:
+        return raw
+    return _BCP47_MAP.get(low, _BCP47_MAP.get(low[:2], "en-IN"))
+
+
+GNANI_V3_VOICES = (
+    "Shivani", "Avinash", "Kalpana", "Lakshmi", "Shubham", "Prakash",
+    "Devansh", "Yashraj", "Chetana", "Vasudha", "Harshad", "Riyaa", "Tarika",
+)
+# Official 42 Timbre v2.5 voices from https://docs.gnani.ai/api/TTS/available-voices
+GNANI_V2_VOICES = (
+    # English (en-IN)
+    "Pranav", "Kaveri", "Trupti", "Devika", "Shlok", "Girish",
+    # Hindi (hi-IN) & Hinglish (hi-en)
+    "Bhavna", "Nalini", "Yashvi", "Urmila", "Jwala", "Chitra", "Ambuja",
+    "Deepak", "Roopesh", "Vikrant", "Hemraj", "Jalaj", "Omkar", "Poorvi",
+    # Telugu (te-IN)
+    "Suhana", "Lehara", "Lavanya", "Yukti", "Varuni",
+    # Tamil (ta-IN)
+    "Asmita", "Trisha", "Brinda", "Vedika", "Noopur",
+    # Kannada (kn-IN)
+    "Saanvi", "Kavin",
+    # Malayalam (ml-IN)
+    "Reshma", "Riyaan",
+    # Marathi (mr-IN)
+    "Zahira", "Ishaan",
+    # Bengali (bn-IN)
+    "Kirra", "Dhruva",
+    # Gujarati (gu-IN)
+    "Falak", "Veera",
+    # Punjabi (pa-IN)
+    "Mehuli", "Zayan",
+)
+_GNANI_V3_SET = set(GNANI_V3_VOICES)
+_GNANI_V2_SET = set(GNANI_V2_VOICES)
+_VOICE_CANONICAL_MAP = {v.lower(): v for v in (*GNANI_V3_VOICES, *GNANI_V2_VOICES)}
+
+
+def normalize_gnani_voice(voice: str | None) -> str | None:
+    """Case-insensitive canonical lookup for supported Gnani Timbre TTS voices."""
+    if not voice:
+        return None
+    cleaned = str(voice).strip()
+    return _VOICE_CANONICAL_MAP.get(cleaned.lower(), cleaned)
+
+
+def resolve_gnani_voice_and_model(
+    voice: str | None,
+    language: str = "en-IN",
+    model: str | None = None,
+) -> tuple[str, str]:
+    """Resolves compatible (timbre_model, voice_name) pair to eliminate Gnani 400 mismatches."""
+    gnani_lang = normalize_gnani_language(language)
+    canonical_voice = normalize_gnani_voice(voice)
+    default_v3 = "Avinash" if gnani_lang == "telugu" else ("Kalpana" if gnani_lang == "hindi" else "Shivani")
+    default_v2 = "Suhana" if gnani_lang == "telugu" else ("Bhavna" if gnani_lang == "hindi" else "Pranav")
+
+    if model:
+        active_model = model
+        if active_model == "timbre-v3.0":
+            active_voice = canonical_voice if canonical_voice in _GNANI_V3_SET else default_v3
+        elif active_model == "timbre-v2.5":
+            active_voice = canonical_voice if canonical_voice in _GNANI_V2_SET else default_v2
+        else:
+            active_voice = canonical_voice if canonical_voice in (_GNANI_V3_SET | _GNANI_V2_SET) else default_v2
+        return active_model, active_voice
+
+    if canonical_voice in _GNANI_V3_SET:
+        return "timbre-v3.0", canonical_voice
+    if canonical_voice in _GNANI_V2_SET:
+        return "timbre-v2.5", canonical_voice
+    return "timbre-v2.5", default_v2
+
+
 def normalize_stt_language(language: str) -> str:
     """Maps language identifiers to Vachana STT locale codes (te-IN, hi-IN, en-IN)."""
     lang = (language or "en-IN").strip()
@@ -259,10 +363,12 @@ class GnaniSpeechClient:
         language: str = "te-IN",
         repo_vocab: list[str] | None = None,
         force_live: bool = False,
+        model: str = "prisma-v2.5",
     ) -> dict:
-        """Calls Gnani Vachana Prisma v2.5 STT REST endpoint when API key is set,
+        """Calls Gnani Vachana Prisma STT REST endpoint when API key is set,
         or handles code-mixed transliteration fallback and AST vocabulary rescoring.
         """
+        active_stt_model = "prisma-v3.0" if "3" in str(model or "") else "prisma-v2.5"
         current_test = os.getenv("PYTEST_CURRENT_TEST", "")
         in_pytest = bool(current_test) and "test_live" not in current_test
         is_test_live = "test_live" in current_test
@@ -272,7 +378,7 @@ class GnaniSpeechClient:
         use_live = bool(self.api_key and audio_bytes) and (
             force_live or not in_pytest or explicit_invalid_key
         )
-        provider_mode = "gnani-prisma-v2.5-live" if use_live else "gnani-prisma-v2.5-sandbox"
+        provider_mode = f"gnani-{active_stt_model}-live" if use_live else f"gnani-{active_stt_model}-sandbox"
         raw_text = (fallback_text or "").strip()
         stt_lang = normalize_stt_language(language)
 
@@ -285,7 +391,8 @@ class GnaniSpeechClient:
             }
             form_data = {
                 "language_code": stt_lang,
-                "model": "prisma-v2.5",
+                "model": active_stt_model,
+                "format": "transcribe",
             }
             resp = None
             max_retries = 1 if bool(current_test) else 5
@@ -320,7 +427,7 @@ class GnaniSpeechClient:
                         break
 
             if resp is not None and resp.status_code == 200:
-                provider_mode = "gnani-prisma-v2.5-live"
+                provider_mode = f"gnani-{active_stt_model}-live"
                 try:
                     resp_data = resp.json()
                     if isinstance(resp_data, dict):
@@ -343,9 +450,9 @@ class GnaniSpeechClient:
                     detected_language = stt_lang
             else:
                 if is_test_live and not explicit_invalid_key and self.stt_rest_url == GNANI_STT_REST_URL:
-                    provider_mode = "gnani-prisma-v2.5-live"
+                    provider_mode = f"gnani-{active_stt_model}-live"
                 else:
-                    provider_mode = "gnani-prisma-v2.5-fallback"
+                    provider_mode = f"gnani-{active_stt_model}-fallback"
                 detected_language = stt_lang
                 if not raw_text:
                     if stt_lang.startswith("te"):
@@ -386,7 +493,7 @@ class GnaniSpeechClient:
 
         rescore_result = self.rescore_ast_vocabulary(raw_text, repo_vocab=repo_vocab)
         return {
-            "model": "prisma-v2.5",
+            "model": active_stt_model,
             "ws_endpoint": self.stt_ws_url,
             "provider_mode": provider_mode,
             "language": language,
@@ -452,34 +559,76 @@ class GnaniSpeechClient:
         }
 
     @staticmethod
-    def _wrap_pcm_as_wav(raw_pcm: bytes, sample_rate: int = 16000, enhance: bool = True) -> bytes:
-        """Wraps raw 16-bit linear PCM into a WAV container with anti-aliasing filtering,
-        rumble elimination (75Hz high-pass), 3.5kHz vocal presence EQ, and peak normalization."""
-        even_len = len(raw_pcm) - (len(raw_pcm) % 2)
-        pcm_data = raw_pcm[:even_len]
-        if even_len < 480:
+    def _wrap_pcm_as_wav(
+        raw_pcm: bytes,
+        sample_rate: int = 16000,
+        enhance: bool = True,
+        source_sample_rate: int | None = None,
+        channels: int = 1,
+    ) -> bytes:
+        """Wraps raw 16-bit PCM (or resamples RIFF WAV) to mono WAV at `sample_rate`.
+        Inspects RIFF headers so 48kHz PCM/WAV resamples cleanly to 16kHz without double-decimating 16kHz input."""
+        pcm_data = raw_pcm
+        src_rate = source_sample_rate
+        src_channels = max(1, int(channels or 1))
+        sampwidth = 2
+
+        if raw_pcm.startswith(b"RIFF") and len(raw_pcm) >= 44:
+            try:
+                with wave.open(io.BytesIO(raw_pcm), "rb") as wf:
+                    src_channels = max(1, wf.getnchannels())
+                    sampwidth = wf.getsampwidth()
+                    src_rate = wf.getframerate()
+                    pcm_data = wf.readframes(wf.getnframes())
+                if (
+                    src_rate == sample_rate
+                    and src_channels == 1
+                    and sampwidth == 2
+                ):
+                    return raw_pcm
+            except Exception:
+                pcm_data = raw_pcm[44:]
+                src_rate = src_rate or 48000
+
+        if src_rate is None:
+            src_rate = 48000
+
+        frame_align = max(2, sampwidth * src_channels)
+        aligned_len = len(pcm_data) - (len(pcm_data) % frame_align)
+        pcm_data = pcm_data[:aligned_len]
+        if aligned_len < frame_align * 8:
             buf = io.BytesIO()
             with wave.open(buf, "wb") as wf:
                 wf.setnchannels(1)
                 wf.setsampwidth(2)
                 wf.setframerate(sample_rate)
-                wf.writeframes(pcm_data)
+                wf.writeframes(pcm_data if sampwidth == 2 and src_channels == 1 else b"")
             return buf.getvalue()
 
         try:
             import numpy as np
             from scipy import signal
 
-            samples_int16 = np.frombuffer(pcm_data, dtype=np.int16)
-            samples = samples_int16.astype(np.float32) / 32768.0
+            if sampwidth == 2:
+                samples_int = np.frombuffer(pcm_data, dtype=np.int16).astype(np.float32) / 32768.0
+            elif sampwidth == 4:
+                samples_int = np.frombuffer(pcm_data, dtype=np.int32).astype(np.float32) / 2147483648.0
+            else:
+                samples_int = (np.frombuffer(pcm_data, dtype=np.uint8).astype(np.float32) - 128.0) / 128.0
 
-            if enhance:
-                # 1. 75Hz high-pass filter: eliminates DC bias, sub-bass mud, and mic rumble
-                b_hp, a_hp = signal.butter(2, 75.0 / 24000.0, btype="highpass")
+            if src_channels > 1:
+                samples = samples_int.reshape(-1, src_channels).mean(axis=1)
+            else:
+                samples = samples_int
+
+            if enhance and len(samples) >= 32:
+                nyquist = max(1000.0, float(src_rate) / 2.0)
+                hp_wn = min(0.95, 75.0 / nyquist)
+                b_hp, a_hp = signal.butter(2, hp_wn, btype="highpass")
                 samples = signal.lfilter(b_hp, a_hp, samples)
 
-                # 2. Vocal presence EQ: +2.5dB at 3500Hz (Q=1.2) for speech intelligibility & consonant clarity
-                w0 = 2.0 * np.pi * 3500.0 / 48000.0
+                eq_freq = min(3500.0, float(src_rate) * 0.4)
+                w0 = 2.0 * np.pi * eq_freq / float(src_rate)
                 alpha = np.sin(w0) / (2.0 * 1.2)
                 A = 10.0 ** (2.5 / 40.0)
                 b0 = 1.0 + alpha * A
@@ -494,29 +643,46 @@ class GnaniSpeechClient:
                     samples,
                 )
 
-                # 3. Peak normalization to -1.0 dBFS (0.90 max amplitude) with soft limiting
                 peak = float(np.max(np.abs(samples)))
                 if peak > 0.02:
                     samples = (samples / peak) * 0.90
 
-            # 4. Polyphase anti-aliasing resampling (prevents metallic foldover distortion)
-            if sample_rate == 16000 and len(samples) >= 480:
-                samples = signal.resample_poly(samples, 1, 3)
-            elif sample_rate == 24000 and len(samples) >= 480:
-                samples = signal.resample_poly(samples, 1, 2)
+            if src_rate != sample_rate and len(samples) >= 32:
+                g = math.gcd(int(src_rate), int(sample_rate))
+                up = max(1, int(sample_rate) // g)
+                down = max(1, int(src_rate) // g)
+                samples = signal.resample_poly(samples, up, down)
 
             out_int16 = (np.clip(samples, -1.0, 1.0) * 32767.0).astype(np.int16)
             pcm_out = out_int16.tobytes()
         except Exception:
-            if sample_rate == 16000 and even_len >= 4800:
-                total_samples = even_len // 2
-                samples_48k = struct.unpack(f"<{total_samples}h", pcm_data)
-                # 3-tap moving average anti-aliasing before 3:1 decimation
-                samples_16k = [
-                    (samples_48k[i] + samples_48k[min(i + 1, total_samples - 1)] + samples_48k[min(i + 2, total_samples - 1)]) // 3
-                    for i in range(0, total_samples, 3)
-                ]
-                pcm_out = struct.pack(f"<{len(samples_16k)}h", *samples_16k)
+            if sampwidth == 2:
+                total_frames = aligned_len // frame_align
+                unpacked = struct.unpack(f"<{total_frames * src_channels}h", pcm_data)
+                if src_channels > 1:
+                    mono = [
+                        sum(unpacked[i * src_channels : (i + 1) * src_channels]) // src_channels
+                        for i in range(total_frames)
+                    ]
+                else:
+                    mono = list(unpacked)
+
+                if src_rate == sample_rate:
+                    out_samples = mono
+                elif src_rate == 48000 and sample_rate == 16000 and len(mono) >= 3:
+                    usable = (len(mono) // 3) * 3
+                    out_samples = [
+                        (mono[i] + mono[i + 1] + mono[i + 2]) // 3
+                        for i in range(0, usable, 3)
+                    ]
+                else:
+                    ratio = float(src_rate) / float(sample_rate)
+                    out_len = max(1, int(round(len(mono) / ratio)))
+                    out_samples = [
+                        mono[min(len(mono) - 1, int(idx * ratio))]
+                        for idx in range(out_len)
+                    ]
+                pcm_out = struct.pack(f"<{len(out_samples)}h", *out_samples)
             else:
                 pcm_out = pcm_data
 
@@ -550,21 +716,9 @@ class GnaniSpeechClient:
         wav_path = output_dir / f"{file_stem}.wav"
         gnani_lang = normalize_gnani_language(language)
 
-        v3_voices = {"Shivani", "Avinash", "Kalpana", "Lakshmi", "Shubham", "Prakash", "Devansh"}
-        v2_voices = {"Nalini", "Bhavna", "Pranav", "Yashvi", "Urmila", "Jwala", "Chitra", "Ambuja", "Deepak", "Roop"}
-
-        # Auto-select model based on voice characteristics if not explicitly forced
-        if model:
-            active_model = model
-        elif voice in v3_voices:
-            active_model = "timbre-v3.0"
-        else:
-            active_model = "timbre-v2.5"
-
-        if voice in v3_voices or voice in v2_voices:
-            active_voice = voice
-        else:
-            active_voice = "Shivani" if active_model == "timbre-v3.0" else "Nalini"
+        active_model, active_voice = resolve_gnani_voice_and_model(
+            voice=voice, language=language, model=model
+        )
 
         raw_input_text = (text or "WhyLine Spoken Fence audio cue.").strip()[:420]
         # Phonetic pronunciation enhancement for code identifiers and technical tokens
@@ -600,13 +754,20 @@ class GnaniSpeechClient:
         provider_mode = f"gnani-{active_model}-live" if use_live else f"gnani-{active_model}-sandbox"
 
         if use_live:
+            api_lang = to_gnani_api_language_code(language)
             payload_dict: dict = {
                 "model": active_model,
                 "voice": active_voice,
                 "text": clean_text,
-                "language": gnani_lang,
-                "sample_rate": sample_rate,
-                "format": "wav",
+                "language": api_lang,
+                "speed": 1.0,
+                "audio_config": {
+                    "sample_rate": sample_rate,
+                    "num_channels": 1,
+                    "sample_width": 2,
+                    "encoding": "linear_pcm",
+                    "container": "wav",
+                },
             }
             if speaker_embedding:
                 payload_dict["speaker_embedding"] = speaker_embedding
@@ -620,8 +781,8 @@ class GnaniSpeechClient:
                     "Content-Type": "application/json",
                 }
                 resp = None
-                max_retries = 1 if bool(current_test) else 4
-                req_timeout = 2.0 if bool(current_test) else 15.0
+                max_retries = 3 if (force_live or not current_test) else 1
+                req_timeout = 15.0 if (force_live or not current_test) else 2.0
                 with _GNANI_CALL_LOCK:
                     for attempt in range(max_retries):
                         try:
@@ -652,22 +813,44 @@ class GnaniSpeechClient:
                 if resp is not None and resp.status_code == 200:
                     raw_bytes = resp.content
                     content_type = resp.headers.get("Content-Type", "")
+                    hdr_rate_raw = resp.headers.get("X-Sample-Rate") or resp.headers.get("x-sample-rate")
+                    try:
+                        hdr_rate = int(hdr_rate_raw) if hdr_rate_raw else None
+                    except (TypeError, ValueError):
+                        hdr_rate = None
+
                     if raw_bytes.startswith(b"RIFF"):
-                        wav_bytes = raw_bytes
+                        wav_bytes = self._wrap_pcm_as_wav(
+                            raw_bytes,
+                            sample_rate=sample_rate,
+                            enhance=enhance,
+                            source_sample_rate=hdr_rate,
+                        )
                     elif "application/octet-stream" in content_type or (
                         len(raw_bytes) > 64 and not raw_bytes.startswith(b"{") and not raw_bytes.startswith(b"<")
                     ):
-                        wav_bytes = self._wrap_pcm_as_wav(raw_bytes, sample_rate=sample_rate, enhance=enhance)
+                        wav_bytes = self._wrap_pcm_as_wav(
+                            raw_bytes,
+                            sample_rate=sample_rate,
+                            enhance=enhance,
+                            source_sample_rate=hdr_rate,
+                        )
                     elif raw_bytes.startswith(b"{"):
                         try:
                             data = json.loads(raw_bytes.decode("utf-8"))
                             audio_b64 = data.get("audio_base64", "")
                             if audio_b64:
                                 decoded = base64.b64decode(audio_b64)
-                                wav_bytes = (
-                                    decoded
-                                    if decoded.startswith(b"RIFF")
-                                    else self._wrap_pcm_as_wav(decoded, sample_rate=sample_rate, enhance=enhance)
+                                json_rate_raw = data.get("sample_rate")
+                                try:
+                                    json_rate = int(json_rate_raw) if json_rate_raw else hdr_rate
+                                except (TypeError, ValueError):
+                                    json_rate = hdr_rate
+                                wav_bytes = self._wrap_pcm_as_wav(
+                                    decoded,
+                                    sample_rate=sample_rate,
+                                    enhance=enhance,
+                                    source_sample_rate=json_rate,
                                 )
                             else:
                                 raise ValueError("No audio_base64 in response")

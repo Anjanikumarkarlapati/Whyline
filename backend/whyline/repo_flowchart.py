@@ -432,13 +432,176 @@ def scan_github_repo_flowchart(
         {"from": "FLOW-04", "to": "FLOW-05", "label": "Invariant & Config Verification"},
     ]
 
+    full_stack_breakdown = {
+        "frontend": "Android Native (Jetpack Compose / Java) & React 19 Dashboard",
+        "backend": "Spring Boot 3.4 on Java 21 + Python FastAPI Services",
+        "database": "PostgreSQL 16 + Redis 7 Failover Store",
+        "apis_and_services": "Razorpay / NPCI Settlement Webhooks + Gnani Vachana TTS/STT",
+        "auth": "JWT Clock-Skew Ingress Filter (180s NTP Drift Tolerance)",
+        "api_keys_summary": "DATABASE_URL, REDIS_HOST, GNANI_API_KEY, GEMINI_API_KEY",
+        "runtime": "JVM 21 + Python 3.12 on OCI Containers",
+        "architecture_style": "Spoken Fence Guarded Settlement & Imaging Pipeline",
+    }
+    weaknesses = [
+        "Clock-skew and token verification tolerances in JwtClockSkewFilter.java must stay aligned with key rotation policies.",
+        "Shared persistence mutations across PostgreSQL and Redis require strict idempotency keys and epsilon_bias rounding guards.",
+        "Synchronous retry loops (retryCount = 5) in GatewayRouter.java can hold virtual threads during prolonged midnight packet drops.",
+    ]
+    improvements = [
+        "Enforce strict boundary contracts between JwtClockSkewFilter.java and GatewayRouter.java with automated JUnit and Pytest contract tests.",
+        "Add circuit-breaker telemetry around DicomShaderPipeline.java and patient_queue.py worker pacing.",
+        "Complete gateway.version v2 cutover in config/application.yml to retire legacy v1 packet-drop retry loops safely.",
+    ]
+    best_alternative_stack = {
+        "name": "Rust (Axum + Tokio + SQLx) or Go 1.22 + pgx",
+        "reason": "Provides predictable sub-millisecond tail latency, zero GC pause jitter during midnight settlement spikes, and single-binary deployment.",
+        "migration_fit": "Recommended when ultra-low memory overhead on edge clinic appliances outweighs existing JVM/Python ecosystem plugins.",
+    }
+    mermaid_layers = [
+        {
+            "id": "entry",
+            "key": "entry",
+            "number": 1,
+            "label": "Entry Points & UI",
+            "title": "Entry Points & Presentation",
+            "description": f"Where clinical tablets and checkout clients enter {short_name}.",
+            "items": [f3["file_path"], "React 19 Dashboard"],
+        },
+        {
+            "id": "auth",
+            "key": "auth",
+            "number": 2,
+            "label": "Auth & Security Guards",
+            "title": "Auth & Security Guards",
+            "description": "JWT clock-skew filter and Spoken Fence invariant guards.",
+            "items": [f"{f3['id']}: {f3['symbol_name']}", f"{f1['id']}: retryCount = 5"],
+        },
+        {
+            "id": "core",
+            "key": "core",
+            "number": 3,
+            "label": "Core Modules & Logic",
+            "title": "Core Modules & Logic",
+            "description": "Settlement routing, DICOM GPU frame pacing, and tax rounding logic.",
+            "items": [f1["file_path"], f2["file_path"], f8["file_path"]],
+        },
+        {
+            "id": "data",
+            "key": "data",
+            "number": 4,
+            "label": "Database & State",
+            "title": "Database & State",
+            "description": "PostgreSQL ledger storage and Redis session failover state.",
+            "items": ["PostgreSQL 16 Ledger", "Redis Session Store", f8["file_path"]],
+        },
+        {
+            "id": "external",
+            "key": "ext",
+            "number": 5,
+            "label": "External Services & APIs",
+            "title": "External Services & APIs",
+            "description": "Banking gateway webhooks, Gnani Vachana speech pipeline, and environment secrets.",
+            "items": ["Razorpay / NPCI v1 Gateway", "Gnani Vachana TTS/STT", "GNANI_API_KEY"],
+        },
+        {
+            "id": "deploy",
+            "key": "deploy",
+            "number": 6,
+            "label": "Runtime & Deployment",
+            "title": "Runtime & Deployment",
+            "description": "Config cutover watcher, MCP gate, and container runtime.",
+            "items": ["config/application.yml", "whyline-mcp CI Gate", "Docker / Cloud Run"],
+        },
+    ]
+    mermaid_code = "\n".join(
+        [
+            "flowchart TD",
+            "  classDef entryLayer fill:#ECEAD0,stroke:#545333,color:#2A2919,stroke-width:2px",
+            "  classDef authLayer fill:#F5EED8,stroke:#8F5A08,color:#2A2919,stroke-width:2px",
+            "  classDef coreLayer fill:#EAE8CA,stroke:#3E3D25,color:#2A2919,stroke-width:2px",
+            "  classDef dataLayer fill:#E4ECE6,stroke:#2E5E4E,color:#2A2919,stroke-width:2px",
+            "  classDef externalLayer fill:#E3ECF2,stroke:#3B6E91,color:#2A2919,stroke-width:2px",
+            "  classDef deployLayer fill:#EDE8E4,stroke:#6B6A55,color:#2A2919,stroke-width:2px",
+            '  subgraph L1_ENTRY["1. Entry Points and Surface"]',
+            f'    E1["Step 1 Ingress: {f3["file_path"]}"]:::entryLayer',
+            '  end',
+            '  subgraph L2_AUTH["2. Auth and Safety Guards"]',
+            f'    A1["{f3["id"]}: Clock Skew 180s Guard"]:::authLayer',
+            f'    A2["{f1["id"]}: retryCount = 5 Invariant"]:::authLayer',
+            '  end',
+            '  subgraph L3_CORE["3. Core Modules and Data Flow"]',
+            f'    C1["Step 2 Router: {f1["file_path"]}"]:::coreLayer',
+            f'    C2["Step 3 Pacing: {f2["file_path"]}"]:::coreLayer',
+            '  end',
+            '  subgraph L4_DATA["4. Database and Persistence"]',
+            f'    D1["Step 4 Ledger: {f8["file_path"]} (epsilon_bias)"]:::dataLayer',
+            '  end',
+            '  subgraph L5_EXTERNAL["5. External Services and Env"]',
+            '    X1["Payment Gateway + Gnani Voice API"]:::externalLayer',
+            '  end',
+            '  subgraph L6_DEPLOY["6. Runtime and Deployment"]',
+            '    P1["Step 5 Config Gate: config/application.yml"]:::deployLayer',
+            '  end',
+            "  E1 --> A1 --> A2 --> C1 --> C2 --> D1",
+            "  C1 --> X1",
+            "  P1 -.-> C1",
+        ]
+    )
+
+    project_summary["full_stack_breakdown"] = full_stack_breakdown
+    project_summary["weaknesses"] = weaknesses
+    project_summary["improvements"] = improvements
+    project_summary["best_alternative_stack"] = best_alternative_stack
+    project_summary["architecture_layers"] = mermaid_layers
+    step_by_step_walkthrough = [
+        f"Step {s['step_number']} ({s['title']}): {s['simple_explanation']} ({s['file_path']})"
+        for s in enriched_steps
+    ]
+    project_summary["step_by_step_walkthrough"] = step_by_step_walkthrough
+
+    graph = {
+        "nodes": [
+            {
+                "id": s["node_id"],
+                "label": s["title"],
+                "phase": s.get("phase", "domain"),
+                "position": {"x": 40 + idx * 240, "y": 120},
+            }
+            for idx, s in enumerate(enriched_steps)
+        ],
+        "edges": edges,
+        "mind_map": {
+            "hub": {"id": "REPO-HUB", "label": repo_display, "phase": "hub", "position": {"x": 480, "y": 220}},
+            "branches": [
+                {
+                    "id": s["node_id"],
+                    "label": s["title"],
+                    "phase": s.get("phase", "domain"),
+                    "position": {"x": 140 if idx % 2 == 0 else 820, "y": 70 + (idx // 2) * 160},
+                }
+                for idx, s in enumerate(enriched_steps)
+            ],
+        },
+    }
+
     elapsed_ms = round((time.perf_counter() - t0) * 1000, 2)
     result = {
+        "status": "ok",
         "github_url": github_url,
         "repo_slug": repo_display,
         "repo_name": short_name,
         "language": language,
         "gnani_language": g_lang,
+        "architecture_style": full_stack_breakdown["architecture_style"],
+        "runtime_engine": full_stack_breakdown["runtime"],
+        "first_file": enriched_steps[0]["file_path"] if enriched_steps else f1["file_path"],
+        "mermaid_code": mermaid_code,
+        "mermaid_layers": mermaid_layers,
+        "architecture_layers": mermaid_layers,
+        "weaknesses": weaknesses,
+        "improvements": improvements,
+        "best_alternative_stack": best_alternative_stack,
+        "step_by_step_walkthrough": step_by_step_walkthrough,
         "project_summary": project_summary,
         "voice_agent": {
             "provider": "Gnani Vachana TTS",
@@ -457,7 +620,21 @@ def scan_github_repo_flowchart(
         "scan_latency_ms": elapsed_ms,
         "cached": False,
         "steps": enriched_steps,
+        "nodes": enriched_steps,
         "edges": edges,
+        "graph": graph,
+        "flowchart": {
+            "repo_name": short_name,
+            "language": language,
+            "architecture_style": full_stack_breakdown["architecture_style"],
+            "runtime_engine": full_stack_breakdown["runtime"],
+            "mermaid_code": mermaid_code,
+            "mermaid_layers": mermaid_layers,
+            "architecture_layers": mermaid_layers,
+            "steps": enriched_steps,
+            "nodes": enriched_steps,
+            "edges": edges,
+        },
     }
     has_fallback = any(s.get("tts_provider_mode") == "gnani-timbre-v2.5-fallback" for s in enriched_steps)
     if not has_fallback or not speech_client.api_key:

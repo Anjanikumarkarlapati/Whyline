@@ -4,7 +4,7 @@
  * or toggles back to a previously synthesized language (English, Hindi, Telugu).
  */
 
-const STORAGE_KEY = 'whyline-voice-response-cache-v1';
+const STORAGE_KEY = 'whyline-voice-response-cache-v3-gnani';
 const MAX_CACHE_ENTRIES = 50;
 
 const memoryCache = new Map();
@@ -37,17 +37,28 @@ function normalizeRepoName(repoFullName = '') {
 }
 
 /**
- * Builds a deterministic cache key for a given repository, question, and output language.
+ * Builds a deterministic cache key for a given repository, question, language,
+ * and optional provider/model/voice tuple (omits suffix when unqualified so legacy callers match).
  */
 export function buildVoiceCacheKey({
   repoFullName = 'HealthConnect/payment-gateway-v1',
   question = '',
   language = 'en-IN',
+  provider = '',
+  model = '',
+  voice = '',
 } = {}) {
   const repo = normalizeRepoName(repoFullName);
   const lang = normalizeLangLocale(language);
   const q = normalizeQuestionText(question);
-  return `${repo}::${lang}::${q}`;
+  const base = `${repo}::${lang}::${q}`;
+  const p = String(provider || '').trim().toLowerCase();
+  const m = String(model || '').trim().toLowerCase();
+  const v = String(voice || '').trim().toLowerCase();
+  if (!p && !m && !v) {
+    return base;
+  }
+  return `${base}::${p}::${m}::${v}`;
 }
 
 function readLocalStorageMap() {
@@ -106,23 +117,37 @@ export function getCachedVoiceResponse({
   repoFullName = 'HealthConnect/payment-gateway-v1',
   question = '',
   language = 'en-IN',
+  provider = '',
+  model = '',
+  voice = '',
 } = {}) {
   const qNorm = normalizeQuestionText(question);
   if (!qNorm) return null;
 
   ensureHydrated();
-  const key = buildVoiceCacheKey({ repoFullName, question, language });
+  const key = buildVoiceCacheKey({ repoFullName, question, language, provider, model, voice });
+  let matchedKey = memoryCache.has(key) ? key : null;
 
-  if (memoryCache.has(key)) {
-    const existing = memoryCache.get(key);
+  // Unqualified callers (no provider/model/voice) can still hit the latest voice-scoped entry for that lang+question
+  if (!matchedKey && !provider && !model && !voice) {
+    const prefix = `${key}::`;
+    for (const candidateKey of memoryCache.keys()) {
+      if (candidateKey.startsWith(prefix)) {
+        matchedKey = candidateKey;
+      }
+    }
+  }
+
+  if (matchedKey && memoryCache.has(matchedKey)) {
+    const existing = memoryCache.get(matchedKey);
     // LRU refresh
-    memoryCache.delete(key);
+    memoryCache.delete(matchedKey);
     const updated = {
       ...existing,
       hitCount: (existing.hitCount || 0) + 1,
       lastAccessedAt: Date.now(),
     };
-    memoryCache.set(key, updated);
+    memoryCache.set(matchedKey, updated);
     syncMemoryToLocalStorage();
 
     stats.hits += 1;
@@ -130,7 +155,7 @@ export function getCachedVoiceResponse({
 
     return {
       hit: true,
-      key,
+      key: matchedKey,
       source: existing.fromStorage ? 'localStorage+memory' : 'memory',
       hitCount: updated.hitCount,
       cachedAt: updated.cachedAt,
@@ -140,6 +165,9 @@ export function getCachedVoiceResponse({
       audioUrl: updated.audioUrl,
       spokenReply: updated.spokenReply,
       language: updated.language,
+      provider: updated.provider || '',
+      model: updated.model || '',
+      voice: updated.voice || '',
     };
   }
 
@@ -155,6 +183,8 @@ export function setCachedVoiceResponse(
     repoFullName = 'HealthConnect/payment-gateway-v1',
     question = '',
     language = 'en-IN',
+    provider = '',
+    model = '',
     voice = 'Pranav',
   } = {},
   { response, sttTelemetry } = {}
@@ -164,13 +194,15 @@ export function setCachedVoiceResponse(
 
   ensureHydrated();
   const langLocale = normalizeLangLocale(language);
-  const key = buildVoiceCacheKey({ repoFullName, question, language: langLocale });
+  const key = buildVoiceCacheKey({ repoFullName, question, language: langLocale, provider, model, voice });
 
   const entry = {
     key,
     repoFullName: normalizeRepoName(repoFullName),
     question: String(question).trim(),
     language: langLocale,
+    provider,
+    model,
     voice,
     audioUrl: response.audio_url || '/api/audio/fence-001.wav',
     spokenReply: response.spoken_reply || response.spoken_answer || '',
@@ -197,6 +229,9 @@ export function setCachedVoiceResponse(
       repoFullName,
       question: rescoredQ,
       language: langLocale,
+      provider,
+      model,
+      voice,
     });
     memoryCache.set(rescoredKey, { ...entry, key: rescoredKey });
   }

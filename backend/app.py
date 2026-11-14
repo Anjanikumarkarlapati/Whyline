@@ -20,7 +20,14 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import yaml
 
-from backend.services.gnani_client import _load_dotenv_once, normalize_gnani_language
+from backend.services.gnani_client import (
+    GNANI_V2_VOICES,
+    GNANI_V3_VOICES,
+    _load_dotenv_once,
+    normalize_gnani_language,
+    normalize_gnani_voice,
+    resolve_gnani_voice_and_model,
+)
 from backend.whyline.ast_scanner import extract_repository_vocabulary
 from backend.whyline.cli_and_hooks import install_git_hooks
 from backend.whyline.fence_compiler import generate_junit_and_pytest_artifacts
@@ -123,6 +130,9 @@ class CoPilotAskRequest(BaseModel):
     language: str = "te-IN"
     fence_id: str | None = None
     voice: str = "Nalini"
+    provider: str = "gnani"
+    model: str | None = None
+    pacing: float = 1.0
     audio_base64: str | None = None
 
 
@@ -376,8 +386,11 @@ class GitScanRequest(BaseModel):
 
 
 class RepoFlowchartRequest(BaseModel):
-    github_url: str = "https://github.com/healthconnect-india/payment-gateway-service"
+    github_url: str | None = None
+    repo_url: str | None = None
+    repo: str | None = None
     language: str = "te-IN"
+    lang: str | None = None
     force_refresh: bool = False
 
 
@@ -391,8 +404,26 @@ class GnaniTtsRequest(BaseModel):
     text: str
     language: str = "en-IN"
     voice: str = "Nalini"
+    model: str | None = None
+    provider: str = "gnani"
+    pacing: float = 1.0
     sample_rate: int = 16000
     enhance: bool = True
+
+
+@app.get("/api/gnani/voices")
+async def list_gnani_voices() -> dict:
+    """Returns strict Gnani Timbre v3.0 / v2.5 TTS and Prisma v3.0 / v2.5 STT catalogs."""
+    return {
+        "status": "ok",
+        "provider": "gnani",
+        "models": ["timbre-v3.0", "timbre-v2.5"],
+        "stt_models": ["prisma-v3.0", "prisma-v2.5"],
+        "voices": [
+            *({"name": v, "model": "timbre-v3.0", "provider": "gnani"} for v in GNANI_V3_VOICES),
+            *({"name": v, "model": "timbre-v2.5", "provider": "gnani"} for v in GNANI_V2_VOICES),
+        ],
+    }
 
 
 @app.post("/api/copilot/ask")
@@ -418,7 +449,21 @@ async def ask_copilot(req: CoPilotAskRequest) -> dict:
             target_lang = req.language
     else:
         target_lang = req.language
-    return store.ask_repo_copilot(question=q_text, language=target_lang, voice=req.voice)
+
+    resolved_voice = normalize_gnani_voice(req.voice) or "Shivani"
+    resolved_model, active_voice = resolve_gnani_voice_and_model(
+        voice=resolved_voice, language=target_lang, model=req.model
+    )
+    payload = store.ask_repo_copilot(
+        question=q_text,
+        language=target_lang,
+        voice=active_voice,
+    )
+    if isinstance(payload, dict):
+        payload.setdefault("provider", "gnani")
+        payload.setdefault("model", resolved_model)
+        payload.setdefault("pacing", req.pacing)
+    return payload
 
 
 @app.post("/api/gemini/explain-codebase")
@@ -428,11 +473,14 @@ async def explain_codebase_endpoint(req: CoPilotAskRequest) -> dict:
 
 
 @app.post("/api/repo/scan-flowchart")
+@app.post("/api/repo/flowchart")
 async def scan_repo_flowchart_post(req: RepoFlowchartRequest) -> dict:
+    resolved_url = req.github_url or req.repo_url or req.repo or "https://github.com/healthconnect-india/payment-gateway-service"
+    resolved_lang = req.lang or req.language or "te-IN"
     return scan_github_repo_flowchart(
         store=store,
-        github_url=req.github_url,
-        language=req.language,
+        github_url=resolved_url,
+        language=resolved_lang,
         force_refresh=req.force_refresh,
     )
 
@@ -470,6 +518,9 @@ async def gnani_tts_endpoint(req: GnaniTtsRequest, request: Request) -> dict:
             text=req.text,
             language=req.language,
             voice=req.voice,
+            model=req.model,
+            provider=req.provider,
+            pacing=req.pacing,
             sample_rate=req.sample_rate,
             enhance=req.enhance,
         ),
@@ -478,14 +529,20 @@ async def gnani_tts_endpoint(req: GnaniTtsRequest, request: Request) -> dict:
 
 
 @app.get("/api/repo/scan-flowchart")
+@app.get("/api/repo/flowchart")
 async def scan_repo_flowchart_get(
-    github_url: str = "https://github.com/healthconnect-india/payment-gateway-service",
+    github_url: str | None = None,
+    repo_url: str | None = None,
+    repo: str | None = None,
     language: str = "te-IN",
+    lang: str | None = None,
 ) -> dict:
+    resolved_url = github_url or repo_url or repo or "https://github.com/healthconnect-india/payment-gateway-service"
+    resolved_lang = lang or language or "te-IN"
     return scan_github_repo_flowchart(
         store=store,
-        github_url=github_url,
-        language=language,
+        github_url=resolved_url,
+        language=resolved_lang,
         force_refresh=False,
     )
 
@@ -513,6 +570,9 @@ class TTSRequest(BaseModel):
     text: str
     language: str = "en-IN"
     voice: str = "Nalini"
+    model: str | None = None
+    provider: str = "gnani"
+    pacing: float = 1.0
     sample_rate: int = 16000
     enhance: bool = True
 
@@ -520,7 +580,7 @@ class TTSRequest(BaseModel):
 _TTS_RATE_LIMIT: dict[str, list[float]] = {}
 _TTS_RATE_LOCK = threading.Lock()
 ALLOWED_LANGUAGES = {"telugu", "hindi", "english", "te-in", "hi-in", "en-in", "te", "hi", "en"}
-ALLOWED_VOICES = {"Nalini", "Bhavna", "Pranav", "Shivani", "Avinash", "Kalpana", "Lakshmi", "Shubham"}
+ALLOWED_VOICES = set(GNANI_V3_VOICES) | set(GNANI_V2_VOICES)
 
 
 def _check_tts_rate_limit(client_ip: str, limit: int = 60, window_secs: float = 60.0) -> None:
@@ -585,7 +645,7 @@ async def synthesize_tts_endpoint(req: TTSRequest, request: Request) -> dict:
             detail=f"Unsupported language '{req.language}'. Allowed: telugu, hindi, english (or te-IN, hi-IN, en-IN)",
         )
 
-    clean_voice = req.voice.strip().capitalize()
+    clean_voice = normalize_gnani_voice(req.voice) or ""
     if clean_voice not in ALLOWED_VOICES:
         raise HTTPException(
             status_code=400,
@@ -595,7 +655,14 @@ async def synthesize_tts_endpoint(req: TTSRequest, request: Request) -> dict:
     cleanup_audio_cache(store.audio_dir, max_files=150, ttl_seconds=86400)
 
     norm_lang = normalize_gnani_language(req.language)
-    opaque_id = hashlib.sha256(f"{clean_voice}:{norm_lang}:{clean_text}:{req.sample_rate}:{req.enhance}".encode("utf-8")).hexdigest()[:16]
+    resolved_model, resolved_voice = resolve_gnani_voice_and_model(
+        voice=clean_voice,
+        language=req.language,
+        model=req.model,
+    )
+    opaque_id = hashlib.sha256(
+        f"gnani:{resolved_model}:{resolved_voice}:{norm_lang}:{clean_text}:{req.sample_rate}:{req.enhance}:{req.pacing}".encode("utf-8")
+    ).hexdigest()[:16]
     stem = f"tts_{opaque_id}"
 
     tts_meta = synthesize_timbre_audio(
@@ -603,17 +670,21 @@ async def synthesize_tts_endpoint(req: TTSRequest, request: Request) -> dict:
         output_dir=store.audio_dir,
         file_stem=stem,
         language=norm_lang,
-        voice=clean_voice,
+        voice=resolved_voice,
         sample_rate=req.sample_rate,
+        model=resolved_model,
         enhance=req.enhance,
     )
 
     return {
         "id": opaque_id,
         "audio_url": f"/api/audio/{stem}.wav",
+        "provider": "gnani",
         "provider_mode": tts_meta.get("provider_mode", "unknown"),
+        "model": tts_meta.get("model", resolved_model),
         "language": req.language,
-        "voice": clean_voice,
+        "voice": resolved_voice,
+        "pacing": req.pacing,
         "sample_rate": tts_meta.get("sample_rate", req.sample_rate),
         "clarity_enhanced": req.enhance,
     }

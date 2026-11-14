@@ -20,6 +20,11 @@ import { CodeBlock, FormattedText } from '../components/CodeText';
 import RepoFlowchartExplorer from '../components/RepoFlowchartExplorer';
 import { HybridRagDiagramIllustration } from '../components/illustrations/FieldIllustrations';
 import AudioWaveform from '../components/AudioWaveform';
+import VoiceLanguageDropdown, {
+  createGnaniMicRecorder,
+  getDefaultVoice,
+  inferModelForVoice,
+} from '../components/VoiceLanguageDropdown';
 
 function getStrategyRiskMeta(tone, rank) {
   const normalized = String(tone || '').toUpperCase();
@@ -68,12 +73,15 @@ const PR_PRESETS = [
 ];
 
 export default function VoiceCoPilotPage() {
-  const { lang, t } = useI18n();
+  const { lang, setLang, t } = useI18n();
   const [question, setQuestion] = useState(
     'How do we fix the double-charge bug in GatewayRouter.java without breaking the PR #212 midnight retry fence?'
   );
   const [outputMode, setOutputMode] = useState('voice_and_text');
-  const [selectedVoice, setSelectedVoice] = useState('Nalini');
+  const [providerEngine, setProviderEngine] = useState('gnani');
+  const [selectedModel, setSelectedModel] = useState('timbre-v3.0');
+  const [selectedSttModel, setSelectedSttModel] = useState('prisma-v3.0');
+  const [selectedVoice, setSelectedVoice] = useState(() => getDefaultVoice(lang, 'gnani', 'timbre-v3.0'));
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
   const [voiceState, setVoiceState] = useState('Idle'); // 'Idle' | 'Listening' | 'Thinking' | 'Speaking'
   const [voiceStatusText, setVoiceStatusText] = useState('');
@@ -85,99 +93,68 @@ export default function VoiceCoPilotPage() {
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [activeFlowStep, setActiveFlowStep] = useState(null);
 
-  const recognitionRef = useRef(null);
+  const micRecorderRef = useRef(null);
   const audioRef = useRef(null);
-
-  useEffect(() => {
-    if (lang === 'te') {
-      setSelectedVoice('Nalini');
-    } else if (lang === 'hi') {
-      setSelectedVoice('Bhavna');
-    } else {
-      setSelectedVoice('Pranav');
-    }
-  }, [lang]);
+  const skipLangEffectRef = useRef(false);
 
   const stopAudioPlayback = () => {
     if (audioRef.current) {
       audioRef.current.pause();
     }
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch {
-        // Ignore
-      }
-    }
     setIsPlayingAudio(false);
     setVoiceState('Idle');
   };
 
-  const speakResponse = (spokenText, audioUrl, langCode) => {
+  const speakResponse = (spokenText, audioUrl, langCode, voiceOverrides = {}) => {
+    const activeVoice = voiceOverrides.voice ?? selectedVoice;
+    const activeModel = voiceOverrides.model ?? selectedModel;
+    const activeRate = voiceOverrides.pacing ?? playbackSpeed;
+    const targetLang = langCode || (lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN');
+    const resolvedUrl =
+      audioUrl ||
+      (spokenText
+        ? `/api/tts/speak?lang=${encodeURIComponent(targetLang)}&voice=${encodeURIComponent(activeVoice)}&provider=gnani&model=${encodeURIComponent(activeModel)}&pacing=${encodeURIComponent(activeRate)}&text=${encodeURIComponent(spokenText)}`
+        : null);
+
+    if (!resolvedUrl) {
+      setIsPlayingAudio(false);
+      setVoiceState('Idle');
+      return;
+    }
+
     setVoiceState('Speaking');
     setIsPlayingAudio(true);
 
-    const fallbackSpeech = () => {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window && spokenText) {
-        try {
-          window.speechSynthesis.cancel();
-          const utter = new SpeechSynthesisUtterance(spokenText);
-          utter.lang = langCode || (lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN');
-          utter.rate = playbackSpeed;
-          utter.onend = () => {
-            setIsPlayingAudio(false);
-            setVoiceState('Idle');
-          };
-          utter.onerror = () => {
-            setIsPlayingAudio(false);
-            setVoiceState('Idle');
-          };
-          window.speechSynthesis.speak(utter);
-        } catch {
-          setIsPlayingAudio(false);
-          setVoiceState('Idle');
-        }
-      } else {
-        setIsPlayingAudio(false);
-        setVoiceState('Idle');
-      }
-    };
-
-    if (audioUrl) {
-      if (!audioRef.current) {
-        audioRef.current = new Audio(audioUrl);
-      } else {
-        audioRef.current.src = audioUrl;
-      }
-      audioRef.current.playbackRate = playbackSpeed;
-      audioRef.current.ontimeupdate = () => {
-        if (audioRef.current) setAudioCurrentTime(audioRef.current.currentTime);
-      };
-      audioRef.current.onloadedmetadata = () => {
-        if (audioRef.current && audioRef.current.duration) setAudioDuration(audioRef.current.duration);
-      };
-      audioRef.current.onended = () => {
-        setIsPlayingAudio(false);
-        setVoiceState('Idle');
-        setAudioCurrentTime(0);
-      };
-      audioRef.current.onerror = () => {
-        fallbackSpeech();
-      };
-      audioRef.current
-        .play()
-        .then(() => {
-          setIsPlayingAudio(true);
-        })
-        .catch(() => {
-          fallbackSpeech();
-        });
-    } else if (spokenText) {
-      fallbackSpeech();
+    if (!audioRef.current) {
+      audioRef.current = new Audio(resolvedUrl);
     } else {
+      audioRef.current.src = resolvedUrl;
+    }
+    audioRef.current.playbackRate = activeRate;
+    audioRef.current.ontimeupdate = () => {
+      if (audioRef.current) setAudioCurrentTime(audioRef.current.currentTime);
+    };
+    audioRef.current.onloadedmetadata = () => {
+      if (audioRef.current && audioRef.current.duration) setAudioDuration(audioRef.current.duration);
+    };
+    audioRef.current.onended = () => {
       setIsPlayingAudio(false);
       setVoiceState('Idle');
-    }
+      setAudioCurrentTime(0);
+    };
+    audioRef.current.onerror = () => {
+      setIsPlayingAudio(false);
+      setVoiceState('Idle');
+    };
+    audioRef.current
+      .play()
+      .then(() => {
+        setIsPlayingAudio(true);
+      })
+      .catch(() => {
+        setIsPlayingAudio(false);
+        setVoiceState('Idle');
+      });
   };
 
   const changePlaybackSpeed = (speed) => {
@@ -187,26 +164,51 @@ export default function VoiceCoPilotPage() {
     }
   };
 
-  const askRepo = async (queryText, autoSpeak = false, overrideVoice = null) => {
+  const askRepo = async (queryText, autoSpeak = false, voiceOptions = null) => {
+    const opts =
+      typeof voiceOptions === 'string' ? { voice: voiceOptions } : (voiceOptions || {});
     setLoading(true);
     setVoiceState('Thinking');
-    const langCode = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
-    const activeVoice = overrideVoice || selectedVoice;
+    const targetLangCode =
+      opts.langCode || (lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN');
+    const activeProvider = opts.provider ?? providerEngine;
+    const activeModel =
+      opts.model ?? selectedModel ?? inferModelForVoice(opts.voice ?? selectedVoice, activeProvider);
+    const activeVoice =
+      opts.voice ?? selectedVoice ?? getDefaultVoice(targetLangCode, activeProvider, activeModel);
+    const activePacing = opts.pacing ?? playbackSpeed;
+    const activeSttModel = opts.sttModel ?? selectedSttModel;
+    const q = queryText || question;
+
     try {
       const resp = await fetch('/api/copilot/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question: queryText || question,
-          language: langCode,
+          question: q,
+          language: targetLangCode,
           voice: activeVoice,
+          provider: activeProvider,
+          model: activeModel,
+          stt_model: activeSttModel,
+          pacing: activePacing,
+          audio_base64: opts.audioBase64 || null,
+          mime_type: opts.mimeType || 'audio/wav',
         }),
       });
       const data = await resp.json();
       setResponse(data);
       const spokenText = data?.spoken_reply || data?.spoken_answer || data?.simple_explanation;
+      const resolvedUrl =
+        data?.audio_url ||
+        `/api/tts/speak?lang=${encodeURIComponent(targetLangCode)}&voice=${encodeURIComponent(activeVoice)}&provider=gnani&model=${encodeURIComponent(activeModel)}&pacing=${encodeURIComponent(activePacing)}&text=${encodeURIComponent(spokenText || q)}`;
       if ((autoSpeak || outputMode === 'voice_only') && spokenText) {
-        speakResponse(spokenText, data.audio_url, langCode);
+        speakResponse(spokenText, resolvedUrl, targetLangCode, {
+          provider: 'gnani',
+          model: activeModel,
+          voice: activeVoice,
+          pacing: activePacing,
+        });
       } else {
         setVoiceState('Idle');
       }
@@ -219,7 +221,19 @@ export default function VoiceCoPilotPage() {
   };
 
   useEffect(() => {
-    askRepo(question, false);
+    if (skipLangEffectRef.current) {
+      skipLangEffectRef.current = false;
+      return () => stopAudioPlayback();
+    }
+    const nextVoice = getDefaultVoice(lang, 'gnani', selectedModel);
+    setSelectedVoice(nextVoice);
+    const nextLangCode = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
+    askRepo(question, false, {
+      langCode: nextLangCode,
+      voice: nextVoice,
+      provider: providerEngine,
+      model: selectedModel,
+    });
     return () => stopAudioPlayback();
   }, [lang]);
 
@@ -240,55 +254,58 @@ export default function VoiceCoPilotPage() {
     askRepo(q, outputMode !== 'text_only');
   };
 
-  const toggleVoiceInput = () => {
+  const toggleVoiceInput = async () => {
     if (voiceState === 'Listening') {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
+      const recordedWav = micRecorderRef.current ? await micRecorderRef.current.stop() : null;
+      micRecorderRef.current = null;
       setVoiceState('Idle');
+      if (recordedWav?.base64) {
+        setVoiceStatusText(`Transcribing WAV via Gnani ${selectedSttModel}…`);
+        const targetLangCode = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
+        try {
+          const sttResp = await fetch('/api/gnani/stt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              audio_base64: recordedWav.base64,
+              mime_type: recordedWav.mimeType,
+              audio_text_hint: question,
+              model: selectedSttModel,
+              language: targetLangCode,
+            }),
+          });
+          if (sttResp.ok) {
+            const sttData = await sttResp.json();
+            const spoken = sttData?.rescored_transcript || sttData?.raw_transcript || question;
+            if (spoken) setQuestion(spoken);
+            setVoiceStatusText(`Transcribed (${sttData?.provider_mode || selectedSttModel}): "${spoken}"`);
+            askRepo(spoken, outputMode !== 'text_only');
+            return;
+          }
+        } catch {
+          // fallback below
+        }
+        askRepo(question, outputMode !== 'text_only', {
+          audioBase64: recordedWav.base64,
+          mimeType: recordedWav.mimeType,
+        });
+      }
       return;
     }
 
-    const SpeechRecognition =
-      typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
-
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognitionRef.current = recognition;
-      recognition.lang = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-
-      recognition.onstart = () => {
-        setVoiceState('Listening');
-        setVoiceStatusText('Listening… Speak your repository or architecture question.');
-      };
-
-      recognition.onresult = (event) => {
-        const transcript = event.results?.[0]?.[0]?.transcript || '';
-        if (transcript) {
-          setQuestion(transcript);
-          setVoiceStatusText(`Transcribed via Voice: "${transcript}"`);
-          askRepo(transcript, outputMode !== 'text_only');
+    setVoiceState('Listening');
+    setVoiceStatusText(`Listening via Gnani ${selectedSttModel}… Click mic again to transcribe.`);
+    createGnaniMicRecorder()
+      .then((rec) => {
+        micRecorderRef.current = rec;
+        if (!rec) {
+          setVoiceStatusText(`Mic unavailable — type your question to transcribe via Gnani ${selectedSttModel}.`);
         }
-      };
-
-      recognition.onerror = () => {
-        setVoiceStatusText('Voice sample loaded via Gnani Prisma v3.0 fallback.');
-        askRepo(question, outputMode !== 'text_only');
-      };
-
-      recognition.onend = () => {
-        if (voiceState === 'Listening') {
-          setVoiceState('Idle');
-        }
-      };
-
-      recognition.start();
-    } else {
-      setVoiceStatusText('Captured voice query via Gnani Prisma v3.0 STT.');
-      askRepo(question, outputMode !== 'text_only');
-    }
+      })
+      .catch(() => {
+        micRecorderRef.current = null;
+        setVoiceStatusText(`Mic unavailable — type your question to transcribe via Gnani ${selectedSttModel}.`);
+      });
   };
 
   return (
@@ -302,7 +319,7 @@ export default function VoiceCoPilotPage() {
         <div className="chip-row" aria-live="polite" aria-atomic="true">
           <span className="status-badge status-good">
             <CheckCircle size={14} weight="regular" aria-hidden="true" />
-            <span className="mono-metric">Gemini 3.8 Flash + Gnani Timbre v3.0</span>
+            <span className="mono-metric">Gemini 2.5 Flash + Gnani Timbre v3.0</span>
           </span>
         </div>
       </section>
@@ -347,7 +364,7 @@ export default function VoiceCoPilotPage() {
             }}
           >
             <Microphone size={14} weight={voiceState === 'Listening' ? 'fill' : 'regular'} aria-hidden="true" />
-            <span>1. Gnani STT {voiceState === 'Listening' ? '(Listening…)' : '(Prisma v3.0)'}</span>
+            <span>1. Gnani STT {voiceState === 'Listening' ? '(Listening…)' : `(${selectedSttModel})`}</span>
           </div>
 
           <ArrowRight size={14} style={{ color: 'var(--ink-muted)' }} aria-hidden="true" />
@@ -370,7 +387,7 @@ export default function VoiceCoPilotPage() {
           >
             <Brain size={14} weight={voiceState === 'Thinking' ? 'fill' : 'regular'} aria-hidden="true" />
             <span>
-              2. Gemini API {voiceState === 'Thinking' ? '(Thinking in Simple Terms…)' : '(Simple Thinking)'}
+              2. Gemini Code Brain {voiceState === 'Thinking' ? '(Analyzing Repo…)' : '(Text/AST Only)'}
             </span>
           </div>
 
@@ -395,7 +412,9 @@ export default function VoiceCoPilotPage() {
             <SpeakerHigh size={14} weight={voiceState === 'Speaking' ? 'fill' : 'regular'} aria-hidden="true" />
             <span>
               3. Gnani Voice Agent{' '}
-              {voiceState === 'Speaking' ? `(Speaking as ${selectedVoice}…)` : `(${selectedVoice} • Timbre v3.0)`}
+              {voiceState === 'Speaking'
+                ? `(Speaking as ${selectedVoice}…)`
+                : `(${selectedVoice} • ${selectedModel})`}
             </span>
           </div>
         </div>
@@ -470,7 +489,7 @@ export default function VoiceCoPilotPage() {
                 isRecording={true}
                 duration={10}
                 title="Capturing Speech Input"
-                subtitle="Gnani Prisma v3.0 Acoustic Beamforming"
+                subtitle={`Gnani ${selectedSttModel} Acoustic Beamforming`}
                 onTogglePlay={toggleVoiceInput}
               />
             )}
@@ -503,66 +522,72 @@ export default function VoiceCoPilotPage() {
             <div
               style={{
                 display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px',
+                flexDirection: 'column',
+                gap: '10px',
                 paddingTop: '10px',
                 borderTop: '1px solid var(--hairline)',
               }}
             >
-              {/* Voice Agent Switcher */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                <span className="small-caps" style={{ fontSize: '11px', color: 'var(--ink-muted)' }}>
-                  Gnani Voice:
-                </span>
-                {[
-                  { id: 'Nalini', label: 'Nalini (Female • Crisp)' },
-                  { id: 'Bhavna', label: 'Bhavna (Female • Articulate)' },
-                  { id: 'Pranav', label: 'Pranav (Male • Authoritative)' },
-                ].map((v) => (
-                  <button
-                    key={v.id}
-                    type="button"
-                    className={`filter-chip ${selectedVoice === v.id ? 'active' : ''}`}
-                    style={{
-                      padding: '2px 8px',
-                      fontSize: '11px',
-                      borderRadius: '14px',
-                      border:
-                        selectedVoice === v.id
-                          ? '1px solid var(--accent)'
-                          : '1px solid var(--hairline-strong)',
-                      backgroundColor: selectedVoice === v.id ? 'var(--accent-wash)' : 'transparent',
-                      fontWeight: selectedVoice === v.id ? '600' : '400',
-                    }}
-                    onClick={() => {
-                      setSelectedVoice(v.id);
-                      askRepo(question, outputMode !== 'text_only', v.id);
-                    }}
-                  >
-                    {v.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Speed Buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span className="small-caps" style={{ fontSize: '11px', color: 'var(--ink-muted)' }}>
-                  Speed:
-                </span>
-                {[0.85, 1.0, 1.15, 1.25].map((spd) => (
-                  <button
-                    key={spd}
-                    type="button"
-                    className={`segmented-btn ${playbackSpeed === spd ? 'active' : ''}`}
-                    style={{ minHeight: '26px', padding: '0 6px', fontSize: '11px' }}
-                    onClick={() => changePlaybackSpeed(spd)}
-                  >
-                    {spd}x
-                  </button>
-                ))}
-              </div>
+              <VoiceLanguageDropdown
+                id="copilot-voice-lang-select"
+                value={lang}
+                provider={providerEngine}
+                model={selectedModel}
+                sttModel={selectedSttModel}
+                onSttModelChange={setSelectedSttModel}
+                voice={selectedVoice}
+                pacing={playbackSpeed}
+                disabled={loading}
+                onProviderChange={(provId, meta = {}) => {
+                  setProviderEngine(provId);
+                  if (meta.model) setSelectedModel(meta.model);
+                  if (meta.voice) setSelectedVoice(meta.voice);
+                  askRepo(question, outputMode !== 'text_only', {
+                    provider: provId,
+                    model: meta.model || selectedModel,
+                    voice: meta.voice || selectedVoice,
+                  });
+                }}
+                onModelChange={(nextModel, nextDefaultVoice, meta = {}) => {
+                  setSelectedModel(nextModel);
+                  if (nextDefaultVoice) setSelectedVoice(nextDefaultVoice);
+                  if (!meta.fromCascade) {
+                    askRepo(question, outputMode !== 'text_only', {
+                      provider: providerEngine,
+                      model: nextModel,
+                      voice: nextDefaultVoice || selectedVoice,
+                    });
+                  }
+                }}
+                onVoiceChange={(voiceName, meta = {}) => {
+                  setSelectedVoice(voiceName);
+                  const nextModel = meta.model || selectedModel;
+                  if (meta.model) setSelectedModel(meta.model);
+                  if (!meta.fromCascade) {
+                    askRepo(question, outputMode !== 'text_only', {
+                      provider: meta.provider || providerEngine,
+                      model: nextModel,
+                      voice: voiceName,
+                    });
+                  }
+                }}
+                onPacingChange={(rate) => changePlaybackSpeed(rate)}
+                onChange={(nextCode, option) => {
+                  skipLangEffectRef.current = true;
+                  setLang(nextCode);
+                  const nextVoice = option?.voice || selectedVoice;
+                  const nextModel = option?.model || selectedModel;
+                  const nextProvider = option?.provider || providerEngine;
+                  setSelectedVoice(nextVoice);
+                  setSelectedModel(nextModel);
+                  askRepo(question, outputMode !== 'text_only', {
+                    langCode: option?.locale || (nextCode === 'hi' ? 'hi-IN' : nextCode === 'te' ? 'te-IN' : 'en-IN'),
+                    voice: nextVoice,
+                    model: nextModel,
+                    provider: nextProvider,
+                  });
+                }}
+              />
 
               {/* Output Mode Switcher */}
               <div className="segmented-control" role="group" aria-label="Output mode preference">

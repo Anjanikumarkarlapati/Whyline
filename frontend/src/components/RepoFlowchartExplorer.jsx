@@ -84,12 +84,12 @@ export default function RepoFlowchartExplorer({
   const [error, setError] = useState(null);
   const [activeStepIdx, setActiveStepIdxState] = useState(0);
   const setActiveStepIdx = (next) => {
-    setActiveStepIdxState((prev) => {
-      const val = typeof next === 'function' ? next(prev) : next;
-      onActiveStepIdxChange?.(val);
-      return val;
-    });
+    setActiveStepIdxState((prev) => (typeof next === 'function' ? next(prev) : next));
   };
+
+  useEffect(() => {
+    onActiveStepIdxChange?.(activeStepIdx);
+  }, [activeStepIdx, onActiveStepIdxChange]);
 
   useEffect(() => {
     if (typeof externalActiveStepIdx === 'number' && externalActiveStepIdx !== activeStepIdx) {
@@ -389,11 +389,11 @@ export default function RepoFlowchartExplorer({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <GitBranch size={18} weight="regular" aria-hidden="true" />
             <h2 className="card-title" style={{ margin: 0 }}>
-              How This Repository Works (Step-by-Step Flowchart)
+              Understand Any Codebase Visually
             </h2>
           </div>
           <p className="form-helper" style={{ marginTop: '4px' }}>
-            See how a request enters the repository, how files connect to each other, and how data moves from start to finish.
+            Paste any GitHub URL or try a sample below. We draw a color-coded map and explain how every file connects in plain English.
           </p>
         </div>
 
@@ -406,9 +406,9 @@ export default function RepoFlowchartExplorer({
               </span>
             </span>
           )}
-          <span className="status-badge status-muted">
-            <SpeakerHigh size={14} weight="regular" aria-hidden="true" />
-            <span className="mono-metric">{voiceAgentStatus}</span>
+          <span className="status-badge status-muted" style={{ maxWidth: '100%', overflow: 'hidden' }}>
+            <SpeakerHigh size={14} weight="regular" aria-hidden="true" style={{ flexShrink: 0 }} />
+            <span className="mono-metric" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{voiceAgentStatus}</span>
           </span>
           <button
             id="btn-toggle-flowchart-fullscreen"
@@ -723,50 +723,45 @@ export default function RepoFlowchartExplorer({
           </div>
         )}
 
-        {/* Beginner Project Overview Card */}
+        {/* Beginner-Friendly Plain-English Starter Card (Above-the-fold, zero overwhelm) */}
         {flowData && (
-          <div
-            id="beginner-project-report-card"
-            style={{
-              padding: '16px 20px',
-              borderRadius: '12px',
-              border: '1px solid var(--border-default)',
-              backgroundColor: 'var(--bg-raised)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '8px',
-              }}
-            >
-              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent)' }}>
-                About This Repository (In Simple English)
-              </span>
-              <button
-                id="btn-speak-project-summary"
-                type="button"
-                className="btn btn-secondary"
-                style={{ minHeight: '30px', padding: '0 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
-                onClick={() => playProjectSummaryAudio(flowData?.project_summary)}
-              >
-                <SpeakerHigh size={14} weight="regular" aria-hidden="true" />
-                <span>Listen to Overview</span>
-              </button>
+          <div id="beginner-project-report-card" className="field-report-dossier">
+            <div className="field-report-header">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
+                <span className="field-report-kicker">
+                  <Stack size={13} aria-hidden="true" />
+                  <span>Quick Summary • In Plain English</span>
+                </span>
+                <h3 className="field-report-title">
+                  What This Repository Does
+                </h3>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <span className="status-badge status-good" style={{ fontSize: '11px' }}>
+                  6 Layers
+                </span>
+                <span className="status-badge status-muted mono-metric" style={{ fontSize: '11px' }}>
+                  {steps.length || 5} Steps • {flowData.primary_language || repoContext?.language || 'Multi-Lang'}
+                </span>
+                <button
+                  id="btn-speak-project-summary"
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => playProjectSummaryAudio(flowData?.project_summary)}
+                >
+                  <SpeakerHigh size={14} weight="regular" aria-hidden="true" />
+                  <span>Listen to Summary</span>
+                </button>
+              </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  What This Repository Does
+            <div className="field-report-tldr-grid">
+              <div className="field-report-tldr-card">
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                  The Big Picture
                 </div>
-                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.55', color: 'var(--text-primary)' }}>
+                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', color: 'var(--text-primary)' }}>
                   <FormattedText
                     text={
                       flowData?.project_summary?.simple_explanation ||
@@ -776,11 +771,11 @@ export default function RepoFlowchartExplorer({
                 </p>
               </div>
 
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Everyday Example
+              <div className="field-report-tldr-card">
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                  Everyday Analogy
                 </div>
-                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.55', color: 'var(--text-primary)' }}>
+                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', color: 'var(--text-primary)' }}>
                   <FormattedText
                     text={
                       flowData?.project_summary?.real_world_example ||
@@ -791,33 +786,21 @@ export default function RepoFlowchartExplorer({
               </div>
             </div>
 
-            {flowData?.project_summary?.detailed_explanation && (
-              <div style={{ paddingTop: '10px', borderTop: '1px solid var(--border-default)' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  End-to-End Architecture &amp; Full-Stack Walkthrough
-                </div>
-                <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.6', color: 'var(--text-primary)' }}>
-                  <FormattedText text={flowData.project_summary.detailed_explanation} />
-                </p>
-              </div>
-            )}
-
             {flowData?.project_summary?.full_stack_breakdown && (
               <div
                 style={{
-                  marginTop: '4px',
-                  paddingTop: '12px',
-                  borderTop: '1px solid var(--border-default)',
                   display: 'flex',
                   flexWrap: 'wrap',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: '10px',
+                  paddingTop: '10px',
+                  borderTop: '1px solid var(--border-default)',
                 }}
               >
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                    Detected Stack:
+                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                    Main Tech:
                   </span>
                   <span className="status-badge status-good" style={{ fontSize: '11px' }}>
                     FE: {flowData.project_summary.full_stack_breakdown.frontend}
@@ -828,181 +811,27 @@ export default function RepoFlowchartExplorer({
                   <span className="status-badge status-muted" style={{ fontSize: '11px' }}>
                     DB: {flowData.project_summary.full_stack_breakdown.database}
                   </span>
-                  {(flowData.project_summary.full_stack_breakdown.api_keys_summary || flowData.project_summary.api_keys_and_env?.length > 0) && (
-                    <span className="status-badge status-muted mono-metric" style={{ fontSize: '11px' }}>
-                      Keys/Env: {flowData.project_summary.full_stack_breakdown.api_keys_summary || flowData.project_summary.api_keys_and_env.join(', ')}
-                    </span>
-                  )}
                 </div>
                 <button
                   type="button"
-                  className="btn btn-secondary"
-                  style={{ minHeight: '28px', padding: '0 12px', fontSize: '12px' }}
+                  className="btn btn-secondary btn-sm"
                   onClick={() => setViewMode('dossier')}
                 >
-                  <RocketLaunch size={14} />
-                  <span>Full Stack, Alternatives &amp; Deploy Guide</span>
+                  <RocketLaunch size={14} aria-hidden="true" />
+                  <span>Full Stack, Critique &amp; Deploy Guide</span>
                 </button>
-              </div>
-            )}
-
-            {/* Architectural Summary: Weaknesses, Improvements & Best Alternative Stack */}
-            {(weaknessesList.length > 0 || improvementsList.length > 0 || bestAlternativeStack || walkthroughSteps.length > 0) && (
-              <div
-                style={{
-                  marginTop: '6px',
-                  paddingTop: '14px',
-                  borderTop: '1px solid var(--border-default)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  minWidth: 0,
-                }}
-              >
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                    gap: '12px',
-                    minWidth: 0,
-                  }}
-                >
-                  {weaknessesList.length > 0 && (
-                    <div
-                      style={{
-                        padding: '12px 14px',
-                        borderRadius: '12px',
-                        border: '1px solid var(--border-default)',
-                        borderLeft: '3px solid var(--danger)',
-                        background: 'var(--bg-surface)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px',
-                        minWidth: 0,
-                      }}
-                    >
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase' }}>
-                        Architectural Weaknesses
-                      </div>
-                      <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '12.5px', lineHeight: 1.45, color: 'var(--text-primary)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
-                        {weaknessesList.slice(0, 4).map((w, idx) => (
-                          <li key={idx}>
-                            {w.title ? <strong>{w.title}: </strong> : null}
-                            <span>{w.detail}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {improvementsList.length > 0 && (
-                    <div
-                      style={{
-                        padding: '12px 14px',
-                        borderRadius: '12px',
-                        border: '1px solid var(--border-default)',
-                        borderLeft: '3px solid var(--success)',
-                        background: 'var(--bg-surface)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px',
-                        minWidth: 0,
-                      }}
-                    >
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase' }}>
-                        Suggested Improvements
-                      </div>
-                      <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '12.5px', lineHeight: 1.45, color: 'var(--text-primary)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
-                        {improvementsList.slice(0, 4).map((imp, idx) => (
-                          <li key={idx}>
-                            {imp.title ? <strong>{imp.title}: </strong> : null}
-                            <span>{imp.detail}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {bestAlternativeStack && (
-                    <div
-                      style={{
-                        padding: '12px 14px',
-                        borderRadius: '12px',
-                        border: '1px solid var(--border-default)',
-                        borderLeft: '3px solid var(--info)',
-                        background: 'var(--bg-surface)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px',
-                        minWidth: 0,
-                      }}
-                    >
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--info)', textTransform: 'uppercase' }}>
-                        Best Alternative Stack
-                      </div>
-                      <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        {bestAlternativeStack.title}
-                      </div>
-                      {bestAlternativeStack.summary && (
-                        <p style={{ margin: 0, fontSize: '12.5px', lineHeight: 1.45, color: 'var(--text-primary)' }}>
-                          {bestAlternativeStack.summary}
-                        </p>
-                      )}
-                      {bestAlternativeStack.tradeoffs && (
-                        <p style={{ margin: 0, fontSize: '12px', lineHeight: 1.4, color: 'var(--text-secondary)' }}>
-                          <strong>Trade-off:</strong> {bestAlternativeStack.tradeoffs}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {walkthroughSteps.length > 0 && (
-                  <div
-                    style={{
-                      padding: '10px 14px',
-                      borderRadius: '12px',
-                      border: '1px solid var(--border-default)',
-                      background: 'var(--bg-surface)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '4px',
-                    }}
-                  >
-                    <div style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                      Step-by-Step Code Walkthrough
-                    </div>
-                    <ol style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12.5px', color: 'var(--text-primary)', lineHeight: 1.45, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
-                      {walkthroughSteps.slice(0, 6).map((item, idx) => (
-                        <li key={idx}>
-                          {typeof item === 'string'
-                            ? item
-                            : `${item.title ? `${item.title}: ` : ''}${item.summary || item.description || item.file || ''}`}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
               </div>
             )}
           </div>
         )}
 
-        {/* View Mode Toggle: Step Cards vs Interactive Flowchart & Mind Map vs Full Stack & Deploy Dossier */}
+        {/* View Mode Toggle: Visual Flowchart vs Step-by-Step Story vs Tech Stack & Critique */}
         {steps.length > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
             <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Choose Architecture View (Click any node or step for voice walkthrough &amp; code):
+              Explore the Codebase:
             </span>
             <div className="segmented-control" role="group" aria-label="Flowchart display mode">
-              <button
-                type="button"
-                className={`segmented-btn ${viewMode === 'steps' ? 'active' : ''}`}
-                onClick={() => setViewMode('steps')}
-                style={{ whiteSpace: 'nowrap' }}
-              >
-                Step-by-Step Cards
-              </button>
               <button
                 type="button"
                 className={`segmented-btn ${viewMode === 'graph' ? 'active' : ''}`}
@@ -1010,7 +839,15 @@ export default function RepoFlowchartExplorer({
                 style={{ whiteSpace: 'nowrap' }}
               >
                 <Graph size={14} weight="regular" style={{ marginRight: '4px' }} aria-hidden="true" />
-                Flowchart &amp; Mind Map
+                Visual Flowchart
+              </button>
+              <button
+                type="button"
+                className={`segmented-btn ${viewMode === 'steps' ? 'active' : ''}`}
+                onClick={() => setViewMode('steps')}
+                style={{ whiteSpace: 'nowrap' }}
+              >
+                Step-by-Step Story
               </button>
               <button
                 type="button"
@@ -1019,7 +856,7 @@ export default function RepoFlowchartExplorer({
                 style={{ whiteSpace: 'nowrap' }}
               >
                 <Stack size={14} weight="regular" style={{ marginRight: '4px' }} aria-hidden="true" />
-                Full Stack &amp; Deploy Guide
+                Tech Stack &amp; Critique
               </button>
             </div>
           </div>
@@ -1031,6 +868,13 @@ export default function RepoFlowchartExplorer({
             className={isFullscreen ? 'repo-flowchart-fullscreen' : 'flow-diagram-stage'}
             data-testid="flowchart-canvas-stage"
           >
+            {!isFullscreen && (
+              <div className="flow-beginner-tip">
+                <span>
+                  <strong>How to read this map:</strong> Click any colored box to see the exact file and hear a plain-English voice explanation.
+                </span>
+              </div>
+            )}
             <div className="flow-toolbar-row">
               <div className="segmented-control flow-topology-group" role="group" aria-label="Diagram topology">
                 <button
@@ -1225,6 +1069,17 @@ export default function RepoFlowchartExplorer({
               gap: '20px',
             }}
           >
+            {flowData?.project_summary?.detailed_explanation && (
+              <div className="field-report-tldr-card">
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                  How It Works End-to-End (Detailed Walkthrough)
+                </div>
+                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', color: 'var(--text-primary)' }}>
+                  <FormattedText text={flowData.project_summary.detailed_explanation} />
+                </p>
+              </div>
+            )}
+
             {/* Section 1: Full Stack Breakdown */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
@@ -1260,6 +1115,67 @@ export default function RepoFlowchartExplorer({
                 ))}
               </div>
             </div>
+
+            {/* Critique Grid: Weaknesses, Improvements & Best Alternative Stack */}
+            {(weaknessesList.length > 0 || improvementsList.length > 0 || bestAlternativeStack) && (
+              <div className="field-report-critique-grid">
+                {weaknessesList.length > 0 && (
+                  <div className="field-report-critique-card" style={{ borderLeft: '3px solid var(--danger)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase' }}>
+                      <WarningCircle size={15} weight="bold" aria-hidden="true" />
+                      <span>Architectural Weaknesses</span>
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '12.5px', lineHeight: 1.45, color: 'var(--text-primary)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                      {weaknessesList.slice(0, 4).map((w, idx) => (
+                        <li key={idx}>
+                          {w.title ? <strong>{w.title}: </strong> : null}
+                          <span>{w.detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {improvementsList.length > 0 && (
+                  <div className="field-report-critique-card" style={{ borderLeft: '3px solid var(--success)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase' }}>
+                      <CheckCircle size={15} weight="bold" aria-hidden="true" />
+                      <span>Suggested Improvements</span>
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '12.5px', lineHeight: 1.45, color: 'var(--text-primary)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                      {improvementsList.slice(0, 4).map((imp, idx) => (
+                        <li key={idx}>
+                          {imp.title ? <strong>{imp.title}: </strong> : null}
+                          <span>{imp.detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {bestAlternativeStack && (
+                  <div className="field-report-critique-card" style={{ borderLeft: '3px solid var(--info)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--info)', textTransform: 'uppercase' }}>
+                      <RocketLaunch size={15} weight="bold" aria-hidden="true" />
+                      <span>Best Alternative Stack</span>
+                    </div>
+                    <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {bestAlternativeStack.title}
+                    </div>
+                    {bestAlternativeStack.summary && (
+                      <p style={{ margin: 0, fontSize: '12.5px', lineHeight: 1.45, color: 'var(--text-primary)' }}>
+                        {bestAlternativeStack.summary}
+                      </p>
+                    )}
+                    {bestAlternativeStack.tradeoffs && (
+                      <p style={{ margin: 0, fontSize: '12px', lineHeight: 1.4, color: 'var(--text-secondary)' }}>
+                        <strong>Trade-off:</strong> {bestAlternativeStack.tradeoffs}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Section 2: Why This Stack is Best */}
             <div

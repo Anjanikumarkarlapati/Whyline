@@ -34,15 +34,16 @@ export default function AnswersPage({ theme }) {
   } = useWorkbenchSelection();
 
   const handlePlaySavedAudio = (url, spokenText) => {
-    const targetUrl = url || latestAudioUrl || '/api/audio/fence-001.wav';
+    const cleanText = String(spokenText || '').trim();
+    const isStaleStatic = !url || String(url).startsWith('/api/audio/fence-');
+    const targetUrl =
+      isStaleStatic && cleanText
+        ? `/api/tts/speak?lang=en-IN&voice=Shivani&provider=gnani&model=timbre-v3.0&pacing=1.0&text=${encodeURIComponent(cleanText)}`
+        : url || '/api/audio/fence-001.wav';
     try {
       const a = new Audio(targetUrl);
       a.play().catch(() => {
-        if (typeof window !== 'undefined' && 'speechSynthesis' in window && spokenText) {
-          window.speechSynthesis.cancel();
-          const utter = new SpeechSynthesisUtterance(spokenText);
-          window.speechSynthesis.speak(utter);
-        }
+        // Gnani audio playback blocked by autoplay or network error
       });
     } catch {
       // ignore

@@ -52,7 +52,7 @@ export default function RouteBackdrop() {
               <filter id="wlGrain">
                 <feTurbulence type="fractalNoise" baseFrequency="0.78" numOctaves="2" stitchTiles="stitch" />
                 <feColorMatrix type="saturate" values="0" />
-              </feFilter>
+              </filter>
               <radialGradient id="wlAuroraA" cx="22%" cy="28%" r="48%">
                 <stop offset="0%" stopColor="currentColor" stopOpacity="0.16" />
                 <stop offset="100%" stopColor="currentColor" stopOpacity="0" />

@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   ChatCircleText,
   Compass,
@@ -16,6 +16,7 @@ import { useI18n } from '../i18n';
 import { useVoiceAgent } from '../context/VoiceAgentContext';
 import WhyLineLogo from './WhyLineLogo';
 import LanguageSegmentedBar from './LanguageSegmentedBar';
+import MenuShaderLayer from './MenuShaderLayer';
 import RouteBackdrop from './RouteBackdrop';
 import VoiceAgentPicker from './VoiceAgentPicker';
 import LanguageVoiceToast from './LanguageVoiceToast';
@@ -32,13 +33,18 @@ export default function Layout({ theme, onToggleTheme }) {
   const { lang, setLang, t } = useI18n();
   const { selectedAgent, isSpeaking, firstRunOpen, dismissFirstRun } = useVoiceAgent();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sessionModalOpen, setSessionModalOpen] = useState(false);
   const [voicePopoverOpen, setVoicePopoverOpen] = useState(false);
+  const [menuHovered, setMenuHovered] = useState(false);
+  const [navPill, setNavPill] = useState({ x: 0, w: 0, ready: false });
 
   const triggerRef = useRef(null);
   const closeBtnRef = useRef(null);
   const drawerRef = useRef(null);
+  const desktopNavRef = useRef(null);
+  const navLinkRefs = useRef({});
 
   // Global Ctrl/Cmd+K shortcut to navigate to /ask
   useEffect(() => {
@@ -109,6 +115,34 @@ export default function Layout({ theme, onToggleTheme }) {
     { to: '/settings', label: t('navSettings'), icon: Gear },
   ];
 
+  const measureNavPill = () => {
+    const navEl = desktopNavRef.current;
+    if (!navEl) return;
+    const activeItem = navItems.find((item) => (item.end ? pathname === item.to : pathname.startsWith(item.to)));
+    const activeEl = activeItem ? navLinkRefs.current[activeItem.to] : null;
+    if (!activeEl) {
+      setNavPill((prev) => (prev.ready ? { ...prev, ready: false } : prev));
+      return;
+    }
+    setNavPill({
+      x: activeEl.offsetLeft,
+      w: activeEl.offsetWidth,
+      ready: true,
+    });
+  };
+
+  useLayoutEffect(() => {
+    measureNavPill();
+  }, [pathname, lang]);
+
+  useEffect(() => {
+    const navEl = desktopNavRef.current;
+    if (!navEl || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(() => measureNavPill());
+    ro.observe(navEl);
+    return () => ro.disconnect();
+  }, [pathname, lang]);
+
   return (
     <div className="app-shell">
       <RouteBackdrop />
@@ -116,28 +150,45 @@ export default function Layout({ theme, onToggleTheme }) {
         {t('skipToContent')}
       </a>
 
-      <header className="topbar glass-navbar glass-strong">
+      <header
+        className="topbar glass-navbar glass-strong"
+        onMouseEnter={() => setMenuHovered(true)}
+        onMouseLeave={() => setMenuHovered(false)}
+      >
+        <MenuShaderLayer theme={theme} hoverEnergy={menuHovered ? 1 : 0} />
         <div
           className="container topbar-inner"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', position: 'relative', zIndex: 2 }}
         >
           <NavLink to="/" viewTransition className="brand-link" aria-label="WhyLine Home" style={{ flexShrink: 0 }}>
             <WhyLineLogo size="sm" speaking={isSpeaking} />
           </NavLink>
 
-          <nav className="desktop-nav" aria-label="Primary navigation">
-            {navItems.map((item) => {
+          <nav ref={desktopNavRef} className="desktop-nav" aria-label="Primary navigation">
+            <span
+              aria-hidden="true"
+              className="desktop-nav-pill"
+              style={{
+                width: navPill.w ? `${navPill.w}px` : 0,
+                transform: `translate3d(${navPill.x}px, 0, 0)`,
+                opacity: navPill.ready ? 1 : 0,
+              }}
+            />
+            {navItems.map((item, idx) => {
               const Icon = item.icon;
               return (
                 <NavLink
                   key={item.to}
+                  ref={(el) => {
+                    navLinkRefs.current[item.to] = el;
+                  }}
                   to={item.to}
                   end={item.end}
                   viewTransition
                   className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                  style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                  style={{ whiteSpace: 'nowrap', flexShrink: 0, '--i': idx }}
                 >
-                  <Icon size={16} weight="regular" aria-hidden="true" />
+                  <Icon className="nav-link-icon" size={16} weight="regular" aria-hidden="true" />
                   <span>{item.label}</span>
                 </NavLink>
               );
@@ -162,7 +213,7 @@ export default function Layout({ theme, onToggleTheme }) {
 
               {voicePopoverOpen && (
                 <div
-                  className="glass-sheet"
+                  className="glass-sheet nav-popover-animated"
                   role="dialog"
                   aria-label={t('voicePickerTitle')}
                   style={{
@@ -251,7 +302,7 @@ export default function Layout({ theme, onToggleTheme }) {
               </div>
 
               <nav className="drawer-nav-list" aria-label="Mobile navigation">
-                {navItems.map((item) => {
+                {navItems.map((item, idx) => {
                   const Icon = item.icon;
                   return (
                     <NavLink
@@ -261,8 +312,9 @@ export default function Layout({ theme, onToggleTheme }) {
                       viewTransition
                       onClick={() => setDrawerOpen(false)}
                       className={({ isActive }) => `drawer-nav-link ${isActive ? 'active' : ''}`}
+                      style={{ '--i': idx }}
                     >
-                      <Icon size={18} weight="regular" aria-hidden="true" />
+                      <Icon className="nav-link-icon" size={18} weight="regular" aria-hidden="true" />
                       <span>{item.label}</span>
                     </NavLink>
                   );

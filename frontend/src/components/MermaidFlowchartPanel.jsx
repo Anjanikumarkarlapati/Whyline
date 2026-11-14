@@ -5,6 +5,7 @@ import {
   applyThemeClassDefs,
   buildFallbackSixLayerMermaid,
   findMatchingStepForMermaidNode,
+  matchesLayerFilter,
   normalizeArchLayers,
   readMermaidThemeConfig,
   stripMermaidFences,
@@ -218,10 +219,8 @@ export default function MermaidFlowchartPanel({
       }
 
       if (focusedLayer) {
-        const hasLayerClass = nodeEl.classList.contains(focusedLayer) ||
-          nodeEl.closest?.(`.cluster.${focusedLayer}, g.${focusedLayer}`) ||
-          nodeText.toLowerCase().includes(focusedLayer);
-        nodeEl.style.opacity = hasLayerClass ? '1' : '0.32';
+        const matches = matchesLayerFilter(nodeEl, focusedLayer);
+        nodeEl.style.opacity = matches ? '1' : '0.28';
       } else {
         nodeEl.style.opacity = '1';
       }
@@ -255,7 +254,7 @@ export default function MermaidFlowchartPanel({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0 }}>
+    <div id="mermaid-six-layer-panel" style={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0 }}>
       {/* Sub-header: 6-Layer Badge + Diagram / Raw Mermaid Switcher */}
       <div
         style={{
@@ -420,6 +419,70 @@ export default function MermaidFlowchartPanel({
           );
         })}
       </div>
+
+      {/* Active Layer / Step Beginner Callout Strip */}
+      {(focusedLayer || (activeStepIndex >= 0 && steps[activeStepIndex])) && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '10px',
+            padding: '10px 14px',
+            borderRadius: '12px',
+            background: 'var(--bg-raised)',
+            border: '1px solid var(--border-default)',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0, flex: 1 }}>
+            {focusedLayer ? (
+              (() => {
+                const activeLayerObj = layers.find((l) => l.key === focusedLayer) || layers[0];
+                return (
+                  <>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      Layer {activeLayerObj.number} Focus: {activeLayerObj.title || activeLayerObj.label}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                      {activeLayerObj.description || BEGINNER_LAYER_HINTS[focusedLayer] || 'Architectural boundary.'}
+                      {activeLayerObj.items?.length > 0 && (
+                        <span style={{ fontFamily: 'var(--font-mono)', marginLeft: '6px', color: 'var(--text-primary)' }}>
+                          [{activeLayerObj.items.join(' · ')}]
+                        </span>
+                      )}
+                    </div>
+                  </>
+                );
+              })()
+            ) : (
+              <>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Active Flowchart Stage: Step {steps[activeStepIndex]?.step_number || activeStepIndex + 1} — {steps[activeStepIndex]?.title}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                  {steps[activeStepIndex]?.simple_explanation || steps[activeStepIndex]?.what_happens}
+                  {steps[activeStepIndex]?.file_path && (
+                    <span style={{ fontFamily: 'var(--font-mono)', marginLeft: '6px', color: 'var(--text-primary)' }}>
+                      ({steps[activeStepIndex].file_path})
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+          {focusedLayer && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setFocusedLayer(null)}
+              style={{ minHeight: '32px', padding: '4px 12px', fontSize: '11.5px' }}
+            >
+              Show All 6 Layers
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Render Error Alert + Automatic Raw Code & Linear SVG Fallback */}
       {panelMode === 'diagram' && renderError && (

@@ -46,6 +46,43 @@ public class GatewayRouter {
 `,
   },
   {
+    path: 'src/main/java/com/healthconnect/payments/SettlementIdempotencyGuard.java',
+    shortName: 'SettlementIdempotencyGuard.java',
+    language: 'java',
+    defaultLine: 14,
+    fenceId: 'FENCE-002',
+    fences: [
+      {
+        id: 'FENCE-002',
+        startLine: 8,
+        endLine: 22,
+        targetLine: 14,
+        token: 'X-Idempotency-Key',
+        badge: 'PR #198 • SHA-256 X-Idempotency-Key outbox deduplication lock',
+        status: 'VERIFIED_ACTIVE',
+      },
+    ],
+    code: `package com.healthconnect.payments;
+
+import java.util.concurrent.TimeUnit;
+
+public class SettlementIdempotencyGuard {
+    // PR #198 (FENCE-002): Pairs with FENCE-001 so 5 retries never double-charge patients
+    public boolean acquireLock(String appointmentId, String sha256Key) {
+        if (appointmentId == null || sha256Key == null || sha256Key.isBlank()) {
+            throw new IllegalArgumentException("Missing X-Idempotency-Key header");
+        }
+        String lockKey = "idemp:" + appointmentId + ":" + sha256Key;
+        return setIfAbsentWithTtl(lockKey, sha256Key, 15, TimeUnit.MINUTES);
+    }
+
+    private boolean setIfAbsentWithTtl(String key, String val, long ttl, TimeUnit unit) {
+        return key != null && val != null && ttl > 0 && unit != null;
+    }
+}
+`,
+  },
+  {
     path: 'src/main/java/com/healthconnect/imaging/DicomShaderPipeline.java',
     shortName: 'DicomShaderPipeline.java',
     language: 'java',

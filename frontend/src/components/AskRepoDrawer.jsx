@@ -17,7 +17,11 @@ import {
 import StatusBadge from './StatusBadge';
 import { CodeBlock, FormattedText } from './CodeText';
 import AudioWaveform from './AudioWaveform';
-import VoiceLanguageDropdown from './VoiceLanguageDropdown';
+import VoiceLanguageDropdown, {
+  createGnaniMicRecorder,
+  getDefaultVoice,
+  inferModelForVoice,
+} from './VoiceLanguageDropdown';
 
 function getStrategyRiskMeta(tone, rank) {
   const normalized = String(tone || '').toUpperCase();
@@ -47,19 +51,23 @@ export default function AskRepoDrawer({
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(10);
-  const [selectedVoice, setSelectedVoice] = useState(() => (lang === 'te' ? 'Nalini' : lang === 'hi' ? 'Bhavna' : 'Pranav'));
+  const [providerEngine, setProviderEngine] = useState('gnani');
+  const [selectedModel, setSelectedModel] = useState('timbre-v3.0');
+  const [selectedSttModel, setSelectedSttModel] = useState('prisma-v3.0');
+  const [playbackRate, setPlaybackRate] = useState(1.0);
+  const [selectedVoice, setSelectedVoice] = useState(() => getDefaultVoice(lang, 'gnani', 'timbre-v3.0'));
   const [micNotice, setMicNotice] = useState(null);
+  const micRecorderRef = useRef(null);
+  const skipLangResetRef = useRef(false);
 
-  // Automatically sync voice model when language is selected
+  // Sync default voice cleanly on external language change unless explicitly overridden
   useEffect(() => {
-    if (lang === 'te') {
-      setSelectedVoice('Nalini');
-    } else if (lang === 'hi') {
-      setSelectedVoice('Bhavna');
-    } else {
-      setSelectedVoice('Pranav');
+    if (skipLangResetRef.current) {
+      skipLangResetRef.current = false;
+      return;
     }
-  }, [lang]);
+    setSelectedVoice(getDefaultVoice(lang, 'gnani', selectedModel));
+  }, [lang, providerEngine, selectedModel]);
 
   const [response, setResponse] = useState({
     spoken_reply:
@@ -127,6 +135,15 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
   const timerRef = useRef(null);
   const prevVoiceStateRef = useRef(voiceState);
 
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      micRecorderRef.current?.cancel?.();
+    };
+  }, []);
+
   // Focus trap + restoration for Ask Drawer
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -190,81 +207,60 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
     }, 100);
   }, [voiceState]);
 
-  const handlePlayAudio = (url, textToSpeak = null) => {
-    const targetUrl = url || audioUrl || '/api/audio/fence-001_confirmed.wav';
+  const handlePlayAudio = (url, textToSpeak = null, voiceOverrides = {}) => {
+    const activeVoice = voiceOverrides.voice ?? selectedVoice;
+    const activeModel = voiceOverrides.model ?? selectedModel;
+    const activeRate = voiceOverrides.pacing ?? playbackRate;
+    const activeLangCode =
+      voiceOverrides.langCode || (lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN');
+    const speechText = textToSpeak || response?.spoken_reply || '';
+
+    const rawUrl = url || audioUrl || '/api/audio/fence-001_confirmed.wav';
+    const targetUrl =
+      rawUrl.startsWith('/api/audio/fence-') && speechText
+        ? `/api/tts/speak?lang=${encodeURIComponent(activeLangCode)}&voice=${encodeURIComponent(activeVoice)}&model=${encodeURIComponent(activeModel)}&provider=gnani&pacing=${encodeURIComponent(activeRate)}&text=${encodeURIComponent(speechText)}`
+        : rawUrl;
+
     setAudioUrl(targetUrl);
     setVoiceState('Speaking');
+
     if (!audioRef.current) {
       audioRef.current = new Audio(targetUrl);
     } else {
       audioRef.current.src = targetUrl;
     }
-
-    const speechText = textToSpeak || response?.spoken_reply;
-
-    const playFallbackSpeech = () => {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window && speechText) {
-        try {
-          window.speechSynthesis.cancel();
-          const utter = new SpeechSynthesisUtterance(speechText);
-          utter.lang = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
-          setIsPlaying(true);
-          setVoiceState('Speaking');
-          utter.onend = () => {
-            setIsPlaying(false);
-            setVoiceState('Idle');
-          };
-          utter.onerror = () => {
-            setIsPlaying(false);
-            setVoiceState('Idle');
-          };
-          window.speechSynthesis.speak(utter);
-        } catch {
-          setIsPlaying(false);
-          setVoiceState('Idle');
-        }
-      } else {
-        setIsPlaying(false);
-        setVoiceState('Idle');
-      }
+    audioRef.current.playbackRate = activeRate;
+    audioRef.current.ontimeupdate = () => {
+      if (audioRef.current) setAudioCurrentTime(audioRef.current.currentTime);
+    };
+    audioRef.current.onloadedmetadata = () => {
+      if (audioRef.current && audioRef.current.duration) setAudioDuration(audioRef.current.duration);
+    };
+    audioRef.current.onended = () => {
+      setIsPlaying(false);
+      setVoiceState('Idle');
+      setAudioCurrentTime(0);
+    };
+    audioRef.current.onerror = () => {
+      setIsPlaying(false);
+      setVoiceState('Idle');
     };
 
-    if (url) {
-      audioRef.current.ontimeupdate = () => {
-        if (audioRef.current) setAudioCurrentTime(audioRef.current.currentTime);
-      };
-      audioRef.current.onloadedmetadata = () => {
-        if (audioRef.current && audioRef.current.duration) setAudioDuration(audioRef.current.duration);
-      };
-      audioRef.current.onended = () => {
+    audioRef.current
+      .play()
+      .then(() => {
+        setIsPlaying(true);
+        setVoiceState('Speaking');
+      })
+      .catch(() => {
         setIsPlaying(false);
         setVoiceState('Idle');
-        setAudioCurrentTime(0);
-      };
-      audioRef.current.onerror = () => {
-        playFallbackSpeech();
-      };
-
-      audioRef.current
-        .play()
-        .then(() => {
-          setIsPlaying(true);
-          setVoiceState('Speaking');
-        })
-        .catch(() => {
-          playFallbackSpeech();
-        });
-    } else if (speechText) {
-      playFallbackSpeech();
-    }
+      });
   };
 
   const handleToggleAudio = () => {
-    if (isPlaying && audioRef.current) {
-      audioRef.current.pause();
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
+    if (isPlaying) {
+      if (audioRef.current) audioRef.current.pause();
       setIsPlaying(false);
       setVoiceState('Idle');
     } else {
@@ -272,16 +268,25 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
     }
   };
 
-  const askRepo = async (queryText, languageCode, audioBase64 = null) => {
+  const askRepo = async (queryText, languageCode, audioBase64 = null, voiceOverrides = {}) => {
     const q = (queryText || query || '').trim();
     const targetLangCode =
       languageCode || (lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN');
+    const activeProvider = voiceOverrides.provider ?? providerEngine;
+    const activeModel =
+      voiceOverrides.model ?? selectedModel ?? inferModelForVoice(voiceOverrides.voice ?? selectedVoice, activeProvider);
+    const activeVoice =
+      voiceOverrides.voice ?? selectedVoice ?? getDefaultVoice(targetLangCode, activeProvider, activeModel);
+    const activePacing = voiceOverrides.pacing ?? playbackRate;
 
     // Serve from in-memory + localStorage cache if no raw audio recording is being transcribed
     if (!audioBase64 && q) {
       const cached = getCachedVoiceResponse({
         question: q,
         language: targetLangCode,
+        provider: activeProvider,
+        model: activeModel,
+        voice: activeVoice,
       });
       if (cached && cached.response) {
         const data = cached.response;
@@ -293,9 +298,18 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
           rrf_telemetry: data.rrf_telemetry || prev.rrf_telemetry,
           strategies: data.strategies || prev.strategies,
         }));
-        const replyUrl = cached.audioUrl || data.audio_url || '/api/audio/fence-001_confirmed.wav';
-        setAudioUrl(replyUrl);
-        handlePlayAudio(replyUrl, replyText);
+        const replyUrl =
+          cached.audioUrl ||
+          data.audio_url ||
+          `/api/tts/speak?lang=${encodeURIComponent(targetLangCode)}&voice=${encodeURIComponent(activeVoice)}&model=${encodeURIComponent(activeModel)}&provider=gnani&pacing=${encodeURIComponent(activePacing)}&text=${encodeURIComponent(replyText)}`;
+        if (replyUrl) setAudioUrl(replyUrl);
+        handlePlayAudio(replyUrl, replyText, {
+          provider: 'gnani',
+          model: activeModel,
+          voice: activeVoice,
+          pacing: activePacing,
+          langCode: targetLangCode,
+        });
         return;
       }
     }
@@ -311,8 +325,13 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
           question: q,
           fence_id: initialFenceId,
           language: targetLangCode,
-          voice: selectedVoice,
+          voice: activeVoice,
+          provider: activeProvider,
+          model: activeModel,
+          stt_model: selectedSttModel,
+          pacing: activePacing,
           audio_base64: audioBase64 || null,
+          mime_type: 'audio/wav',
         }),
       });
       if (resp.ok) {
@@ -329,13 +348,24 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
           {
             question: q,
             language: targetLangCode,
-            voice: selectedVoice,
+            provider: activeProvider,
+            model: activeModel,
+            voice: activeVoice,
           },
           { response: data, sttTelemetry: data.stt_telemetry }
         );
-        if (data.audio_url) {
-          setAudioUrl(data.audio_url);
-          handlePlayAudio(data.audio_url, replyText);
+        const resolvedUrl =
+          data.audio_url ||
+          `/api/tts/speak?lang=${encodeURIComponent(targetLangCode)}&voice=${encodeURIComponent(activeVoice)}&model=${encodeURIComponent(activeModel)}&provider=gnani&pacing=${encodeURIComponent(activePacing)}&text=${encodeURIComponent(replyText)}`;
+        if (resolvedUrl) {
+          setAudioUrl(resolvedUrl);
+          handlePlayAudio(resolvedUrl, replyText, {
+            provider: 'gnani',
+            model: activeModel,
+            voice: activeVoice,
+            pacing: activePacing,
+            langCode: targetLangCode,
+          });
         } else {
           setVoiceState('Idle');
         }
@@ -357,28 +387,12 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      mediaRecorderRef.current = recorder;
-
-      const chunks = [];
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
-
-      recorder.onstop = async () => {
-        const blob = new Blob(chunks, { type: mimeType || 'audio/webm' });
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          askRepo(query, null, reader.result);
-        };
-        reader.readAsDataURL(blob);
-        stream.getTracks().forEach((track) => track.stop());
-      };
-
-      recorder.start();
+      const rec = await createGnaniMicRecorder();
+      if (!rec) {
+        setMicNotice('Microphone audio recorder unavailable in this browser.');
+        return;
+      }
+      micRecorderRef.current = rec;
       setVoiceState('Listening');
       setRecordingSeconds(0);
       timerRef.current = setInterval(() => {
@@ -390,12 +404,17 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
     }
   };
 
-  const stopRecording = () => {
+  const stopRecording = async () => {
     if (timerRef.current) clearInterval(timerRef.current);
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
+    const recorder = micRecorderRef.current;
+    micRecorderRef.current = null;
     setVoiceState('Idle');
+    if (recorder) {
+      const wavPayload = await recorder.stop();
+      if (wavPayload?.base64) {
+        askRepo(query, null, wavPayload.base64);
+      }
+    }
   };
 
   if (!isOpen) return null;
@@ -461,12 +480,60 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
               <VoiceLanguageDropdown
                 id="drawer-ask-voice-lang-select"
                 value={lang}
+                provider={providerEngine}
+                model={selectedModel}
+                sttModel={selectedSttModel}
+                onSttModelChange={setSelectedSttModel}
+                voice={selectedVoice}
+                pacing={playbackRate}
                 disabled={loading}
                 compact={true}
+                onProviderChange={(provId, meta = {}) => {
+                  setProviderEngine(provId);
+                  if (meta.model) setSelectedModel(meta.model);
+                  if (meta.voice) setSelectedVoice(meta.voice);
+                  askRepo(query, null, null, {
+                    provider: provId,
+                    model: meta.model || selectedModel,
+                    voice: meta.voice || selectedVoice,
+                  });
+                }}
+                onModelChange={(nextModel, nextDefaultVoice, meta = {}) => {
+                  setSelectedModel(nextModel);
+                  if (nextDefaultVoice) setSelectedVoice(nextDefaultVoice);
+                  if (!meta.fromCascade) {
+                    askRepo(query, null, null, {
+                      provider: providerEngine,
+                      model: nextModel,
+                      voice: nextDefaultVoice || selectedVoice,
+                    });
+                  }
+                }}
+                onVoiceChange={(voiceName, meta = {}) => {
+                  setSelectedVoice(voiceName);
+                  const nextModel = meta.model || selectedModel;
+                  if (meta.model) setSelectedModel(meta.model);
+                  if (!meta.fromCascade) {
+                    askRepo(query, null, null, {
+                      provider: meta.provider || providerEngine,
+                      model: nextModel,
+                      voice: voiceName,
+                    });
+                  }
+                }}
                 onChange={(nextCode, option) => {
+                  skipLangResetRef.current = true;
                   setLang(nextCode);
-                  setSelectedVoice(option.voice);
-                  askRepo(query, option.locale);
+                  const nextVoice = option?.voice || selectedVoice;
+                  const nextModel = option?.model || selectedModel;
+                  const nextProvider = option?.provider || providerEngine;
+                  setSelectedVoice(nextVoice);
+                  setSelectedModel(nextModel);
+                  askRepo(query, option?.locale || (nextCode === 'hi' ? 'hi-IN' : nextCode === 'te' ? 'te-IN' : 'en-IN'), null, {
+                    voice: nextVoice,
+                    model: nextModel,
+                    provider: nextProvider,
+                  });
                 }}
               />
             </div>
@@ -523,31 +590,31 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
             )}
           </form>
 
-          {/* Top 3 Voice Selector synced with Language */}
-          <div className="chip-grid">
+          {/* Active Engine Status & Pacing Controls */}
+          <div className="chip-grid" style={{ justifyContent: 'space-between' }}>
             <span className="small-caps small-11 text-ink-muted">
-              Voice Model (Gnani Timbre):
+              Engine: Gnani ({selectedModel} • {selectedSttModel}) • Voice: {selectedVoice}
             </span>
-            {[
-              { id: 'Nalini', langKey: 'te', label: 'Nalini (Telugu • Crisp)' },
-              { id: 'Bhavna', langKey: 'hi', label: 'Bhavna (Hindi • Articulate)' },
-              { id: 'Pranav', langKey: 'en', label: 'Pranav (English • Authoritative)' },
-            ].map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                className={`filter-chip voice-chip ${selectedVoice === v.id ? 'active' : ''}`}
-                style={{
-                  border: selectedVoice === v.id ? '1px solid var(--accent)' : '1px solid var(--border-default)',
-                  backgroundColor: selectedVoice === v.id ? 'var(--accent-wash)' : 'transparent',
-                  fontWeight: selectedVoice === v.id ? '600' : '400',
-                }}
-                onClick={() => setSelectedVoice(v.id)}
-                title={`Select ${v.label} for speech synthesis`}
-              >
-                {v.label}
-              </button>
-            ))}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              {[0.8, 1.0, 1.25].map((rate) => (
+                <button
+                  key={rate}
+                  type="button"
+                  className={`filter-chip ${Math.abs(playbackRate - rate) < 0.05 ? 'active' : ''}`}
+                  style={{
+                    border: Math.abs(playbackRate - rate) < 0.05 ? '1px solid var(--accent)' : '1px solid var(--border-default)',
+                    backgroundColor: Math.abs(playbackRate - rate) < 0.05 ? 'var(--accent-wash)' : 'transparent',
+                    fontWeight: Math.abs(playbackRate - rate) < 0.05 ? '600' : '400',
+                  }}
+                  onClick={() => {
+                    setPlaybackRate(rate);
+                    if (audioRef.current) audioRef.current.playbackRate = rate;
+                  }}
+                >
+                  {rate}x
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Preset Chips */}
@@ -606,7 +673,7 @@ for (int attempt = 1; attempt <= retryCount; attempt++) {
                 }
               }}
               title="Gnani Spoken Architecture Answer"
-              subtitle={`Voice: ${selectedVoice} • 16kHz Studio Audio Note`}
+              subtitle={`Engine: ${providerEngine === 'gnani' ? `${selectedModel} • ${selectedSttModel}` : 'Browser'} • Voice: ${selectedVoice} • 24kHz Gnani Studio Audio`}
             />
 
             <div className="answer-header-flex">

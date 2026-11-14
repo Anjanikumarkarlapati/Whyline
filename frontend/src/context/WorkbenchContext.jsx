@@ -4,7 +4,7 @@ import { DEMO_FILES } from './demoFiles';
 
 const WorkbenchContext = createContext(null);
 
-const QA_HISTORY_STORAGE_KEY = 'whyline-qa-history-v1';
+const QA_HISTORY_STORAGE_KEY = 'whyline-qa-history-v3-gnani';
 
 export const QUICK_GITHUB_REPOS = [
   {
@@ -99,16 +99,21 @@ export const QUICK_GITHUB_REPOS = [
   },
 ];
 
+const DEFAULT_SPOKEN_REPLY =
+  'In GatewayRouter.java on line 23, retryCount is set to 5 because the v1 payment gateway drops packets around midnight. To stop double-charging without removing the 5 retries, pass a unique idempotency key for each orderId into sendV1Frame so duplicate retries are safely ignored.';
+
+const DEFAULT_GNANI_AUDIO_URL =
+  `/api/tts/speak?lang=en-IN&voice=Shivani&provider=gnani&model=timbre-v3.0&pacing=1.0&text=${encodeURIComponent(DEFAULT_SPOKEN_REPLY)}`;
+
 const DEFAULT_ANSWER = {
   question:
     'How do we fix the double-charge bug in GatewayRouter.java without breaking retryCount = 5?',
   repo_full_name: 'HealthConnect/payment-gateway-v1',
   language: 'en-IN',
-  voice: 'Pranav',
+  voice: 'Shivani',
   brain_engine: 'Gemini 3.8 Flash',
-  audio_url: '/api/audio/fence-001.wav',
-  spoken_reply:
-    'In GatewayRouter.java on line 23, retryCount is set to 5 because the v1 payment gateway drops packets around midnight. To stop double-charging without removing the 5 retries, pass a unique idempotency key for each orderId into sendV1Frame so duplicate retries are safely ignored.',
+  audio_url: DEFAULT_GNANI_AUDIO_URL,
+  spoken_reply: DEFAULT_SPOKEN_REPLY,
   guardrail_rule:
     'Keep retryCount = 5 in GatewayRouter.java until application.yml switches gateway.version from v1 to v2.',
   recommended_patch: `String idempotencyKey = "settle_" + orderId;
@@ -213,7 +218,7 @@ export function WorkbenchProvider({ children }) {
   );
   const [latestResponse, setLatestResponse] = useState(DEFAULT_ANSWER);
   const [latestSttTelemetry, setLatestSttTelemetry] = useState(null);
-  const [latestAudioUrl, setLatestAudioUrl] = useState('/api/audio/fence-001.wav');
+  const [latestAudioUrl, setLatestAudioUrl] = useState(DEFAULT_GNANI_AUDIO_URL);
   const [cacheTelemetry, setCacheTelemetry] = useState(null);
   const [qaHistory, setQaHistory] = useState(loadInitialHistory);
 

@@ -6,15 +6,15 @@
     "semantic_hash": ""
   },
   "backend-api-middleware.js": {
-    "mtime": 1794396187.116268,
-    "seen": 1794398201.2762387,
-    "ast_hash": "07a74d90bb79e2a0eb8fbdfd01316248",
+    "mtime": 1794656857.4472418,
+    "seen": 1794660975.4409227,
+    "ast_hash": "fad05700c845f9fd85e752349afb7c23",
     "semantic_hash": ""
   },
   "backend/app.py": {
-    "mtime": 1793946366.5674973,
-    "seen": 1794392876.9803736,
-    "ast_hash": "12e78ab2bcd008c22c9395f356e3f738",
+    "mtime": 1794656872.4316852,
+    "seen": 1794660975.440937,
+    "ast_hash": "27b5b8d97e0df5432331e37687331079",
     "semantic_hash": ""
   },
   "backend/eval/cases.json": {
@@ -42,15 +42,15 @@
     "semantic_hash": ""
   },
   "backend/services/gnani_client.py": {
-    "mtime": 1794390726.6943884,
-    "seen": 1794392876.98042,
-    "ast_hash": "644e4b4048beeac57e3fd66f9d292534",
+    "mtime": 1794638900.3474753,
+    "seen": 1794640004.9936543,
+    "ast_hash": "72014385e17a43a864844c2cb95dc8f3",
     "semantic_hash": ""
   },
   "backend/services/rag_service.py": {
-    "mtime": 1794392355.7992923,
-    "seen": 1794392876.980427,
-    "ast_hash": "c1a2a143c6a6e34dacbc4bd3ce76bd03",
+    "mtime": 1794635796.6115732,
+    "seen": 1794635829.5983455,
+    "ast_hash": "267f48d2a2fd6b3f828b1854056f9b6a",
     "semantic_hash": ""
   },
   "backend/services/test_compiler.py": {
@@ -174,9 +174,9 @@
     "semantic_hash": ""
   },
   "backend/whyline/repo_flowchart.py": {
-    "mtime": 1793894839.9928274,
-    "seen": 1794392876.9805634,
-    "ast_hash": "1f6910603165cf770840c502cb435e88",
+    "mtime": 1794656876.5681045,
+    "seen": 1794660975.4411132,
+    "ast_hash": "93bda1da455011f1da684e4ffc0e1d13",
     "semantic_hash": ""
   },
   "backend/whyline/store.py": {
@@ -186,80 +186,80 @@
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/.whyline/pr_fixtures.json": {
-    "mtime": 1794394633.4588087,
-    "seen": 1794395900.3842585,
+    "mtime": 1794642201.9451816,
+    "seen": 1794642639.7805161,
     "ast_hash": "cedb0a7f23277cbe10cb828f9fe278f4",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/config/application.yml": {
-    "mtime": 1794396366.3207264,
-    "seen": 1794398201.3929324,
+    "mtime": 1794642225.712667,
+    "seen": 1794642639.7805228,
     "ast_hash": "872225e61b4936ba972d11ab3847a410",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/services/billing/gst_rounding_engine.py": {
-    "mtime": 1794394632.380689,
-    "seen": 1794395900.3842807,
+    "mtime": 1794642201.3880556,
+    "seen": 1794642639.7805262,
     "ast_hash": "dd8cdfedc8fb5d01f599c69e239fe022",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/services/cache/redis_session_store.py": {
-    "mtime": 1794394633.1317098,
-    "seen": 1794395900.3842866,
+    "mtime": 1794642201.7703197,
+    "seen": 1794642639.7805293,
     "ast_hash": "0dd69933e9c3a5ede460517a1f86c700",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/services/ocr/prescription_parser.py": {
-    "mtime": 1794394632.6860187,
-    "seen": 1794395900.3842933,
+    "mtime": 1794642201.5760608,
+    "seen": 1794642639.7805326,
     "ast_hash": "864ab66f240fd94524ed75e7165b954d",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/services/sync_worker/patient_queue.py": {
-    "mtime": 1794394631.5605986,
-    "seen": 1794395900.3842998,
+    "mtime": 1794642201.025471,
+    "seen": 1794642639.7805355,
     "ast_hash": "d72c34478501b4a719673558185ab4d1",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/services/sync_worker/webhook_dispatcher.py": {
-    "mtime": 1794394631.9704685,
-    "seen": 1794395900.384306,
+    "mtime": 1794642201.21416,
+    "seen": 1794642639.7805388,
     "ast_hash": "0e1da786bf1f9e8382ada7294afe37b5",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/src/main/java/com/healthconnect/auth/JwtClockSkewFilter.java": {
-    "mtime": 1794394630.3463547,
-    "seen": 1794395900.384313,
+    "mtime": 1794642200.4715939,
+    "seen": 1794642639.780542,
     "ast_hash": "70289ce519f1ba2785bf9fc4ea880319",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/src/main/java/com/healthconnect/hl7/LegacyHl7SslClient.java": {
-    "mtime": 1794394630.8150237,
-    "seen": 1794395900.3843205,
+    "mtime": 1794642200.6336226,
+    "seen": 1794642639.7805452,
     "ast_hash": "7250239de37829badd1355353414bbe2",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/src/main/java/com/healthconnect/imaging/DicomShaderPipeline.java": {
-    "mtime": 1794394629.9759426,
-    "seen": 1794395900.3843277,
+    "mtime": 1794642200.271562,
+    "seen": 1794642639.7805486,
     "ast_hash": "d0ddfd7d8dced8ff99a35f983059d784",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/src/main/java/com/healthconnect/patient/PatientProfileService.java": {
-    "mtime": 1794394629.2459948,
-    "seen": 1794395900.3843346,
+    "mtime": 1794642199.8440318,
+    "seen": 1794642639.7805514,
     "ast_hash": "df26b63696606464b1a5ab5bd794a821",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/src/main/java/com/healthconnect/payments/GatewayRouter.java": {
-    "mtime": 1794394629.6298015,
-    "seen": 1794395900.384341,
+    "mtime": 1794642200.0674763,
+    "seen": 1794642639.7805545,
     "ast_hash": "af6a65b40cf9221b67034f71f6a694b2",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/src/main/java/com/healthconnect/telehealth/WebRtcIceCandidateHandler.java": {
-    "mtime": 1794394631.1806364,
-    "seen": 1794395900.3843474,
+    "mtime": 1794642200.8467824,
+    "seen": 1794642639.7805579,
     "ast_hash": "9faffcd09a0fea37681eb0fbcfe58115",
     "semantic_hash": ""
   },
@@ -390,9 +390,9 @@
     "semantic_hash": ""
   },
   "frontend/src/App.jsx": {
-    "mtime": 1794378434.4744394,
-    "seen": 1794392876.9808125,
-    "ast_hash": "cdb201df79542ecbe54bcb8fefdbbd87",
+    "mtime": 1794644594.5433834,
+    "seen": 1794645375.6307998,
+    "ast_hash": "24f8e941f4603e9f26786b289cca1878",
     "semantic_hash": ""
   },
   "frontend/src/assets/images/asset-manifest.json": {
@@ -402,9 +402,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/AskRepoDrawer.jsx": {
-    "mtime": 1794025435.7723773,
-    "seen": 1794392876.9808233,
-    "ast_hash": "eb984a04c41343840f134ccf7771b377",
+    "mtime": 1794642129.5479164,
+    "seen": 1794642639.7806523,
+    "ast_hash": "6cf4ed53a81ad042727f80f02793eec0",
     "semantic_hash": ""
   },
   "frontend/src/components/AudioWaveform.jsx": {
@@ -432,15 +432,15 @@
     "semantic_hash": ""
   },
   "frontend/src/components/InteractiveFlowchartSvg.jsx": {
-    "mtime": 1794395090.1087184,
-    "seen": 1794395900.48245,
-    "ast_hash": "a56489b0de4d095a559b86a9bc34e359",
+    "mtime": 1794645463.3084362,
+    "seen": 1794648770.9404097,
+    "ast_hash": "9bb7b8c1165c848430d5612164f04ccf",
     "semantic_hash": ""
   },
   "frontend/src/components/Layout.jsx": {
-    "mtime": 1794025435.776863,
-    "seen": 1794392876.980854,
-    "ast_hash": "d3229641bc34ea411dae24c9cf768ba3",
+    "mtime": 1794655765.9263234,
+    "seen": 1794660975.4414139,
+    "ast_hash": "7a20bcfcb3c23de6a9a9bd743f987010",
     "semantic_hash": ""
   },
   "frontend/src/components/LegacyRedirect.jsx": {
@@ -456,9 +456,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/RepoFlowchartExplorer.jsx": {
-    "mtime": 1794395173.967214,
-    "seen": 1794395900.4940948,
-    "ast_hash": "4402f9247c12a34cf6bb547a4e5142c8",
+    "mtime": 1794660655.995107,
+    "seen": 1794660975.4414449,
+    "ast_hash": "e56e95054812594a69e66968915f6931",
     "semantic_hash": ""
   },
   "frontend/src/components/RouteAnnouncer.jsx": {
@@ -486,9 +486,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/VoiceLanguageDropdown.jsx": {
-    "mtime": 1794157825.2614622,
-    "seen": 1794392876.9808967,
-    "ast_hash": "c0c7c281b5545d7b4ba52c5d9f4010fc",
+    "mtime": 1794641931.7570367,
+    "seen": 1794642639.7808938,
+    "ast_hash": "3310332bd8497c26c990b5f4e6fcf2be",
     "semantic_hash": ""
   },
   "frontend/src/components/illustrations/FieldIllustrations.jsx": {
@@ -504,9 +504,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/workbench/AskTabPanel.jsx": {
-    "mtime": 1794395191.4873002,
-    "seen": 1794395900.5136764,
-    "ast_hash": "9f201f3a45f87b3e532c13c889375850",
+    "mtime": 1794644348.8482313,
+    "seen": 1794645375.6308494,
+    "ast_hash": "3246a18c7b95a4c2ac6f50313d1dc7d0",
     "semantic_hash": ""
   },
   "frontend/src/components/workbench/FenceTabPanel.jsx": {
@@ -534,15 +534,15 @@
     "semantic_hash": ""
   },
   "frontend/src/context/WorkbenchContext.jsx": {
-    "mtime": 1794025435.7853749,
-    "seen": 1794392876.9809372,
-    "ast_hash": "654a06727d7cbee7057b4f204fa2bd19",
+    "mtime": 1794641963.247235,
+    "seen": 1794642639.7809172,
+    "ast_hash": "ddc522426391c798504dccf920ce17ed",
     "semantic_hash": ""
   },
   "frontend/src/context/demoFiles.js": {
-    "mtime": 1793948786.8230796,
-    "seen": 1794392876.9809418,
-    "ast_hash": "d4ebeec95b97671336eb1e46221dd665",
+    "mtime": 1794655931.0461478,
+    "seen": 1794660975.4415488,
+    "ast_hash": "984afde226c438c59275afb0dd286351",
     "semantic_hash": ""
   },
   "frontend/src/hooks/useKbPress.js": {
@@ -552,9 +552,9 @@
     "semantic_hash": ""
   },
   "frontend/src/i18n.js": {
-    "mtime": 1794157515.7125401,
-    "seen": 1794392876.980951,
-    "ast_hash": "b0d3a0f354b7aa42bfdb0716993096eb",
+    "mtime": 1794644189.4602695,
+    "seen": 1794645375.6308684,
+    "ast_hash": "fd0d0b9b49e9e0dbce9fb48bee7a2d1d",
     "semantic_hash": ""
   },
   "frontend/src/main.jsx": {
@@ -570,15 +570,15 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/AnswersPage.jsx": {
-    "mtime": 1794231090.7154336,
-    "seen": 1794392876.9810257,
-    "ast_hash": "14c856f976434157b09892a6e7217e85",
+    "mtime": 1794641968.987118,
+    "seen": 1794642639.780932,
+    "ast_hash": "436f25fa04d1149637fc7d308feaefff",
     "semantic_hash": ""
   },
   "frontend/src/pages/AskRepoPage.jsx": {
-    "mtime": 1794395185.329254,
-    "seen": 1794395900.5534003,
-    "ast_hash": "f5c33eeb1935234b4ed714dee3c7da8f",
+    "mtime": 1794644351.8213181,
+    "seen": 1794645375.6308818,
+    "ast_hash": "50756d056727ea52b3be2a93a972fc25",
     "semantic_hash": ""
   },
   "frontend/src/pages/BriefingDashboard.jsx": {
@@ -588,9 +588,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/FlowchartsPage.jsx": {
-    "mtime": 1794395180.5012739,
-    "seen": 1794395900.5570529,
-    "ast_hash": "df563b1b47222fa1a2e31c3a65c564bc",
+    "mtime": 1794645935.1849456,
+    "seen": 1794648770.9405124,
+    "ast_hash": "623b4b9a7a8910281d1bf86b50c8a9e7",
     "semantic_hash": ""
   },
   "frontend/src/pages/GitFlowchartPage.jsx": {
@@ -606,9 +606,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/LoginPage.jsx": {
-    "mtime": 1794378434.4774394,
-    "seen": 1794392876.981057,
-    "ast_hash": "4d4f3cb2e3f7b54f19119dfc8aa8df19",
+    "mtime": 1794644045.0765219,
+    "seen": 1794645375.6308932,
+    "ast_hash": "3c0aa336e05c6229398c326c5027eb5a",
     "semantic_hash": ""
   },
   "frontend/src/pages/MemoryPage.jsx": {
@@ -618,9 +618,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/SettingsPage.jsx": {
-    "mtime": 1794157679.2542372,
-    "seen": 1794392876.9810665,
-    "ast_hash": "444fffc39db838cb6eef10d52c61efa1",
+    "mtime": 1794646226.1917307,
+    "seen": 1794648770.9405289,
+    "ast_hash": "6b7dd72558060b1f8f95586df4c9e0fe",
     "semantic_hash": ""
   },
   "frontend/src/pages/SpokenFencesPage.jsx": {
@@ -636,9 +636,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/VoiceCoPilotPage.jsx": {
-    "mtime": 1794025435.791057,
-    "seen": 1794392876.9810846,
-    "ast_hash": "fd8161fe63c42e34e8addb45535b9af5",
+    "mtime": 1794642074.8248954,
+    "seen": 1794642639.780958,
+    "ast_hash": "6edd3b032e1e69f13e7024975e6a26a8",
     "semantic_hash": ""
   },
   "frontend/src/pages/WorkbenchPage.jsx": {
@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "frontend/src/utils/voiceResponseCache.js": {
-    "mtime": 1794025435.7964993,
-    "seen": 1794392876.9811082,
-    "ast_hash": "cf096d955724550c80174f2110740d6a",
+    "mtime": 1794641966.2392404,
+    "seen": 1794642639.7813528,
+    "ast_hash": "df84d3b29db80c9e522efabe5ca82ecf",
     "semantic_hash": ""
   },
   "frontend/src/utils/voiceResponseCache.test.js": {
@@ -696,9 +696,9 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1794231090.7350242,
-    "seen": 1794392876.981145,
-    "ast_hash": "f434cea6de195f42861123da23a9f0b0",
+    "mtime": 1794656881.5681396,
+    "seen": 1794660975.441728,
+    "ast_hash": "1e2775695904f029466413a8dc15bec4",
     "semantic_hash": ""
   },
   "scripts/audit_design_system.py": {
@@ -882,9 +882,9 @@
     "semantic_hash": ""
   },
   "tests/test_challenger_frontend.py": {
-    "mtime": 1793894818.1952634,
-    "seen": 1794392876.9813786,
-    "ast_hash": "2b8b3db949a14128ed4ad58e6384d6a3",
+    "mtime": 1794644486.4482248,
+    "seen": 1794645375.6310112,
+    "ast_hash": "2a1251485662cb4e05d9a998d0d79b78",
     "semantic_hash": ""
   },
   "tests/test_migration_challenge.py": {
@@ -966,9 +966,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1794231090.6914823,
-    "seen": 1794392876.981451,
-    "ast_hash": "2f91dbce9831c8430c883c3ff0181eac",
+    "mtime": 1794399235.7478087,
+    "seen": 1794412108.2004998,
+    "ast_hash": "390fa63e1d1e9b75a8512a4af209b5a0",
     "semantic_hash": ""
   },
   "SCREENSHOTS_CATALOG.md": {
@@ -1008,27 +1008,27 @@
     "semantic_hash": ""
   },
   "backend/README.md": {
-    "mtime": 1794157947.5405183,
-    "seen": 1794392876.9814868,
-    "ast_hash": "869aac5c4b684ba88edcf537e83f8459",
+    "mtime": 1794399235.7562804,
+    "seen": 1794412108.208,
+    "ast_hash": "2cc04d2e61ec4a9999189c3496f631e8",
     "semantic_hash": ""
   },
   "frontend/README.md": {
-    "mtime": 1794157967.005886,
-    "seen": 1794392876.981492,
-    "ast_hash": "34ed0334cbf7c8a9f4c270095ea9ed09",
+    "mtime": 1794399235.7618296,
+    "seen": 1794412108.208011,
+    "ast_hash": "0359fef3d6e19a013ea2f6bf914fc254",
     "semantic_hash": ""
   },
   "frontend/index.html": {
-    "mtime": 1794025435.7695887,
-    "seen": 1794392876.9814975,
-    "ast_hash": "65e1bbb6437a1af06859d7ad9689377a",
+    "mtime": 1794643973.1197076,
+    "seen": 1794645375.6310565,
+    "ast_hash": "2a646499c532470c88011c7b201ab441",
     "semantic_hash": ""
   },
   "mcp/README.md": {
-    "mtime": 1794157991.467686,
-    "seen": 1794392876.9815028,
-    "ast_hash": "4f918dbf5fa4b20be53d93a0ae1b1965",
+    "mtime": 1794399235.764866,
+    "seen": 1794412108.208834,
+    "ast_hash": "a41fc73ea523bddeb0b88ad836ea4d00",
     "semantic_hash": ""
   },
   "skills.md": {
@@ -1116,9 +1116,9 @@
     "semantic_hash": ""
   },
   "frontend/public/logo.svg": {
-    "mtime": 1793894839.9989011,
-    "seen": 1794392876.9815834,
-    "ast_hash": "20e539ccf0742f612a23d70cec999700",
+    "mtime": 1794644027.0175624,
+    "seen": 1794645375.631088,
+    "ast_hash": "7c7f908a0b235052795ce9fc3f33f5b7",
     "semantic_hash": ""
   },
   "frontend/src/components/illustrations/assistant-empty-state.svg": {
@@ -1284,543 +1284,189 @@
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/.whyline/assumptions.json": {
-    "mtime": 1794397572.9634228,
-    "seen": 1794398201.3882546,
-    "ast_hash": "be234e5a028fe636b47d05cf88fe3760",
+    "mtime": 1794642222.139406,
+    "seen": 1794642639.7805016,
+    "ast_hash": "4312051f1b225c3a921f457eaab4c684",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/.whyline/checkpoints.json": {
-    "mtime": 1794394686.7488258,
-    "seen": 1794395900.3842344,
+    "mtime": 1794642207.53933,
+    "seen": 1794642639.7805054,
     "ast_hash": "504bb000bb9e83e334c6cd7a33cafbc4",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/.whyline/fences.json": {
-    "mtime": 1794398059.4332092,
-    "seen": 1794398201.3899682,
-    "ast_hash": "d08e76c595813274a0360b3a7f1d65f0",
+    "mtime": 1794646807.081503,
+    "seen": 1794648770.9402704,
+    "ast_hash": "44302259502d78cfcb66ce7cccbad88f",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/.whyline/incidents.json": {
-    "mtime": 1794397573.3149776,
-    "seen": 1794398201.3899784,
-    "ast_hash": "6b41fed0c6a9df0faf8ecd907be09b46",
+    "mtime": 1794642243.7928581,
+    "seen": 1794642639.780513,
+    "ast_hash": "a092e7bc450e490491cef40ebd98b84d",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/.whyline/scorecard.json": {
-    "mtime": 1794397573.3149776,
-    "seen": 1794398201.3929224,
-    "ast_hash": "a71c213296b6de5bdeb8478153caad4c",
+    "mtime": 1794642222.1306143,
+    "seen": 1794642639.7805197,
+    "ast_hash": "4879a2904fb9c0b1716fb321c6aa1207",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/src/test/java/com/healthconnect/whyline/SpokenFenceInvariantTest.java": {
-    "mtime": 1794394693.3783803,
-    "seen": 1794395900.3843527,
+    "mtime": 1794642226.9488428,
+    "seen": 1794642639.780561,
     "ast_hash": "d1383cb9f45ed4a31633b38b095a0410",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/tests/test_whyline_invariants.py": {
-    "mtime": 1794397589.9684749,
-    "seen": 1794398201.4530303,
+    "mtime": 1794642226.9510071,
+    "seen": 1794642639.7805643,
     "ast_hash": "f1daa7883a374d7bcf2bf9561f734cb2",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/checkpoint_chk-03.wav": {
-    "mtime": 1794394686.673054,
-    "seen": 1794395902.6640215,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/utils/flowchartPipeline.test.js": {
+    "mtime": 1794657093.0674136,
+    "seen": 1794660975.4416804,
+    "ast_hash": "e5eb7d836fbda242c10e3255d7833a64",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/checkpoint_fix_payment_double_charge.wav": {
-    "mtime": 1794394638.9159229,
-    "seen": 1794395902.6640308,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "backend/migrations/01_init.sql": {
+    "mtime": 1793894839.968654,
+    "seen": 1794635829.5983262,
+    "ast_hash": "ffde6b689443d36916e749db26ce57b4",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/copilot_english_3b6737bf.wav": {
-    "mtime": 1794394665.8474555,
-    "seen": 1794395902.6640372,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/components/MermaidFlowchartPanel.jsx": {
+    "mtime": 1794654451.8747284,
+    "seen": 1794660975.4414332,
+    "ast_hash": "4aa1ccf17fc5ee1435cb03ddbc3aa4cf",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/copilot_english_88f9b5a6.wav": {
-    "mtime": 1794394659.9823034,
-    "seen": 1794395902.6640444,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/utils/flowchartLayers.js": {
+    "mtime": 1794653598.1588857,
+    "seen": 1794660975.44167,
+    "ast_hash": "b79eecc750e1e04c4bef952bf59f9bf3",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/copilot_english_99893738.wav": {
-    "mtime": 1794394666.3241498,
-    "seen": 1794395902.6640518,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/utils/flowchartLayers.test.js": {
+    "mtime": 1794653116.5500383,
+    "seen": 1794660975.4416747,
+    "ast_hash": "d4894eea7c32b5416d953eb6d2dde9fa",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/copilot_telugu_5a322d31.wav": {
-    "mtime": 1794394648.2910821,
-    "seen": 1794395902.6640582,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/copilot_telugu_b1f19aef.wav": {
-    "mtime": 1794394660.6126013,
-    "seen": 1794395902.6640632,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/copilot_telugu_b45e2318.wav": {
-    "mtime": 1794394659.4259791,
-    "seen": 1794395902.664068,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/copilot_telugu_d22e20fc.wav": {
-    "mtime": 1794394681.0788252,
-    "seen": 1794395902.6640732,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/copilot_telugu_d41d8cd9.wav": {
-    "mtime": 1794394665.4193494,
-    "seen": 1794395902.66408,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/copilot_telugu_f4fd66d1.wav": {
-    "mtime": 1794394659.0026267,
-    "seen": 1794395902.6640859,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/copilot_telugu_f6451741.wav": {
-    "mtime": 1794394666.7476115,
-    "seen": 1794395902.6640906,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "supabase/migrations/20261101000000_whyline_hybrid_rag.sql": {
+    "mtime": 1793476854.2097042,
+    "seen": 1794635829.5991063,
+    "ast_hash": "d5d64af1ce30297b084ef86b386c05f6",
     "semantic_hash": ""
   },
   "demo-repos/HealthConnect/.whyline/audio/fence-001.wav": {
-    "mtime": 1794394690.3008864,
-    "seen": 1794395902.6640954,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+    "mtime": 1794642554.3260555,
+    "seen": 1794642639.78188,
+    "ast_hash": "84bee795864683ccd5f699275208dded",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/fence-001_confirmed.wav": {
-    "mtime": 1794394688.53488,
-    "seen": 1794395902.6641016,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/components/LanguageVoiceToast.jsx": {
+    "mtime": 1794644227.7444413,
+    "seen": 1794645375.6308165,
+    "ast_hash": "03a5e01469c9fbd830bef4beb2fcb37c",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/fence-002.wav": {
-    "mtime": 1794394690.5031743,
-    "seen": 1794395902.664106,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/components/RouteBackdrop.jsx": {
+    "mtime": 1794644503.3282962,
+    "seen": 1794645375.6308317,
+    "ast_hash": "910c94a1614a3042443b194349f220fd",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/fence-003.wav": {
-    "mtime": 1794394690.862284,
-    "seen": 1794395902.664112,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/components/VoiceAgentPicker.jsx": {
+    "mtime": 1794644225.1010308,
+    "seen": 1794645375.6308398,
+    "ast_hash": "80bd0270445a7d8d4a10e07feb77784c",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/fence-004.wav": {
-    "mtime": 1794394691.1364,
-    "seen": 1794395902.664118,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/components/WhyLineLogo.jsx": {
+    "mtime": 1794646196.502104,
+    "seen": 1794648770.9404533,
+    "ast_hash": "fbde2ec4db935ec037e95670f5c8a535",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/fence-005.wav": {
-    "mtime": 1794394691.5761294,
-    "seen": 1794395902.664123,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/config/voiceAgents.js": {
+    "mtime": 1794644089.8735387,
+    "seen": 1794645375.630859,
+    "ast_hash": "6eb6f97409cb596b1a093478989471f8",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/fence-006.wav": {
-    "mtime": 1794394691.902988,
-    "seen": 1794395902.6641278,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/context/VoiceAgentContext.jsx": {
+    "mtime": 1794644092.860077,
+    "seen": 1794645375.6308608,
+    "ast_hash": "d5d598e8e283ef0e16032761bff54dae",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/fence-007.wav": {
-    "mtime": 1794394692.1860044,
-    "seen": 1794395902.6641326,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/i18n/en.json": {
+    "mtime": 1794644149.8758452,
+    "seen": 1794645375.6308706,
+    "ast_hash": "35f71b359f1831aae294094969edf936",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/fence-008.wav": {
-    "mtime": 1794394692.4592323,
-    "seen": 1794395902.6641371,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/i18n/hi.json": {
+    "mtime": 1794644149.8781686,
+    "seen": 1794645375.6308722,
+    "ast_hash": "cf0c58ad7a448de8d666530b58db7835",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/fence-009.wav": {
-    "mtime": 1794394692.8325107,
-    "seen": 1794395902.664142,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/i18n/te.json": {
+    "mtime": 1794644149.8768,
+    "seen": 1794645375.6308742,
+    "ast_hash": "3013be8dd05d545cd366d95558302a79",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/fence-010.wav": {
-    "mtime": 1794394693.3522065,
-    "seen": 1794395902.6641464,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/pages/LandingPage.jsx": {
+    "mtime": 1794644042.4495409,
+    "seen": 1794645375.6308916,
+    "ast_hash": "5746e5d41e4e6314ed5e6d5a4e874aef",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/flow_4a1ee7_english_step1.wav": {
-    "mtime": 1794394648.6836772,
-    "seen": 1794395902.664152,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/components/BeginnerFlowchartGuide.jsx": {
+    "mtime": 1794645883.1022277,
+    "seen": 1794648770.9403987,
+    "ast_hash": "6558d516d6fb3a6b4186220b0f5315bd",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/flow_4a1ee7_english_step2.wav": {
-    "mtime": 1794394648.6920235,
-    "seen": 1794395902.6641567,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/components/LanguageSegmentedBar.jsx": {
+    "mtime": 1794646193.7928848,
+    "seen": 1794648770.940412,
+    "ast_hash": "c053c7e8cfcdba016e283c438c58add6",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/flow_4a1ee7_english_step3.wav": {
-    "mtime": 1794394648.6973634,
-    "seen": 1794395902.6641614,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "frontend/src/components/MenuShaderLayer.jsx": {
+    "mtime": 1794653606.9009223,
+    "seen": 1794660975.4414263,
+    "ast_hash": "a5bc390130ee75954f70b95802c0bc49",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/flow_4a1ee7_english_step4.wav": {
-    "mtime": 1794394648.7030697,
-    "seen": 1794395902.664166,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "test-results/flow-desktop-1280x800.png": {
+    "mtime": 1794654649.0693548,
+    "seen": 1794660975.4431643,
+    "ast_hash": "8925a8770f5f19d3f810f53f470d569a",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/flow_4a1ee7_english_step5.wav": {
-    "mtime": 1794394648.7090554,
-    "seen": 1794395902.6641705,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "test-results/flow-desktop-full.png": {
+    "mtime": 1794655008.8434546,
+    "seen": 1794660975.4431732,
+    "ast_hash": "658de312145c04b14858ed426b2ef936",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/flow_4a1ee7_hindi_step1.wav": {
-    "mtime": 1794394648.5743666,
-    "seen": 1794395902.6641753,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
+  "test-results/flow-mobile-390x844.png": {
+    "mtime": 1794654665.0020638,
+    "seen": 1794660975.4431784,
+    "ast_hash": "9cd335f5a9dd17fbe637eee835ccb261",
     "semantic_hash": ""
   },
-  "demo-repos/HealthConnect/.whyline/audio/flow_4a1ee7_hindi_step2.wav": {
-    "mtime": 1794394648.5813637,
-    "seen": 1794395902.6641798,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/flow_4a1ee7_hindi_step3.wav": {
-    "mtime": 1794394648.5880897,
-    "seen": 1794395902.6641843,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/flow_4a1ee7_hindi_step4.wav": {
-    "mtime": 1794394648.594335,
-    "seen": 1794395902.6641896,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/flow_4a1ee7_hindi_step5.wav": {
-    "mtime": 1794394648.5994687,
-    "seen": 1794395902.664195,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/flow_4a1ee7_telugu_step1.wav": {
-    "mtime": 1794394648.4563615,
-    "seen": 1794395902.6642008,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/flow_4a1ee7_telugu_step2.wav": {
-    "mtime": 1794394648.4628959,
-    "seen": 1794395902.6642063,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/flow_4a1ee7_telugu_step3.wav": {
-    "mtime": 1794394648.468655,
-    "seen": 1794395902.6642141,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/flow_4a1ee7_telugu_step4.wav": {
-    "mtime": 1794394648.475095,
-    "seen": 1794395902.664219,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/flow_4a1ee7_telugu_step5.wav": {
-    "mtime": 1794394648.4815962,
-    "seen": 1794395902.6642237,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/regenerated_cue.wav": {
-    "mtime": 1794394672.9414473,
-    "seen": 1794395902.6642292,
-    "ast_hash": "bfe928f9cf6fc956d28283c8bff7d2f4",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/summary_4a1ee7_english.wav": {
-    "mtime": 1794394648.7398162,
-    "seen": 1794395902.6642332,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/summary_4a1ee7_hindi.wav": {
-    "mtime": 1794394648.627983,
-    "seen": 1794395902.6642375,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/summary_4a1ee7_telugu.wav": {
-    "mtime": 1794394648.5149202,
-    "seen": 1794395902.6642423,
-    "ast_hash": "eb41e46b911f28d24f0502010679c5e0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/copilot_f3b7ba8f.wav": {
-    "mtime": 1794397572.9978375,
-    "seen": 1794398201.8802278,
-    "ast_hash": "5591c17b9cd64296d20175f329cc2394",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1592ed8b46ef55cf.wav": {
-    "mtime": 1794397573.0042083,
-    "seen": 1794398202.0605655,
-    "ast_hash": "634fb644ade1ba1c87ebda7d40c48798",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1afa67ad_te-IN_1.wav": {
-    "mtime": 1794397573.0042083,
-    "seen": 1794398202.060577,
-    "ast_hash": "d034a2bea809dabf7ee064c6f3dc0e13",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1afa67ad_te-IN_2.wav": {
-    "mtime": 1794397573.0165987,
-    "seen": 1794398202.0605855,
-    "ast_hash": "d41f524212000444374aecbc9955f0b0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1afa67ad_te-IN_3.wav": {
-    "mtime": 1794397573.0201733,
-    "seen": 1794398202.0605927,
-    "ast_hash": "3e740cc617c8480b30d7c2707f18e1f4",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1afa67ad_te-IN_4.wav": {
-    "mtime": 1794397573.0332706,
-    "seen": 1794398202.0605996,
-    "ast_hash": "c28b2b8a9b77ea213369043947e00573",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1afa67ad_te-IN_5.wav": {
-    "mtime": 1794397573.037472,
-    "seen": 1794398202.0606112,
-    "ast_hash": "ce387cc02e5363d02cd554d12418f07f",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1afa67ad_te-IN_6.wav": {
-    "mtime": 1794397573.0456045,
-    "seen": 1794398202.0606167,
-    "ast_hash": "a926489ce31161e4658399856b470a32",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1afa67ad_te-IN_7.wav": {
-    "mtime": 1794397573.0564578,
-    "seen": 1794398202.0606217,
-    "ast_hash": "5b0caebf4ce66cf545c5b2edc3debd1e",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1cbb7272_hi-IN_1.wav": {
-    "mtime": 1794397573.0620327,
-    "seen": 1794398202.0606277,
-    "ast_hash": "7b75b8ab14aa606045515a0fd0e0edb2",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1cbb7272_hi-IN_2.wav": {
-    "mtime": 1794397573.0661302,
-    "seen": 1794398202.0606332,
-    "ast_hash": "eadd14e86c58f2f418cb71d5222c90d4",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1cbb7272_hi-IN_3.wav": {
-    "mtime": 1794397573.0725148,
-    "seen": 1794398202.0606375,
-    "ast_hash": "c6fcc164dffc7b7d78988a37f2fe3c8e",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1cbb7272_hi-IN_4.wav": {
-    "mtime": 1794397573.0853374,
-    "seen": 1794398202.0606413,
-    "ast_hash": "993e601f653f7296145b94d6d54fe530",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1cbb7272_hi-IN_5.wav": {
-    "mtime": 1794397573.0897484,
-    "seen": 1794398202.060645,
-    "ast_hash": "cd5af32914cd56747487424f5ae9fd86",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1cbb7272_hi-IN_6.wav": {
-    "mtime": 1794397573.0994077,
-    "seen": 1794398202.0606506,
-    "ast_hash": "a7d2b0bc2aeddc50308b73005cc42b12",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1cbb7272_hi-IN_7.wav": {
-    "mtime": 1794397573.1092749,
-    "seen": 1794398202.0606556,
-    "ast_hash": "71164846438a8520dd2aa92a83999a0b",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_1e15554ddedfef89.wav": {
-    "mtime": 1794397573.117721,
-    "seen": 1794398202.060661,
-    "ast_hash": "4cd27fe8ecda310abd3ed446973dadd9",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_4c4f8c02593ced78.wav": {
-    "mtime": 1794397573.1206353,
-    "seen": 1794398202.0606658,
-    "ast_hash": "da217a7139649e139e68b84fc86bca00",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_50ac0c85_en-IN_1.wav": {
-    "mtime": 1794397573.1278448,
-    "seen": 1794398202.0606701,
-    "ast_hash": "eb1eec3424ef6d983ae610c383bc80fc",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_50ac0c85_en-IN_2.wav": {
-    "mtime": 1794397573.1278448,
-    "seen": 1794398202.060675,
-    "ast_hash": "ad648525fde6751157a12747d3da1160",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_50ac0c85_en-IN_3.wav": {
-    "mtime": 1794397573.1358924,
-    "seen": 1794398202.0606794,
-    "ast_hash": "8529506b4b7545a8c2a54405502a390f",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_50ac0c85_en-IN_4.wav": {
-    "mtime": 1794397573.1477783,
-    "seen": 1794398202.0606854,
-    "ast_hash": "ad74ecc11aa966ac2476de93b3d43e18",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_50ac0c85_en-IN_5.wav": {
-    "mtime": 1794397573.1519897,
-    "seen": 1794398202.0606897,
-    "ast_hash": "a429ef4b35f604283b6cc55bff8c04f0",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_50ac0c85_en-IN_6.wav": {
-    "mtime": 1794397573.1611202,
-    "seen": 1794398202.0606945,
-    "ast_hash": "1740769ee15ce12bb9f8792a3bac2563",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_50ac0c85_en-IN_7.wav": {
-    "mtime": 1794397573.1709456,
-    "seen": 1794398202.0606992,
-    "ast_hash": "70dfb65de4d298e23a9539cece4344b1",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_5356b2466af0ccfa.wav": {
-    "mtime": 1794397573.1774719,
-    "seen": 1794398202.0607045,
-    "ast_hash": "d5c6cfaa1dad0a0a1a34fb1e603ec534",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_56dd1712fd267dfc.wav": {
-    "mtime": 1794397573.187041,
-    "seen": 1794398202.0607095,
-    "ast_hash": "ceff0deba8338819d8eb0d82f9b92442",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_68ebcd3f7b0d7453.wav": {
-    "mtime": 1794397573.193695,
-    "seen": 1794398202.0607142,
-    "ast_hash": "e48fa0bf43aaeeed248dd98055554601",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_6924c4c8a3578158.wav": {
-    "mtime": 1794397573.1999168,
-    "seen": 1794398202.0607202,
-    "ast_hash": "6001eed8a526f2c427cef448bdfcb27f",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_7715a845451affb6.wav": {
-    "mtime": 1794397573.2100217,
-    "seen": 1794398202.0607245,
-    "ast_hash": "e9cf34bf5aa70c74a008f0c2a50ef4c2",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_79e772b919a6152f.wav": {
-    "mtime": 1794397573.2227592,
-    "seen": 1794398202.0622866,
-    "ast_hash": "9dbdca41bfc2ab112bd7e49c63f19f92",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_8b1e86fc970ec20d.wav": {
-    "mtime": 1794397573.2270126,
-    "seen": 1794398202.0623007,
-    "ast_hash": "8e3c5db86bac479cadf4e6ba0ec4a5c7",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_8ea70ac4beca3e9b.wav": {
-    "mtime": 1794397573.2416105,
-    "seen": 1794398202.0623102,
-    "ast_hash": "f79ee8bc8a228e86661be13b8f45696c",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_90ba5f11e8c45102.wav": {
-    "mtime": 1794397573.2484107,
-    "seen": 1794398202.0623171,
-    "ast_hash": "be9f6f7a73416c813c096f486984f54b",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_a8b6c12ada7801c3.wav": {
-    "mtime": 1794397573.2573173,
-    "seen": 1794398202.0623245,
-    "ast_hash": "b2052f7411af153e7c825d7e508df01f",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_aed76e4c77c4562c.wav": {
-    "mtime": 1794397573.2651095,
-    "seen": 1794398202.0623317,
-    "ast_hash": "0976284e261859dcf50029cc2d5249fd",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_b07ffd3f9f889278.wav": {
-    "mtime": 1794397573.275286,
-    "seen": 1794398202.0623395,
-    "ast_hash": "13d6b4863b4096c0e73488a2a38c7212",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_bee3c363766d52aa.wav": {
-    "mtime": 1794397573.282827,
-    "seen": 1794398202.062346,
-    "ast_hash": "d158c58105f7328e093a7d73ce86fd4c",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_ccb9772230eb33c3.wav": {
-    "mtime": 1794397573.2911274,
-    "seen": 1794398202.0623517,
-    "ast_hash": "690c378e982f7d175cce23ba1de153fc",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_da1bc50b4ae57c3b.wav": {
-    "mtime": 1794397573.3011956,
-    "seen": 1794398202.0623567,
-    "ast_hash": "ccc7ccf9e21108ecfe5a556a21ac35f2",
-    "semantic_hash": ""
-  },
-  "demo-repos/HealthConnect/.whyline/audio/git_fa2b6502f4c3bc25.wav": {
-    "mtime": 1794397573.3070261,
-    "seen": 1794398202.0623634,
-    "ast_hash": "caf9faead603078b84e40c2eff1400c1",
+  "test-results/mermaid-six-layer-panel.png": {
+    "mtime": 1794655006.0970562,
+    "seen": 1794660975.4431832,
+    "ast_hash": "d536fba84be88f4dfc55c07c261e235a",
     "semantic_hash": ""
   },
   "frontend/package-lock.json": {
@@ -1830,9 +1476,9 @@
     "semantic_hash": ""
   },
   "package-lock.json": {
-    "mtime": 1794231090.7330022,
-    "seen": 1794392876.9818845,
-    "ast_hash": "03d45ba4d54f03240f62b251e62e0934",
+    "mtime": 1794653577.5648422,
+    "seen": 1794660975.4432628,
+    "ast_hash": "947119e24beda6bc13e21df0a6396544",
     "semantic_hash": ""
   }
 }
