@@ -1423,6 +1423,7 @@ a.btn:active {
 
 :root {
   --stagger: 0;
+  --node-i: 0;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-fast: 120ms;
   --dur-mid: 220ms;
@@ -1928,7 +1929,7 @@ a:focus-visible {
   transform: translateY(-2px);
 }
 
-/* FlowChat SVG path draw-in on load */
+/* FlowChat SVG path draw-in & animated signal pulse */
 .flow-canvas-paths svg path.flowchart-link,
 .flow-canvas-paths svg .edgePath path {
   stroke-dasharray: 420;
@@ -1936,8 +1937,75 @@ a:focus-visible {
   animation: flowPathDraw var(--dur-reveal) var(--ease-out) forwards;
 }
 
+.flow-canvas-paths svg g.node,
+.flowchart-node {
+  animation: flowNodeReveal 420ms var(--ease-out) both;
+  animation-delay: calc(min(var(--node-i, 0), 14) * 45ms);
+  transition: transform var(--dur-mid) var(--ease-out), opacity var(--dur-mid) ease;
+}
+
+.flow-canvas-paths svg g.node:hover,
+.flowchart-node:hover {
+  transform: translateY(-2px);
+}
+
+.flow-canvas-paths svg g.node.is-active-mermaid-node rect,
+.flow-canvas-paths svg g.node.is-active-mermaid-node polygon,
+.flow-canvas-paths svg g.node.is-active-mermaid-node path {
+  stroke: var(--accent) !important;
+  stroke-width: 2.6px !important;
+  filter: drop-shadow(0 6px 14px rgba(84, 83, 51, 0.24));
+}
+
+.flowchart-edge {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.6;
+  transition: stroke var(--dur-mid) ease, stroke-width var(--dur-mid) ease;
+}
+
+.flowchart-edge-active {
+  stroke: var(--accent);
+  stroke-width: 2.2;
+}
+
+.flowchart-edge-signal {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 2.4;
+  stroke-dasharray: 7 11;
+  stroke-linecap: round;
+  animation: flowSignalPulse 1.35s linear infinite;
+  pointer-events: none;
+}
+
+.flowchart-node-halo {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 2;
+  opacity: 0.65;
+  animation: flowNodeHalo 2s var(--ease-out) infinite;
+  pointer-events: none;
+}
+
 @keyframes flowPathDraw {
   to { stroke-dashoffset: 0; }
+}
+
+@keyframes flowNodeReveal {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes flowSignalPulse {
+  from { stroke-dashoffset: 36; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes flowNodeHalo {
+  0% { opacity: 0.72; stroke-width: 2; }
+  70% { opacity: 0.15; stroke-width: 6; }
+  100% { opacity: 0; stroke-width: 7; }
 }
 
 /* Route-Specific Lightweight SVG/CSS Backdrops */

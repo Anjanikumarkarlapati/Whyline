@@ -37,29 +37,34 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
   };
 
   // Estimate node width from displayed truncated label length (Indic scripts run ~30-40% longer)
-  const estimateNodeWidth = (label, idx = 0) => {
+  const estimateNodeWidth = (label, idx = 0, isHub = false) => {
     const clean = stripLeadingStepNumber(label);
-    const displayLabel = `${idx + 1}. ${truncateGraphemes(clean || label || 'Step', 26)}`;
+    const displayLabel = isHub ? (clean || label || 'Project Hub') : `${idx + 1}. ${truncateGraphemes(clean || label || 'Step', 34)}`;
     const graphemes = Array.from(
       new Intl.Segmenter(lang === 'en' ? 'en' : lang === 'hi' ? 'hi' : 'te', {
         granularity: 'grapheme',
       }).segment(displayLabel)
     );
     const factor = lang === 'en' ? 7.2 : lang === 'hi' ? 9.0 : 9.8;
-    const maxW = lang === 'en' ? 236 : 268;
+    const maxW = lang === 'en' ? 280 : 300;
     return Math.min(maxW, Math.max(nodeMinW, Math.ceil(graphemes.length * factor + labelGap)));
   };
 
   const nodeWidths = Object.fromEntries(
-    nodes.map((n, idx) => [n.id, estimateNodeWidth(n.label, idx)])
+    nodes.map((n, idx) => {
+      const isHub = n.id === 'REPO-HUB' || n.phase === 'hub';
+      return [n.id, estimateNodeWidth(n.label, idx, isHub)];
+    })
   );
 
-  // Resolve non-overlapping positions so linear pipeline nodes never collide
+  const isRadialMindMap = nodes.some((n) => n.id === 'REPO-HUB' || n.phase === 'hub');
+
+  // Resolve non-overlapping positions so linear pipeline nodes never collide; preserve radial mind map coords
   const resolvedPositions = {};
   nodes.forEach((n, idx) => {
     const rawX = n?.position?.x ?? idx * 280 + 40;
     const rawY = n?.position?.y ?? 120;
-    if (idx === 0) {
+    if (isRadialMindMap || idx === 0) {
       resolvedPositions[n.id] = { x: rawX, y: rawY };
       return;
     }
@@ -81,13 +86,38 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
     ])
   );
 
-  const width =
-    Math.max(
-      ...nodes.map((n) => (resolvedPositions[n?.id]?.x ?? 0) + (nodeWidths[n?.id] || nodeMinW) + pad),
-      320
-    ) + pad;
-  const height =
-    Math.max(...nodes.map((n) => (resolvedPositions[n?.id]?.y ?? 0) + nodeH + pad), 160) + pad;
+  const maxX = Math.max(
+    320,
+    ...nodes.map((n) => (resolvedPositions[n?.id]?.x ?? 0) + (nodeWidths[n?.id] || nodeMinW))
+  );
+  const maxY = Math.max(
+    160,
+    ...nodes.map((n) => (resolvedPositions[n?.id]?.y ?? 0) + nodeH)
+  );
+  const width = maxX + pad * 2;
+  const height = maxY + pad * 2;
+
+  if (nodes.length === 0) {
+    return (
+      <svg
+        className="flowchart-svg"
+        viewBox="0 0 600 160"
+        role="group"
+        aria-label="Empty repository flowchart"
+        style={{ width: '100%', height: 'auto', minHeight: 160 }}
+      >
+        <text
+          x="300"
+          y="85"
+          textAnchor="middle"
+          fill="var(--text-secondary)"
+          style={{ fontSize: '13px', fontFamily: 'var(--font-mono, monospace)' }}
+        >
+          No flowchart nodes indexed for this repository view
+        </text>
+      </svg>
+    );
+  }
 
   const mid = (n) => ({
     x: (n?.position?.x ?? 0) + (nodeWidths[n?.id] || nodeMinW) / 2,
@@ -159,16 +189,26 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
         const p = rectBoundaryPoint(a, centerB, 2);
         const q = rectBoundaryPoint(b, centerA, 4);
         const isEdgeActive = srcId === activeId || tgtId === activeId;
+        const dx = q.x - p.x;
+        const dy = q.y - p.y;
+        const c1x = Number((p.x + dx * 0.45).toFixed(1));
+        const c1y = Number((p.y + dy * 0.1).toFixed(1));
+        const c2x = Number((q.x - dx * 0.45).toFixed(1));
+        const c2y = Number((q.y - dy * 0.1).toFixed(1));
+        const pathD = `M ${p.x} ${p.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${q.x} ${q.y}`;
         return (
           <g key={e.id || `${srcId}-${tgtId}-${idx}`}>
-            <line
+            <path
               className={isEdgeActive ? 'flowchart-edge flowchart-edge-active' : 'flowchart-edge'}
-              x1={p.x}
-              y1={p.y}
-              x2={q.x}
-              y2={q.y}
+              d={pathD}
               markerEnd={isEdgeActive ? 'url(#flowchart-arrow-active)' : 'url(#flowchart-arrow)'}
             />
+            {isEdgeActive && (
+              <path
+                className="flowchart-edge-signal"
+                d={pathD}
+              />
+            )}
             {e.label && (
               <text
                 className="flowchart-edge-label"
@@ -185,14 +225,26 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
       {nodes.map((n, i) => {
         const active = n.id === activeId;
         const done = doneIds.includes(n.id);
-        const w = nodeWidths[n.id];
+        const w = nodeWidths[n.id] || nodeMinW;
         const pos = resolvedPositions[n.id] || n.position || { x: i * 280 + 40, y: 120 };
-        const cleanLabel = stripLeadingStepNumber(n.label) || n.label || `Step ${i + 1}`;
+        const isHub = n.id === 'REPO-HUB' || n.phase === 'hub';
+        const rawClean = stripLeadingStepNumber(n.label) || n.label;
+        const cleanLabel = isHub ? rawClean : (rawClean || `Step ${i + 1}`);
+        const renderedTitle = isHub ? truncateGraphemes(cleanLabel, 32) : `${i + 1}. ${truncateGraphemes(cleanLabel, 34)}`;
+        const renderedSub = active
+          ? 'Speaking now'
+          : done
+            ? 'Explained'
+            : isHub
+              ? 'Architecture Hub'
+              : n.category || n.phase || 'Stage';
+
         return (
           <g
             key={n.id}
             ref={(el) => { nodeRefs.current[n.id] = el; }}
             className="flowchart-node"
+            style={{ '--node-i': i, cursor: 'pointer' }}
             tabIndex={i === 0 ? 0 : -1}
             role="button"
             aria-label={`${cleanLabel}${active ? ' (speaking)' : done ? ' (explained)' : ''}`}
@@ -250,9 +302,19 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
             onBlur={(ev) => {
               ev.currentTarget.removeAttribute('data-pressing');
             }}
-            style={{ cursor: 'pointer' }}
           >
             <title>{cleanLabel} — {n.category || n.phase || 'Step'}</title>
+            {active && (
+              <rect
+                x={pos.x - 4}
+                y={pos.y - 4}
+                width={w + 8}
+                height={nodeH + 8}
+                rx="16"
+                ry="16"
+                className="flowchart-node-halo"
+              />
+            )}
             <rect
               x={pos.x}
               y={pos.y}
@@ -260,6 +322,9 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
               height={nodeH}
               rx="12"
               ry="12"
+              fill={active ? 'var(--accent-wash)' : done ? 'var(--bg-raised)' : 'var(--bg-surface)'}
+              stroke={active ? 'var(--accent)' : done ? 'var(--border-strong)' : 'var(--border-default)'}
+              strokeWidth={active ? 2 : 1.2}
               className={
                 active
                   ? 'flowchart-node-bg flowchart-node-active'
@@ -271,24 +336,26 @@ export default function InteractiveFlowchartSvg({ graph, activeId, doneIds = [],
             <text
               x={pos.x + 12}
               y={pos.y + nodeH / 2 - 6}
+              fill={active ? 'var(--accent)' : 'var(--text-primary)'}
               className={
                 active
                   ? 'flowchart-node-text-main flowchart-node-active'
                   : 'flowchart-node-text-main'
               }
             >
-              {i + 1}. {truncateGraphemes(cleanLabel, 26)}
+              {renderedTitle}
             </text>
             <text
               x={pos.x + 12}
               y={pos.y + nodeH / 2 + 14}
+              fill="var(--text-secondary)"
               className={
                 active
                   ? 'flowchart-node-text-sub flowchart-node-active'
                   : 'flowchart-node-text-sub'
               }
             >
-              {active ? 'Speaking now' : done ? 'Explained' : n.category || n.phase || 'Stage'}
+              {renderedSub}
             </text>
           </g>
         );

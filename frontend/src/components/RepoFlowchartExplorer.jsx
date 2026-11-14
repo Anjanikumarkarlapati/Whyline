@@ -15,27 +15,72 @@ import {
   SkipForward,
   SpeakerHigh,
   Stack,
+  WarningCircle,
 } from '@phosphor-icons/react';
 import { QUICK_GITHUB_REPOS, useWorkbenchSelection } from '../context/WorkbenchContext';
+import { useVoiceAgent } from '../context/VoiceAgentContext';
 import { useI18n } from '../i18n';
 import StatusBadge from './StatusBadge';
 import { CodeBlock, FormattedText } from './CodeText';
 import InteractiveFlowchartSvg from './InteractiveFlowchartSvg';
+import MermaidFlowchartPanel from './MermaidFlowchartPanel';
+import BeginnerFlowchartGuide from './BeginnerFlowchartGuide';
+import { normalizeBestAlternative, normalizeCritiqueList } from '../utils/flowchartLayers';
+import VoiceLanguageDropdown, {
+  getDefaultVoice,
+  inferModelForVoice,
+} from './VoiceLanguageDropdown';
+
+// Module-level in-memory cache so switching tabs or clicking Flowcharts renders instantly (0ms)
+const flowchartClientCache = new Map();
+
+const normalizeRepoKey = (urlStr = '') =>
+  String(urlStr || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\/(www\.)?github\.com\//, '')
+    .replace(/\.git$/, '')
+    .replace(/\/+$/, '');
 
 export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber }) {
   const { lang, setLang } = useI18n();
   const { repoContext, loadGitHubRepo } = useWorkbenchSelection();
+  const { selectedAgent } = useVoiceAgent();
 
   const [githubUrl, setGithubUrl] = useState(
     repoContext?.url || 'https://github.com/HealthConnect/payment-gateway-v1'
   );
-  const [flowData, setFlowData] = useState(null);
+  const langCode = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
+  const [providerEngine, setProviderEngine] = useState('gnani');
+  const [selectedModel, setSelectedModel] = useState('timbre-v3.0');
+  const [selectedSttModel, setSelectedSttModel] = useState('prisma-v3.0');
+  const [selectedVoice, setSelectedVoice] = useState(() => getDefaultVoice(lang, 'gnani', 'timbre-v3.0'));
+  const [playbackRate, setPlaybackRate] = useState(1.0);
+  const skipVoiceSyncRef = useRef(false);
+
+  useEffect(() => {
+    if (selectedAgent?.voiceName) {
+      setSelectedVoice(selectedAgent.voiceName);
+      if (selectedAgent.model) setSelectedModel(selectedAgent.model);
+    }
+  }, [selectedAgent?.voiceName, selectedAgent?.model]);
+
+  useEffect(() => {
+    if (skipVoiceSyncRef.current) {
+      skipVoiceSyncRef.current = false;
+      return;
+    }
+    setSelectedVoice(selectedAgent?.voiceName || getDefaultVoice(lang, providerEngine, selectedModel));
+  }, [lang, providerEngine, selectedModel, selectedAgent?.voiceName]);
+  const initialCacheKey = `${normalizeRepoKey(repoContext?.url || 'https://github.com/HealthConnect/payment-gateway-v1')}:${langCode}`;
+  const [flowData, setFlowData] = useState(() => flowchartClientCache.get(initialCacheKey) || null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [activeStepIdx, setActiveStepIdx] = useState(0);
   const [isWalkthroughPlaying, setIsWalkthroughPlaying] = useState(false);
   const [voiceAgentStatus, setVoiceAgentStatus] = useState('Ready');
-  const [viewMode, setViewMode] = useState('steps'); // 'steps' | 'graph' | 'dossier'
-  const [graphSubMode, setGraphSubMode] = useState('pipeline'); // 'pipeline' | 'mindmap'
+  const [viewMode, setViewMode] = useState('graph'); // 'steps' | 'graph' | 'dossier'
+  const [graphSubMode, setGraphSubMode] = useState('mermaid'); // 'mermaid' | 'pipeline' | 'mindmap'
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
   const [copiedCmd, setCopiedCmd] = useState(false);
@@ -56,17 +101,8 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
   const lastScannedKeyRef = useRef('');
   const lastScannedLangRef = useRef('');
 
-  const langCode = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
   const cleanStepTitle = (title) =>
     String(title || '').replace(/^\s*(?:step\s*)?\d+\s*[.:)-]\s*/i, '').trim() || title;
-
-  const normalizeRepoKey = (urlStr = '') =>
-    String(urlStr || '')
-      .trim()
-      .toLowerCase()
-      .replace(/^https?:\/\/(www\.)?github\.com\//, '')
-      .replace(/\.git$/, '')
-      .replace(/\/+$/, '');
 
   useEffect(() => {
     if (repoContext?.url) {
@@ -90,61 +126,77 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
     if (audioRef.current) {
       audioRef.current.pause();
     }
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch {
-        // Ignore
-      }
-    }
   };
 
-  const speakWithBrowserFallback = (text, targetLang, onDone) => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window && text) {
-      try {
-        window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.lang = targetLang || langCode;
-        utter.onend = () => onDone?.();
-        utter.onerror = () => onDone?.();
-        window.speechSynthesis.speak(utter);
-        return;
-      } catch {
-        // Fall through
-      }
-    }
+  const speakWithBrowserFallback = (_text, _targetLang, onDone) => {
     onDone?.();
+  };
+
+  const buildFlowchartTtsUrl = (text, targetLang = langCode, overrides = {}) => {
+    const clean = String(text || '').trim();
+    if (!clean) return null;
+    const activeVoice = overrides.voice ?? selectedVoice;
+    const activeModel = overrides.model ?? selectedModel ?? inferModelForVoice(activeVoice, 'gnani');
+    const activePacing = overrides.pacing ?? playbackRate ?? 1.0;
+    return `/api/tts/speak?lang=${encodeURIComponent(targetLang)}&voice=${encodeURIComponent(activeVoice)}&model=${encodeURIComponent(activeModel)}&provider=gnani&pacing=${encodeURIComponent(activePacing)}&text=${encodeURIComponent(clean)}`;
   };
 
   const playProjectSummaryAudio = (projectSummary) => {
     if (!projectSummary) return;
     stopVoiceWalkthrough();
-    setVoiceAgentStatus(`Playing Overview (${langCode})`);
     const fallbackText = `${projectSummary.simple_explanation || ''} ${projectSummary.real_world_example || ''}`.trim();
+    const resolvedUrl = buildFlowchartTtsUrl(fallbackText, langCode) || projectSummary.audio_url;
+    setVoiceAgentStatus(`Playing Overview (${selectedVoice} • ${selectedModel})`);
 
-    if (projectSummary.audio_url) {
+    if (resolvedUrl) {
       if (!audioRef.current) {
-        audioRef.current = new Audio(projectSummary.audio_url);
+        audioRef.current = new Audio(resolvedUrl);
       } else {
-        audioRef.current.src = projectSummary.audio_url;
+        audioRef.current.src = resolvedUrl;
       }
+      audioRef.current.playbackRate = playbackRate;
       audioRef.current.onended = () => setVoiceAgentStatus('Ready');
-      audioRef.current.onerror = () =>
-        speakWithBrowserFallback(fallbackText, langCode, () => setVoiceAgentStatus('Ready'));
+      audioRef.current.onerror = () => setVoiceAgentStatus('Ready');
       audioRef.current.play().catch(() => {
-        speakWithBrowserFallback(fallbackText, langCode, () => setVoiceAgentStatus('Ready'));
+        setVoiceAgentStatus('Ready');
       });
     } else {
-      speakWithBrowserFallback(fallbackText, langCode, () => setVoiceAgentStatus('Ready'));
+      setVoiceAgentStatus('Ready');
     }
   };
 
-  const fetchFlowchartScan = async (targetUrl, targetLangCode, autoPlayWalkthrough = false) => {
+  const fetchFlowchartScan = async (targetUrl, targetLangCode, autoPlayWalkthrough = false, forceRefresh = false) => {
     const resolvedUrl = targetUrl || githubUrl;
     const resolvedLang = targetLangCode || langCode;
-    lastScannedKeyRef.current = normalizeRepoKey(resolvedUrl);
+    const targetRepoKey = normalizeRepoKey(resolvedUrl);
+    const cacheKey = `${targetRepoKey}:${resolvedLang}`;
+    lastScannedKeyRef.current = targetRepoKey;
     lastScannedLangRef.current = resolvedLang;
     stopVoiceWalkthrough();
+    setError(null);
+
+    // Instant client-side cache retrieval (0ms)
+    if (!forceRefresh && flowchartClientCache.has(cacheKey)) {
+      const cached = flowchartClientCache.get(cacheKey);
+      setFlowData(cached);
+      setActiveStepIdx(0);
+      setLoading(false);
+      setVoiceAgentStatus('Ready');
+      if (cached?.steps?.length > 0 && onSelectStep) {
+        onSelectStep(cached.steps[0]);
+      }
+      if (autoPlayWalkthrough && cached?.steps?.length > 0) {
+        startStepWalkthrough(cached.steps, 0);
+      }
+      return;
+    }
+
+    const currentLoadedKey = normalizeRepoKey(flowData?.repo_url || flowData?.repo_name || flowData?.repo || '');
+    if (currentLoadedKey && currentLoadedKey !== targetRepoKey) {
+      setFlowData(null);
+      setActiveStepIdx(0);
+    }
+
     setLoading(true);
     setVoiceAgentStatus('Building Flowchart...');
     try {
@@ -154,19 +206,37 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
         body: JSON.stringify({
           github_url: resolvedUrl,
           language: resolvedLang,
+          force_refresh: forceRefresh,
         }),
       });
-      const json = await resp.json();
+      const json = await resp.json().catch(() => null);
+      if (!resp.ok || json?.status === 'error') {
+        throw new Error(
+          json?.error ||
+          json?.message ||
+          `Server returned HTTP ${resp.status} while analyzing this repository.`
+        );
+      }
+      if (!json || typeof json !== 'object') {
+        throw new Error('Server returned an empty response while generating the flowchart.');
+      }
+      flowchartClientCache.set(cacheKey, json);
       setFlowData(json);
       setActiveStepIdx(0);
       setVoiceAgentStatus('Ready');
+      setError(null);
       if (json?.steps?.length > 0 && onSelectStep) {
         onSelectStep(json.steps[0]);
       }
       if (autoPlayWalkthrough && json?.steps?.length > 0) {
         startStepWalkthrough(json.steps, 0);
       }
-    } catch {
+    } catch (err) {
+      console.warn('Flowchart scan failed:', err);
+      setError(
+        err?.message ||
+        'Unable to load flowchart for this repository. Please check the URL or network and try again.'
+      );
       setVoiceAgentStatus('Ready');
     } finally {
       setLoading(false);
@@ -194,10 +264,11 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
   const playSingleStepAudio = (stepObj, onComplete) => {
     if (!stepObj) return;
     const stepLang = stepObj.tts_language || langCode;
-    setVoiceAgentStatus(`Speaking Step ${stepObj.step_number} (${stepLang})`);
     const spokenText =
       stepObj.spoken_narration ||
       `Step ${stepObj.step_number}: ${stepObj.title}. ${stepObj.simple_explanation || stepObj.summary || ''}`;
+    const resolvedUrl = buildFlowchartTtsUrl(spokenText, stepLang) || stepObj.audio_url;
+    setVoiceAgentStatus(`Speaking Step ${stepObj.step_number} (${selectedVoice} • ${selectedModel})`);
 
     let finished = false;
     const finishOnce = () => {
@@ -214,18 +285,19 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
       }
     };
 
-    walkthroughTimerRef.current = setTimeout(finishOnce, 14000);
+    walkthroughTimerRef.current = setTimeout(finishOnce, 25000);
 
-    if (stepObj.audio_url) {
+    if (resolvedUrl) {
       if (!audioRef.current) {
-        audioRef.current = new Audio(stepObj.audio_url);
+        audioRef.current = new Audio(resolvedUrl);
       } else {
-        audioRef.current.src = stepObj.audio_url;
+        audioRef.current.src = resolvedUrl;
       }
+      audioRef.current.playbackRate = playbackRate;
       audioRef.current.onloadedmetadata = () => {
         if (!finished && walkthroughTimerRef.current && audioRef.current?.duration > 0) {
           clearTimeout(walkthroughTimerRef.current);
-          const waitMs = Math.min(25000, Math.ceil(audioRef.current.duration * 1000) + 1200);
+          const waitMs = Math.min(35000, Math.ceil(audioRef.current.duration * 1000) + 1500);
           walkthroughTimerRef.current = setTimeout(finishOnce, waitMs);
         }
       };
@@ -272,6 +344,20 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
   const currentStep = steps[activeStepIdx] || steps[0] || null;
   const prevStep = activeStepIdx > 0 ? steps[activeStepIdx - 1] : null;
   const nextStep = activeStepIdx < steps.length - 1 ? steps[activeStepIdx + 1] : null;
+  const weaknessesList = normalizeCritiqueList(
+    flowData?.project_summary?.weaknesses || flowData?.weaknesses
+  );
+  const improvementsList = normalizeCritiqueList(
+    flowData?.project_summary?.improvements || flowData?.improvements
+  );
+  const bestAlternativeStack = normalizeBestAlternative(
+    flowData?.project_summary?.best_alternative_stack || flowData?.best_alternative_stack,
+    flowData?.project_summary?.modern_alternatives || flowData?.modern_alternatives || []
+  );
+  const walkthroughSteps = Array.isArray(flowData?.project_summary?.step_by_step_walkthrough)
+    ? flowData.project_summary.step_by_step_walkthrough
+    : [];
+  const fetchWarning = flowData?.fetch_warning || flowData?.warning || '';
 
   return (
     <article className={`card ${isFullscreen ? "repo-flowchart-fullscreen" : ""}`} aria-label="GitHub Repository Flowchart and Step-by-Step Guide">
@@ -406,25 +492,211 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
             ))}
           </div>
 
-          <div className="segmented-control" role="group" aria-label="Voice explanation language">
-            {[
-              { code: 'en', label: 'English' },
-              { code: 'hi', label: 'Hindi' },
-              { code: 'te', label: 'Telugu' },
-            ].map((item) => (
-              <button
-                key={item.code}
-                id={`btn-flow-lang-${item.code}`}
-                type="button"
-                className={`segmented-btn ${lang === item.code ? 'active' : ''}`}
-                onClick={() => setLang(item.code)}
-                style={{ whiteSpace: 'nowrap' }}
-              >
-                {item.label}
-              </button>
-            ))}
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+            <VoiceLanguageDropdown
+              id="flowchart-voice-lang-select"
+              compact={true}
+              value={lang}
+              provider={providerEngine}
+              model={selectedModel}
+              sttModel={selectedSttModel}
+              onSttModelChange={setSelectedSttModel}
+              voice={selectedVoice}
+              pacing={playbackRate}
+              disabled={loading}
+              onProviderChange={(provId, meta = {}) => {
+                setProviderEngine(provId);
+                if (meta.model) setSelectedModel(meta.model);
+                if (meta.voice) setSelectedVoice(meta.voice);
+              }}
+              onModelChange={(nextModel, nextDefaultVoice) => {
+                setSelectedModel(nextModel);
+                if (nextDefaultVoice) setSelectedVoice(nextDefaultVoice);
+              }}
+              onVoiceChange={(voiceName, meta = {}) => {
+                setSelectedVoice(voiceName);
+                if (meta.model) setSelectedModel(meta.model);
+              }}
+              onPacingChange={(rate) => {
+                setPlaybackRate(rate);
+                if (audioRef.current) audioRef.current.playbackRate = rate;
+              }}
+              onChange={(nextCode, option) => {
+                skipVoiceSyncRef.current = true;
+                setLang(nextCode);
+                if (option?.voice) setSelectedVoice(option.voice);
+                if (option?.model) setSelectedModel(option.model);
+              }}
+            />
+
+            <div className="segmented-control" role="group" aria-label="Voice explanation language">
+              {[
+                { code: 'en', label: 'English' },
+                { code: 'hi', label: 'Hindi' },
+                { code: 'te', label: 'Telugu' },
+              ].map((item) => (
+                <button
+                  key={item.code}
+                  id={`btn-flow-lang-${item.code}`}
+                  type="button"
+                  className={`segmented-btn ${lang === item.code ? 'active' : ''}`}
+                  onClick={() => setLang(item.code)}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
+
+        {/* Flowchart Error Banner with Retry */}
+        {error && (
+          <div
+            role="alert"
+            style={{
+              padding: '20px 24px',
+              borderRadius: '12px',
+              border: '1px solid var(--danger)',
+              backgroundColor: 'var(--danger-wash)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', fontWeight: 700, color: 'var(--danger)' }}>
+              <WarningCircle size={18} />
+              <span>Flowchart Generation Unavailable</span>
+            </div>
+            <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+              {error}
+            </p>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '4px' }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => fetchFlowchartScan(githubUrl, langCode, false, true)}
+              >
+                <ArrowsClockwise size={15} />
+                <span>Retry Generating Flowchart</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  const defaultUrl = 'https://github.com/HealthConnect/payment-gateway-v1';
+                  setGithubUrl(defaultUrl);
+                  loadGitHubRepo(defaultUrl);
+                  fetchFlowchartScan(defaultUrl, langCode, false);
+                }}
+              >
+                <span>Reset to HealthConnect Sample</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Fetch / Rate-Limit / Large-Repo Resilience Warning */}
+        {!loading && fetchWarning && (
+          <div
+            role="status"
+            style={{
+              padding: '12px 16px',
+              borderRadius: '12px',
+              border: '1px solid var(--warning)',
+              backgroundColor: 'var(--warning-tint)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: '10px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minWidth: 0, flex: 1 }}>
+              <WarningCircle size={17} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: '2px' }} />
+              <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.45 }}>
+                <strong style={{ color: 'var(--warning)' }}>Partial / Fallback Repository Scan: </strong>
+                {fetchWarning}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ minHeight: '34px', padding: '4px 12px', fontSize: '12px' }}
+              onClick={() => fetchFlowchartScan(githubUrl, langCode, false, true)}
+            >
+              Retry Live Scan
+            </button>
+          </div>
+        )}
+
+        {/* Inline Refresh Indicator when re-scanning over an existing view */}
+        {loading && flowData && (
+          <div
+            role="status"
+            style={{
+              padding: '10px 14px',
+              borderRadius: '12px',
+              border: '1px solid var(--accent)',
+              backgroundColor: 'var(--accent-wash)',
+              fontSize: '13px',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+            }}
+          >
+            Scanning repository &amp; regenerating 6-layer Mermaid architecture…
+          </div>
+        )}
+
+        {/* Progressive Loading Skeleton */}
+        {loading && !flowData && (
+          <div
+            role="status"
+            aria-label="Generating repository architecture flowchart"
+            style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '4px 0' }}
+          >
+            <div
+              style={{
+                padding: '20px',
+                borderRadius: '12px',
+                background: 'var(--bg-raised)',
+                border: '1px solid var(--border-default)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
+              <div style={{ height: '18px', width: '240px', borderRadius: '4px', background: 'var(--border-default)', opacity: 0.6 }} />
+              <div style={{ height: '14px', width: '90%', borderRadius: '4px', background: 'var(--border-default)', opacity: 0.4 }} />
+              <div style={{ height: '14px', width: '70%', borderRadius: '4px', background: 'var(--border-default)', opacity: 0.4 }} />
+            </div>
+
+            <div
+              style={{
+                minHeight: '260px',
+                borderRadius: '12px',
+                background: 'var(--bg-surface)',
+                border: '1px dashed var(--border-strong)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                gap: '12px',
+                padding: '24px',
+              }}
+            >
+              <ArrowsClockwise size={28} className="animate-spin" color="var(--accent)" />
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Parsing repository AST &amp; assembling flowchart topology...
+                </p>
+                <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  Extracting entrypoint, router guards, business services, and database persistence layers.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Beginner Project Overview Card */}
         {flowData && (
@@ -548,6 +820,146 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                 </button>
               </div>
             )}
+
+            {/* Architectural Summary: Weaknesses, Improvements & Best Alternative Stack */}
+            {(weaknessesList.length > 0 || improvementsList.length > 0 || bestAlternativeStack || walkthroughSteps.length > 0) && (
+              <div
+                style={{
+                  marginTop: '6px',
+                  paddingTop: '14px',
+                  borderTop: '1px solid var(--border-default)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  minWidth: 0,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                    gap: '12px',
+                    minWidth: 0,
+                  }}
+                >
+                  {weaknessesList.length > 0 && (
+                    <div
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border-default)',
+                        borderLeft: '3px solid var(--danger)',
+                        background: 'var(--bg-surface)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        minWidth: 0,
+                      }}
+                    >
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase' }}>
+                        Architectural Weaknesses
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '12.5px', lineHeight: 1.45, color: 'var(--text-primary)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                        {weaknessesList.slice(0, 4).map((w, idx) => (
+                          <li key={idx}>
+                            {w.title ? <strong>{w.title}: </strong> : null}
+                            <span>{w.detail}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {improvementsList.length > 0 && (
+                    <div
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border-default)',
+                        borderLeft: '3px solid var(--success)',
+                        background: 'var(--bg-surface)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        minWidth: 0,
+                      }}
+                    >
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase' }}>
+                        Suggested Improvements
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '12.5px', lineHeight: 1.45, color: 'var(--text-primary)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                        {improvementsList.slice(0, 4).map((imp, idx) => (
+                          <li key={idx}>
+                            {imp.title ? <strong>{imp.title}: </strong> : null}
+                            <span>{imp.detail}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {bestAlternativeStack && (
+                    <div
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border-default)',
+                        borderLeft: '3px solid var(--info)',
+                        background: 'var(--bg-surface)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        minWidth: 0,
+                      }}
+                    >
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--info)', textTransform: 'uppercase' }}>
+                        Best Alternative Stack
+                      </div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {bestAlternativeStack.title}
+                      </div>
+                      {bestAlternativeStack.summary && (
+                        <p style={{ margin: 0, fontSize: '12.5px', lineHeight: 1.45, color: 'var(--text-primary)' }}>
+                          {bestAlternativeStack.summary}
+                        </p>
+                      )}
+                      {bestAlternativeStack.tradeoffs && (
+                        <p style={{ margin: 0, fontSize: '12px', lineHeight: 1.4, color: 'var(--text-secondary)' }}>
+                          <strong>Trade-off:</strong> {bestAlternativeStack.tradeoffs}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {walkthroughSteps.length > 0 && (
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: '12px',
+                      border: '1px solid var(--border-default)',
+                      background: 'var(--bg-surface)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <div style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                      Step-by-Step Code Walkthrough
+                    </div>
+                    <ol style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12.5px', color: 'var(--text-primary)', lineHeight: 1.45, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                      {walkthroughSteps.slice(0, 6).map((item, idx) => (
+                        <li key={idx}>
+                          {typeof item === 'string'
+                            ? item
+                            : `${item.title ? `${item.title}: ` : ''}${item.summary || item.description || item.file || ''}`}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -588,8 +1000,8 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
           </div>
         )}
 
-        {/* Visual SVG Diagram & Radial Mind Map Mode */}
-        {steps.length > 0 && (viewMode === 'steps' || viewMode === 'graph') && (
+        {/* Visual SVG Diagram, 6-Layer Mermaid & Radial Mind Map Mode */}
+        {(steps.length > 0 || flowData?.mermaid_code) && (viewMode === 'steps' || viewMode === 'graph') && (
           <div
             style={{
               padding: '20px',
@@ -603,6 +1015,13 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <div className="segmented-control" role="group" aria-label="Diagram topology">
+                <button
+                  type="button"
+                  className={`segmented-btn ${graphSubMode === 'mermaid' ? 'active' : ''}`}
+                  onClick={() => setGraphSubMode('mermaid')}
+                >
+                  6-Layer Mermaid Architecture
+                </button>
                 <button
                   type="button"
                   className={`segmented-btn ${graphSubMode === 'pipeline' ? 'active' : ''}`}
@@ -623,8 +1042,17 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                 <button
                   type="button"
                   className="btn btn-secondary"
+                  style={{ minHeight: '28px', padding: '0 8px', fontSize: '11px' }}
+                  onClick={() => setZoomScale(0.85)}
+                  title="Fit flowchart to view"
+                >
+                  Fit
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
                   style={{ minHeight: '28px', padding: '0 10px', fontSize: '12px' }}
-                  onClick={() => setZoomScale((z) => Math.max(0.6, +(z - 0.15).toFixed(2)))}
+                  onClick={() => setZoomScale((z) => Math.max(0.5, +(z - 0.15).toFixed(2)))}
                 >
                   Zoom -
                 </button>
@@ -635,7 +1063,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                   type="button"
                   className="btn btn-secondary"
                   style={{ minHeight: '28px', padding: '0 10px', fontSize: '12px' }}
-                  onClick={() => setZoomScale((z) => Math.min(1.8, +(z + 0.15).toFixed(2)))}
+                  onClick={() => setZoomScale((z) => Math.min(2.0, +(z + 0.15).toFixed(2)))}
                 >
                   Zoom +
                 </button>
@@ -645,7 +1073,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                   style={{ minHeight: '28px', padding: '0 10px', fontSize: '12px' }}
                   onClick={() => setZoomScale(1)}
                 >
-                  Reset
+                  100%
                 </button>
                 <button
                   type="button"
@@ -659,65 +1087,108 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
               </div>
             </div>
 
-            <div
-              style={{
-                overflowX: 'auto',
-                overflowY: 'auto',
-                padding: '12px',
-                borderRadius: '12px',
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border-default)',
-                minHeight: isFullscreen ? '55vh' : '280px',
-              }}
-            >
-              <div style={{ transform: `scale(${zoomScale})`, transformOrigin: 'top left', transition: 'transform 160ms ease' }}>
-                <InteractiveFlowchartSvg
-                  graph={
-                    graphSubMode === 'mindmap' && flowData?.graph?.mind_map
-                      ? {
-                          nodes: [
-                            flowData.graph.mind_map.hub,
-                            ...(flowData.graph.mind_map.branches || []),
-                          ],
-                          edges: (flowData.graph.mind_map.branches || []).map((b, idx) => ({
-                            id: `mm-e-${idx}`,
-                            source: flowData.graph.mind_map.hub.id,
-                            target: b.id,
-                            label: b.phase || 'module',
-                          })),
-                        }
-                      : flowData?.graph || {
-                          nodes: steps.map((s, idx) => ({
-                            id: s.node_id,
-                            label: s.title,
-                            category: s.phase,
-                            position: { x: idx * 240 + 40, y: 120 },
-                          })),
-                          edges: steps.slice(0, -1).map((s, idx) => ({
-                            id: `e-${idx}`,
-                            source: s.node_id,
-                            target: steps[idx + 1].node_id,
-                            label: 'next',
-                          })),
-                        }
-                  }
-                  activeId={currentStep?.node_id}
-                  doneIds={steps.slice(0, activeStepIdx).map((s) => s.node_id)}
-                  onSelect={(nodeId) => {
-                    const foundIdx = steps.findIndex((s) => s.node_id === nodeId);
-                    if (foundIdx >= 0) {
-                      stopVoiceWalkthrough();
-                      setActiveStepIdx(foundIdx);
-                      playSingleStepAudio(steps[foundIdx]);
-                      if (onSelectStep) {
-                        onSelectStep(steps[foundIdx]);
-                      }
+            {graphSubMode === 'mermaid' ? (
+              <MermaidFlowchartPanel
+                mermaidCode={flowData?.mermaid_code || flowData?.mermaid_flowchart}
+                flowData={flowData}
+                steps={steps}
+                activeStepIndex={activeStepIdx}
+                zoom={zoomScale}
+                onFallbackToLinear={() => setGraphSubMode('pipeline')}
+                onSelectStep={(step, idx) => {
+                  stopVoiceWalkthrough();
+                  if (typeof idx === 'number' && idx >= 0) {
+                    setActiveStepIdx(idx);
+                    playSingleStepAudio(step);
+                    if (onSelectStep) {
+                      onSelectStep(step);
                     }
+                  }
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  overflowX: 'auto',
+                  overflowY: 'auto',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-default)',
+                  minHeight: isFullscreen ? '55vh' : '280px',
+                }}
+              >
+                <div
+                  style={{
+                    minWidth: graphSubMode === 'mindmap' ? '920px' : '1080px',
+                    transform: `scale(${zoomScale})`,
+                    transformOrigin: 'top left',
+                    transition: 'transform 160ms ease',
                   }}
-                />
+                >
+                  <InteractiveFlowchartSvg
+                    graph={
+                      graphSubMode === 'mindmap' && flowData?.graph?.mind_map
+                        ? {
+                            nodes: [
+                              flowData.graph.mind_map.hub,
+                              ...(flowData.graph.mind_map.branches || []),
+                            ],
+                            edges: (flowData.graph.mind_map.branches || []).map((b, idx) => ({
+                              id: `mm-e-${idx}`,
+                              source: flowData.graph.mind_map.hub.id,
+                              target: b.id,
+                              label: b.phase || 'module',
+                            })),
+                          }
+                        : flowData?.graph || {
+                            nodes: steps.map((s, idx) => ({
+                              id: s.node_id,
+                              label: s.title,
+                              category: s.phase,
+                              position: { x: idx * 240 + 40, y: 120 },
+                            })),
+                            edges: steps.slice(0, -1).map((s, idx) => ({
+                              id: `e-${idx}`,
+                              source: s.node_id,
+                              target: steps[idx + 1].node_id,
+                              label: 'next',
+                            })),
+                          }
+                    }
+                    activeId={currentStep?.node_id}
+                    doneIds={steps.slice(0, activeStepIdx).map((s) => s.node_id)}
+                    onSelect={(nodeId) => {
+                      const foundIdx = steps.findIndex((s) => s.node_id === nodeId);
+                      if (foundIdx >= 0) {
+                        stopVoiceWalkthrough();
+                        setActiveStepIdx(foundIdx);
+                        playSingleStepAudio(steps[foundIdx]);
+                        if (onSelectStep) {
+                          onSelectStep(steps[foundIdx]);
+                        }
+                      }
+                    }}
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </div>
+        )}
+
+        {steps.length > 0 && (viewMode === 'steps' || viewMode === 'graph') && (
+          <BeginnerFlowchartGuide
+            steps={steps}
+            activeIndex={activeStepIdx}
+            onSelectStep={(step, idx) => {
+              stopVoiceWalkthrough();
+              setActiveStepIdx(idx);
+              if (onSelectStep) onSelectStep(step);
+            }}
+            onInspectCode={(step) => {
+              if (onSelectStep) onSelectStep(step);
+            }}
+          />
         )}
 
         {/* Full Stack Architecture, Alternatives & Deployment Playbook Mode */}
@@ -745,10 +1216,10 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
               </div>
               <div className="dossier-stack-grid">
                 {[
-                  { label: 'Frontend & UI Layer', value: flowData?.project_summary?.full_stack_breakdown?.frontend || 'React 19 + Vite 6 SPA' },
-                  { label: 'Backend & API Runtime', value: flowData?.project_summary?.full_stack_breakdown?.backend || 'Java 21 Spring Boot / Node.js' },
-                  { label: 'Database & Persistence', value: flowData?.project_summary?.full_stack_breakdown?.database || 'PostgreSQL 16 + Redis 7' },
-                  { label: 'APIs, Auth & Services', value: flowData?.project_summary?.full_stack_breakdown?.apis_and_services || 'REST / HTTP + JWT Auth' },
+                  { label: 'Frontend & UI Layer', value: flowData?.project_summary?.full_stack_breakdown?.frontend || 'Not explicitly declared in manifest' },
+                  { label: 'Backend & API Runtime', value: flowData?.project_summary?.full_stack_breakdown?.backend || 'Core library / runtime modules' },
+                  { label: 'Database & Persistence', value: flowData?.project_summary?.full_stack_breakdown?.database || 'No external database client detected' },
+                  { label: 'APIs, Auth & Services', value: flowData?.project_summary?.full_stack_breakdown?.apis_and_services || 'Internal module / HTTP boundary' },
                   {
                     label: 'API Keys & Environment Variables',
                     value:
@@ -757,7 +1228,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
                       flowData?.project_summary?.deployment_strategy?.environment_variables?.join(', ') ||
                       'Standard runtime environment variables',
                   },
-                  { label: 'Architecture Pattern', value: flowData?.project_summary?.full_stack_breakdown?.architecture_style || 'Hexagonal Outbox + Spoken Fences' },
+                  { label: 'Architecture Pattern', value: flowData?.project_summary?.full_stack_breakdown?.architecture_style || 'Modular layered architecture' },
                 ].map((item) => (
                   <div key={item.label} className="dossier-card">
                     <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
@@ -785,34 +1256,40 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
               </div>
               <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)' }}>
                 {flowData?.project_summary?.why_this_stack_is_best ||
-                  'This architecture balances high concurrency, strict transactional safety, and rapid developer iteration without unnecessary framework overhead.'}
+                  'This architecture balances clear separation of concerns, maintainable modules, and low operational overhead.'}
               </p>
             </div>
 
             {/* Section 3: Suggested Modern Alternatives */}
-            {flowData?.project_summary?.modern_alternatives?.length > 0 && (
+            {(flowData?.project_summary?.modern_alternatives?.length > 0 || flowData?.modern_alternatives?.length > 0) && (
               <div>
                 <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '10px' }}>
                   3. Recommended Modern Stack Alternatives &amp; Trade-Offs
                 </div>
                 <div className="dossier-stack-grid">
-                  {flowData.project_summary.modern_alternatives.map((alt, i) => (
+                  {(flowData?.project_summary?.modern_alternatives || flowData?.modern_alternatives || []).map((alt, i) => (
                     <div key={i} className="dossier-card">
                       <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--accent)' }}>
-                        {alt.name}
+                        {alt.name || alt.recommended || alt.category || 'Alternative Option'}
                       </div>
-                      <div style={{ fontSize: '12px', lineHeight: 1.45 }}>
-                        <strong style={{ color: 'var(--text-primary)' }}>Pros: </strong>
-                        <span>{alt.pros}</span>
-                      </div>
-                      <div style={{ fontSize: '12px', lineHeight: 1.45 }}>
-                        <strong style={{ color: 'var(--text-secondary)' }}>Trade-offs: </strong>
-                        <span>{alt.cons}</span>
-                      </div>
-                      <div style={{ fontSize: '12px', lineHeight: 1.45, marginTop: '4px', paddingTop: '6px', borderTop: '1px solid var(--border-default)' }}>
-                        <strong>When to choose: </strong>
-                        <span>{alt.when_to_choose}</span>
-                      </div>
+                      {(alt.pros || alt.current) && (
+                        <div style={{ fontSize: '12px', lineHeight: 1.45 }}>
+                          <strong style={{ color: 'var(--text-primary)' }}>{alt.pros ? 'Pros: ' : 'Replaces: '}</strong>
+                          <span>{alt.pros || alt.current}</span>
+                        </div>
+                      )}
+                      {(alt.cons || alt.why) && (
+                        <div style={{ fontSize: '12px', lineHeight: 1.45 }}>
+                          <strong style={{ color: 'var(--text-secondary)' }}>{alt.cons ? 'Trade-offs: ' : 'Why: '}</strong>
+                          <span>{alt.cons || alt.why}</span>
+                        </div>
+                      )}
+                      {alt.when_to_choose && (
+                        <div style={{ fontSize: '12px', lineHeight: 1.45, marginTop: '4px', paddingTop: '6px', borderTop: '1px solid var(--border-default)' }}>
+                          <strong>When to choose: </strong>
+                          <span>{alt.when_to_choose}</span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -924,7 +1401,7 @@ export default function RepoFlowchartExplorer({ onSelectStep, selectedStepNumber
               }}
             >
               <span className="mono-metric" style={{ fontWeight: 600, fontSize: '12px' }}>
-                Repository: {flowData?.repo_slug || repoContext?.fullName} • Viewing Step {activeStepIdx + 1} of {steps.length}
+                Repository: {flowData?.repo_slug || flowData?.repo_name || flowData?.repo || repoContext?.fullName} • Viewing Step {activeStepIdx + 1} of {steps.length}
               </span>
               <div className="chip-row">
                 <button
