@@ -202,3 +202,34 @@ def test_app_router_context_integrity():
             "<Router> throws an unhandled exception: 'useLocation() may be used only in the context "
             "of a <Router> component.', crashing the entire application on launch."
         )
+
+
+def test_voice_agent_config_and_persistence():
+    """Verify Gnani voice agent config covers en/te/hi and VoiceAgentContext persists whyline_voice_agent."""
+    cfg = (FRONTEND_SRC / "config" / "voiceAgents.js").read_text(encoding="utf-8")
+    for lang_code in ["'en'", "'te'", "'hi'"]:
+        assert f"language: {lang_code}" in cfg, f"Missing {lang_code} voice agent in voiceAgents.js"
+
+    ctx = (FRONTEND_SRC / "context" / "VoiceAgentContext.jsx").read_text(encoding="utf-8")
+    assert "localStorage.getItem(STORAGE_KEY)" in ctx
+    assert "localStorage.setItem(STORAGE_KEY" in ctx
+    assert "'whyline_voice_agent'" in ctx
+
+    picker = (FRONTEND_SRC / "components" / "VoiceAgentPicker.jsx").read_text(encoding="utf-8")
+    assert "voice-live-wave" in picker
+    assert "previewAgent" in picker
+
+
+def test_dedicated_routes_and_no_duplicate_ask_flow_mount():
+    """Verify lazy routes in App.jsx and that AskRepoPage does not duplicate RepoFlowchartExplorer."""
+    app = (FRONTEND_SRC / "App.jsx").read_text(encoding="utf-8")
+    for route_path in ['path="connect"', 'path="ask"', 'path="flow"', 'path="settings"']:
+        assert route_path in app, f"Missing dedicated route {route_path} in App.jsx"
+    assert "lazy(() => import('./pages/AskRepoPage'))" in app
+    assert "lazy(() => import('./pages/FlowchartsPage'))" in app
+
+    ask_page = (FRONTEND_SRC / "pages" / "AskRepoPage.jsx").read_text(encoding="utf-8")
+    assert "RepoFlowchartExplorer" not in ask_page, (
+        "AskRepoPage must not mount RepoFlowchartExplorer directly"
+    )
+
