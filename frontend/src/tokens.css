@@ -1953,3 +1953,52 @@ a:focus-visible {
 @keyframes flowPathDraw {
   to { stroke-dashoffset: 0; }
 }
+
+/* Route-Specific Lightweight SVG/CSS Backdrops */
+.route-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  color: var(--accent);
+}
+
+.route-backdrop-parallax {
+  position: absolute;
+  inset: -16px;
+  will-change: transform;
+  transition: transform 240ms var(--ease-out);
+}
+
+.route-backdrop-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.route-backdrop-drift {
+  animation: mapDrift 34s linear infinite alternate;
+}
+
+.route-indic-watermark {
+  position: fixed;
+  right: clamp(16px, 4vw, 48px);
+  bottom: clamp(12px, 3vh, 36px);
+  font-family: var(--font-display);
+  font-size: clamp(7rem, 16vw, 13rem);
+  line-height: 1;
+  color: var(--accent);
+  opacity: 0.045;
+  user-select: none;
+  pointer-events: none;
+}
+
+[data-theme="dark"] .route-backdrop {
+  color: var(--border-default);
+}
+
+[data-theme="dark"] .route-indic-watermark {
+  color: var(--text-secondary);
+  opacity: 0.05;
+}

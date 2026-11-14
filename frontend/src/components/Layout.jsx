@@ -15,6 +15,7 @@ import {
 import { useI18n } from '../i18n';
 import { useVoiceAgent } from '../context/VoiceAgentContext';
 import WhyLineLogo from './WhyLineLogo';
+import RouteBackdrop from './RouteBackdrop';
 import VoiceAgentPicker from './VoiceAgentPicker';
 import LanguageVoiceToast from './LanguageVoiceToast';
 import Footer from './Footer';
@@ -109,6 +110,7 @@ export default function Layout({ theme, onToggleTheme }) {
 
   return (
     <div className="app-shell">
+      <RouteBackdrop />
       <a href="#main-content" className="skip-link">
         {t('skipToContent')}
       </a>
