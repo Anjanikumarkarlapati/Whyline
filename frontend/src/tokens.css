@@ -1941,3 +1941,15 @@ a:focus-visible {
 .voice-agent-card:hover {
   transform: translateY(-2px);
 }
+
+/* FlowChat SVG path draw-in on load */
+.flow-canvas-paths svg path.flowchart-link,
+.flow-canvas-paths svg .edgePath path {
+  stroke-dasharray: 420;
+  stroke-dashoffset: 420;
+  animation: flowPathDraw var(--dur-reveal) var(--ease-out) forwards;
+}
+
+@keyframes flowPathDraw {
+  to { stroke-dashoffset: 0; }
+}
