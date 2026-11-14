@@ -49,10 +49,10 @@ export default function App() {
   const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
 
   return (
-    <I18nProvider>
-      <VoiceAgentProvider>
-        <WorkbenchProvider>
-          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <I18nProvider>
+        <VoiceAgentProvider>
+          <WorkbenchProvider>
             <RouteAnnouncer />
             <Suspense fallback={<RouteSkeleton />}>
               <Routes>
@@ -77,9 +77,9 @@ export default function App() {
                 </Route>
               </Routes>
             </Suspense>
-          </BrowserRouter>
-        </WorkbenchProvider>
-      </VoiceAgentProvider>
-    </I18nProvider>
+          </WorkbenchProvider>
+        </VoiceAgentProvider>
+      </I18nProvider>
+    </BrowserRouter>
   );
 }
