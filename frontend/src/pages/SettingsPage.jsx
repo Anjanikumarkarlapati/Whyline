@@ -13,6 +13,7 @@ import {
   UserCircle,
 } from '@phosphor-icons/react';
 import { useI18n } from '../i18n';
+import VoiceAgentPicker from '../components/VoiceAgentPicker';
 import StatusBadge from '../components/StatusBadge';
 import { FormattedText } from '../components/CodeText';
 import SessionModal from '../components/SessionModal';
@@ -126,6 +127,38 @@ export default function SettingsPage() {
         </button>
       </section>
 
+      {/* Language & Voice Agent Selection */}
+      <section className="glass-sheet reveal-stagger" style={{ '--stagger': 0, padding: '22px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <div>
+            <h2 className="card-title" style={{ margin: '0 0 4px 0', fontSize: 'var(--type-lg)' }}>
+              {t('voicePickerTitle')}
+            </h2>
+            <p style={{ margin: 0, fontSize: 'var(--type-sm)', color: 'var(--text-secondary)' }}>
+              {t('voicePickerSubtitle')}
+            </p>
+          </div>
+          <div className="segmented-control" role="group" aria-label={t('languageLabel')}>
+            {[
+              { code: 'en', label: 'English' },
+              { code: 'te', label: 'తెలుగు' },
+              { code: 'hi', label: 'हिन्दी' },
+            ].map((opt) => (
+              <button
+                key={opt.code}
+                type="button"
+                className={`segmented-option ${lang === opt.code ? 'is-active' : ''}`}
+                aria-pressed={lang === opt.code}
+                onClick={() => setLang(opt.code)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <VoiceAgentPicker variant="panel" />
+      </section>
+
       {/* Grid: 2 Columns for Sections */}
       <div className="two-col-grid">
         {/* Section 1: Service Integrations */}
@@ -144,10 +177,10 @@ export default function SettingsPage() {
                 </span>
               </div>
               <div className="mono-metric" style={{ marginTop: '4px', color: 'var(--text-primary)' }}>
-                Prisma v3.0 STT &amp; Timbre v3.0 DSP Engine
+                Prisma v3.0 / v2.5 STT &amp; Timbre v3.0 / v2.5 TTS Engine
               </div>
               <p className="form-helper" style={{ margin: '4px 0 0 0' }}>
-                Rescores code-mixed Indic speech against AST symbols. Voice IDs: <strong>Shivani / Nalini</strong> (Telugu), <strong>Avinash / Bhavna</strong> (Hindi), <strong>Kalpana / Pranav</strong> (English).
+                Rescores code-mixed Indic speech against AST symbols. Timbre v3.0: <strong>Shivani, Avinash, Kalpana, Lakshmi...</strong> (13 voices); Timbre v2.5: <strong>Suhana</strong> (Telugu), <strong>Bhavna</strong> (Hindi), <strong>Pranav</strong> (English) &amp; 42 Indic voices.
               </p>
             </div>
 
@@ -340,9 +373,9 @@ export default function SettingsPage() {
                 value={lang}
                 onChange={(e) => setLang(e.target.value)}
               >
-                <option value="en">English (EN • Pranav voice)</option>
-                <option value="te">తెలుగు (Telugu • Nalini voice)</option>
-                <option value="hi">हिंदी (Hindi • Bhavna voice)</option>
+                <option value="en">English (EN • Shivani / Pranav)</option>
+                <option value="te">తెలుగు (Telugu • Avinash / Suhana)</option>
+                <option value="hi">हिंदी (Hindi • Kalpana / Bhavna)</option>
               </select>
             </div>
 
