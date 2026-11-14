@@ -11,6 +11,7 @@ import {
   Stop,
 } from '@phosphor-icons/react';
 import { QUICK_GITHUB_REPOS, useWorkbenchSelection } from '../../context/WorkbenchContext';
+import { useVoiceAgent } from '../../context/VoiceAgentContext';
 import { useI18n } from '../../i18n';
 import {
   clearVoiceResponseCache,
@@ -19,11 +20,16 @@ import {
   setCachedVoiceResponse,
 } from '../../utils/voiceResponseCache';
 import AudioWaveform from '../AudioWaveform';
-import VoiceLanguageDropdown from '../VoiceLanguageDropdown';
+import VoiceLanguageDropdown, {
+  createGnaniMicRecorder,
+  getDefaultVoice,
+  inferModelForVoice,
+} from '../VoiceLanguageDropdown';
 
 export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
   const navigate = useNavigate();
   const { lang, setLang } = useI18n();
+  const { selectedAgent } = useVoiceAgent();
   const {
     repoContext,
     repoLoading,
@@ -46,8 +52,11 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
     repoContext?.url || 'https://github.com/HealthConnect/payment-gateway-v1'
   );
   const [selectedVoice, setSelectedVoice] = useState(() =>
-    lang === 'te' ? 'Nalini' : lang === 'hi' ? 'Bhavna' : 'Pranav'
+    getDefaultVoice(lang, 'gnani', 'timbre-v3.0')
   );
+  const [providerEngine, setProviderEngine] = useState('gnani'); // 'gnani' | 'browser'
+  const [selectedModel, setSelectedModel] = useState('timbre-v3.0');
+  const [selectedSttModel, setSelectedSttModel] = useState('prisma-v3.0');
   const [loading, setLoading] = useState(false);
   const [pipelineStage, setPipelineStage] = useState('idle'); // 'idle' | 'recording' | 'stt' | 'rrf' | 'done'
   const [isRecording, setIsRecording] = useState(false);
@@ -55,11 +64,13 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(10);
+  const [playbackRate, setPlaybackRate] = useState(1.0);
 
   const audioRef = useRef(null);
   const timerRef = useRef(null);
   const playbackTimerRef = useRef(null);
-  const recognitionRef = useRef(null);
+  const micRecorderRef = useRef(null);
+  const skipLangResetRef = useRef(false);
   const inputRef = useRef(null);
 
   const query = currentQuery;
@@ -78,10 +89,19 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
   }, [repoContext?.url]);
 
   useEffect(() => {
-    if (lang === 'te') setSelectedVoice('Nalini');
-    else if (lang === 'hi') setSelectedVoice('Bhavna');
-    else setSelectedVoice('Pranav');
-  }, [lang]);
+    if (selectedAgent?.voiceName) {
+      setSelectedVoice(selectedAgent.voiceName);
+      if (selectedAgent.model) setSelectedModel(selectedAgent.model);
+    }
+  }, [selectedAgent?.voiceName, selectedAgent?.model]);
+
+  useEffect(() => {
+    if (skipLangResetRef.current) {
+      skipLangResetRef.current = false;
+      return;
+    }
+    setSelectedVoice(selectedAgent?.voiceName || getDefaultVoice(lang, 'gnani', selectedModel));
+  }, [lang, providerEngine, selectedModel, selectedAgent?.voiceName]);
 
   useEffect(() => {
     return () => {
@@ -91,13 +111,12 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
       }
       if (timerRef.current) clearInterval(timerRef.current);
       if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
+      micRecorderRef.current?.cancel?.();
     };
   }, []);
 
   useEffect(() => {
+    let active = true;
     if (isRecording) {
       setRecordingSeconds(0);
       setPipelineStage('recording');
@@ -105,40 +124,22 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
         setRecordingSeconds((prev) => prev + 1);
       }, 1000);
 
-      if (typeof window !== 'undefined') {
-        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRec) {
-          try {
-            const rec = new SpeechRec();
-            rec.lang = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
-            rec.interimResults = true;
-            rec.continuous = true;
-            rec.onresult = (event) => {
-              let transcript = '';
-              for (let i = 0; i < event.results.length; i++) {
-                transcript += event.results[i][0].transcript;
-              }
-              if (transcript.trim()) {
-                setQuery(transcript.trim());
-              }
-            };
-            rec.start();
-            recognitionRef.current = rec;
-          } catch {
-            // fallback to simulated mic capture
+      createGnaniMicRecorder()
+        .then((rec) => {
+          if (!active) {
+            rec?.cancel?.();
+          } else {
+            micRecorderRef.current = rec;
           }
-        }
-      }
+        })
+        .catch(() => {
+          // Graceful fallback if mic permission is denied/unavailable
+        });
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {}
-        recognitionRef.current = null;
-      }
     }
     return () => {
+      active = false;
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [isRecording, lang, setQuery]);
@@ -182,8 +183,16 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
       source: cached.source,
       ...getVoiceCacheStats(),
     });
-    const replyUrl = cached.audioUrl || data?.audio_url || '/api/audio/fence-001.wav';
+    const langCode = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
     const replyText = cached.spokenReply || data?.spoken_reply || data?.spoken_answer || '';
+    const fallbackTtsUrl = replyText
+      ? `/api/tts/speak?lang=${encodeURIComponent(langCode)}&voice=${encodeURIComponent(selectedVoice)}&provider=gnani&model=${encodeURIComponent(selectedModel)}&pacing=${encodeURIComponent(playbackRate)}&text=${encodeURIComponent(replyText)}`
+      : '';
+    const rawCachedUrl = cached.audioUrl || data?.audio_url || '';
+    const replyUrl =
+      rawCachedUrl && !rawCachedUrl.startsWith('/api/audio/fence-')
+        ? rawCachedUrl
+        : fallbackTtsUrl;
     setAudioUrl(replyUrl);
     handlePlayAudio(replyUrl, replyText);
     if (onQuestionAnswered) {
@@ -195,24 +204,37 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
     rawHint,
     explicitLang = null,
     explicitRepoUrl = null,
-    explicitRepoFullName = null
+    explicitRepoFullName = null,
+    voiceOverrides = {}
   ) => {
     const targetLang = explicitLang || lang;
     const langCode = targetLang === 'hi' ? 'hi-IN' : targetLang === 'te' ? 'te-IN' : 'en-IN';
     const rawQ = (rawHint || query || '').trim();
     if (!rawQ) return;
 
+    const activeProvider = voiceOverrides.provider ?? providerEngine;
+    const activeModel =
+      voiceOverrides.model ?? selectedModel ?? inferModelForVoice(voiceOverrides.voice ?? selectedVoice, activeProvider);
+    const activeVoice =
+      voiceOverrides.voice ?? selectedVoice ?? getDefaultVoice(targetLang, activeProvider, activeModel);
+    const audioPayload = voiceOverrides.audioPayload || null;
+
     const effectiveRepoUrl = explicitRepoUrl || repoInput || repoContext?.url;
     const effectiveRepoName = explicitRepoFullName || repoContext?.fullName || effectiveRepoUrl;
 
-    const cached = getCachedVoiceResponse({
-      repoFullName: effectiveRepoName,
-      question: rawQ,
-      language: langCode,
-    });
-    if (cached && cached.response) {
-      applyCachedEntry(cached);
-      return;
+    if (!audioPayload?.base64) {
+      const cached = getCachedVoiceResponse({
+        repoFullName: effectiveRepoName,
+        question: rawQ,
+        language: langCode,
+        provider: activeProvider,
+        model: activeModel,
+        voice: activeVoice,
+      });
+      if (cached && cached.response) {
+        applyCachedEntry(cached);
+        return;
+      }
     }
 
     setLoading(true);
@@ -223,27 +245,36 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          audio_base64: audioPayload?.base64 || undefined,
+          mime_type: audioPayload?.mimeType || 'audio/wav',
           audio_text_hint: rawQ,
+          model: selectedSttModel,
+          stt_model: selectedSttModel,
           language: langCode,
           repo_url: effectiveRepoUrl,
         }),
       });
       const sttData = sttResp.ok ? await sttResp.json() : null;
-      const rescoredQuery = sttData?.rescored_transcript || rawQ;
+      const rescoredQuery = sttData?.rescored_transcript || sttData?.raw_transcript || rawQ;
       if (sttData) {
         setSttTelemetry(sttData);
         setQuery(rescoredQuery);
       }
-      await handleAsk(rescoredQuery, sttData, targetLang, rawQ, effectiveRepoUrl, effectiveRepoName);
+      await handleAsk(rescoredQuery, sttData, targetLang, rawQ, effectiveRepoUrl, effectiveRepoName, voiceOverrides);
     } catch {
-      await handleAsk(rawQ, null, targetLang, rawQ, effectiveRepoUrl, effectiveRepoName);
+      await handleAsk(rawQ, null, targetLang, rawQ, effectiveRepoUrl, effectiveRepoName, voiceOverrides);
     }
   };
 
-  const handleToggleRecord = () => {
+  const handleToggleRecord = async () => {
     if (isRecording) {
       setIsRecording(false);
-      runSttAndExecuteTask(query);
+      const recorder = micRecorderRef.current;
+      micRecorderRef.current = null;
+      const recordedWav = recorder ? await recorder.stop() : null;
+      runSttAndExecuteTask(query || 'Explain the core architecture and fences.', null, null, null, {
+        audioPayload: recordedWav,
+      });
     } else {
       setIsRecording(true);
     }
@@ -255,14 +286,21 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
     explicitLang = null,
     originalRawQuery = null,
     explicitRepoUrl = null,
-    explicitRepoFullName = null
+    explicitRepoFullName = null,
+    voiceOverrides = {}
   ) => {
     const q = (explicitQuery || query || '').trim();
     if (!q) return;
 
     const targetLang = explicitLang || lang;
     const langCode = targetLang === 'hi' ? 'hi-IN' : targetLang === 'te' ? 'te-IN' : 'en-IN';
-    const voiceForLang = targetLang === 'te' ? 'Nalini' : targetLang === 'hi' ? 'Bhavna' : 'Pranav';
+    const activeProvider = voiceOverrides.provider ?? providerEngine;
+    const activeModel =
+      voiceOverrides.model ?? selectedModel ?? inferModelForVoice(voiceOverrides.voice ?? selectedVoice, activeProvider);
+    const activeVoice =
+      voiceOverrides.voice ?? selectedVoice ?? getDefaultVoice(targetLang, activeProvider, activeModel);
+    const activePacing = voiceOverrides.pacing ?? playbackRate;
+
     const targetRepoUrl = explicitRepoUrl || repoInput || repoContext?.url;
     const targetRepoName = explicitRepoFullName || repoContext?.fullName || targetRepoUrl;
 
@@ -271,6 +309,9 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
         repoFullName: targetRepoName,
         question: q,
         language: langCode,
+        provider: activeProvider,
+        model: activeModel,
+        voice: activeVoice,
       });
       if (cached && cached.response) {
         applyCachedEntry(cached);
@@ -287,7 +328,11 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
         body: JSON.stringify({
           question: q,
           language: langCode,
-          voice: voiceForLang,
+          voice: activeVoice,
+          provider: activeProvider,
+          model: activeModel,
+          stt_model: selectedSttModel,
+          pacing: activePacing,
           repo_url: targetRepoUrl,
           output_mode: 'voice_and_text',
         }),
@@ -307,7 +352,9 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
           repoFullName: resolvedRepoFullName,
           question: originalRawQuery || q,
           language: langCode,
-          voice: voiceForLang,
+          provider: activeProvider,
+          model: activeModel,
+          voice: activeVoice,
         },
         { response: data, sttTelemetry: finalStt }
       );
@@ -317,7 +364,9 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
             repoFullName: resolvedRepoFullName,
             question: q,
             language: langCode,
-            voice: voiceForLang,
+            provider: activeProvider,
+            model: activeModel,
+            voice: activeVoice,
           },
           { response: data, sttTelemetry: finalStt }
         );
@@ -346,10 +395,17 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
         });
       }
       setPipelineStage('done');
-      const replyUrl = data?.audio_url || '/api/audio/fence-001.wav';
       const replyText = data?.spoken_reply || data?.spoken_answer || '';
-      setAudioUrl(replyUrl);
-      handlePlayAudio(replyUrl, replyText);
+      const replyUrl =
+        data?.audio_url ||
+        `/api/tts/speak?lang=${encodeURIComponent(langCode)}&voice=${encodeURIComponent(activeVoice)}&provider=gnani&model=${encodeURIComponent(activeModel)}&pacing=${encodeURIComponent(activePacing)}&text=${encodeURIComponent(replyText || q)}`;
+      setAudioUrl(replyUrl || '');
+      handlePlayAudio(replyUrl, replyText, {
+        provider: activeProvider,
+        voice: activeVoice,
+        langCode,
+        pacing: activePacing,
+      });
       if (onQuestionAnswered) {
         onQuestionAnswered(data);
       }
@@ -360,43 +416,30 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
     }
   };
 
-  const startSimulatedWaveformPlayback = (speechText) => {
-    if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
-    setIsPlayingAudio(true);
-    setAudioCurrentTime(0);
-    setAudioDuration(8);
-
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window && speechText) {
-      try {
-        window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(speechText);
-        utter.lang = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
-        window.speechSynthesis.speak(utter);
-      } catch {
-        // ignore speechSynthesis error
-      }
-    }
-
-    playbackTimerRef.current = setInterval(() => {
-      setAudioCurrentTime((prev) => {
-        if (prev >= 8) {
-          clearInterval(playbackTimerRef.current);
-          setIsPlayingAudio(false);
-          return 0;
-        }
-        return Number((prev + 0.25).toFixed(2));
-      });
-    }, 250);
-  };
-
-  const handlePlayAudio = (url, textToSpeak = null) => {
-    const target = url || audioUrl;
+  const handlePlayAudio = (url, textToSpeak = null, voiceOverrides = {}) => {
+    const rawTarget = url || audioUrl;
     const spokenText = textToSpeak || response?.spoken_reply || response?.spoken_answer || '';
+    const activeRate = voiceOverrides.pacing ?? playbackRate;
+    const activeLangCode =
+      voiceOverrides.langCode || (lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN');
+    const activeVoiceName = voiceOverrides.voice || selectedVoice;
+    const activeModelName = voiceOverrides.model || selectedModel;
     if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
+
+    const target =
+      (!rawTarget || String(rawTarget).startsWith('/api/audio/fence-')) && spokenText
+        ? `/api/tts/speak?lang=${encodeURIComponent(activeLangCode)}&voice=${encodeURIComponent(activeVoiceName)}&provider=gnani&model=${encodeURIComponent(activeModelName)}&pacing=${encodeURIComponent(activeRate)}&text=${encodeURIComponent(spokenText)}`
+        : rawTarget;
+
+    if (!target) {
+      setIsPlayingAudio(false);
+      return;
+    }
 
     try {
       if (audioRef.current) audioRef.current.pause();
       const a = new Audio(target);
+      a.playbackRate = activeRate;
       audioRef.current = a;
       a.ontimeupdate = () => setAudioCurrentTime(a.currentTime);
       a.onloadedmetadata = () => {
@@ -407,27 +450,75 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
         setAudioCurrentTime(0);
       };
       a.onerror = () => {
-        startSimulatedWaveformPlayback(spokenText);
+        setIsPlayingAudio(false);
       };
       a.play()
         .then(() => {
           setIsPlayingAudio(true);
         })
         .catch(() => {
-          startSimulatedWaveformPlayback(spokenText);
+          setIsPlayingAudio(false);
         });
     } catch {
-      startSimulatedWaveformPlayback(spokenText);
+      setIsPlayingAudio(false);
     }
+  };
+
+  const resynthesizeExistingAnswer = async (voiceOverrides = {}) => {
+    const spokenText = response?.spoken_reply || response?.spoken_answer || '';
+    if (!spokenText) return;
+    const nextModel = voiceOverrides.model ?? selectedModel;
+    const nextVoice = voiceOverrides.voice ?? selectedVoice;
+    const nextPacing = voiceOverrides.pacing ?? playbackRate;
+    const langCode = lang === 'hi' ? 'hi-IN' : lang === 'te' ? 'te-IN' : 'en-IN';
+
+    if (audioRef.current) audioRef.current.pause();
+
+    try {
+      const resp = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: spokenText,
+          language: langCode,
+          voice: nextVoice,
+          provider: 'gnani',
+          model: nextModel,
+          pacing: nextPacing,
+        }),
+      });
+      if (resp.ok) {
+        const ttsData = await resp.json();
+        if (ttsData?.audio_url) {
+          setAudioUrl(ttsData.audio_url);
+          handlePlayAudio(ttsData.audio_url, spokenText, {
+            provider: 'gnani',
+            voice: nextVoice,
+            model: nextModel,
+            langCode,
+            pacing: nextPacing,
+          });
+          return;
+        }
+      }
+    } catch {
+      // fall through to streaming endpoint
+    }
+    const streamUrl = `/api/tts/speak?lang=${encodeURIComponent(langCode)}&voice=${encodeURIComponent(nextVoice)}&provider=gnani&model=${encodeURIComponent(nextModel)}&pacing=${encodeURIComponent(nextPacing)}&text=${encodeURIComponent(spokenText)}`;
+    setAudioUrl(streamUrl);
+    handlePlayAudio(streamUrl, spokenText, {
+      provider: 'gnani',
+      voice: nextVoice,
+      model: nextModel,
+      langCode,
+      pacing: nextPacing,
+    });
   };
 
   const handleToggleAudio = () => {
     if (isPlayingAudio) {
       if (audioRef.current) audioRef.current.pause();
       if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
       setIsPlayingAudio(false);
     } else {
       handlePlayAudio(audioUrl, response?.spoken_reply);
@@ -585,19 +676,87 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
           >
             Step 2: Ask Any Question About This Repository
           </label>
-          <VoiceLanguageDropdown
-            id="query-voice-lang-select"
-            value={lang}
-            disabled={loading || isRecording}
-            onChange={(nextCode, option) => {
-              setLang(nextCode);
-              setSelectedVoice(option.voice);
-              if (response || query.trim()) {
-                runSttAndExecuteTask(query, nextCode);
-              }
-            }}
-          />
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => navigate('/flowcharts')}
+              title="Open Interactive Flowchart & Radial Mind Map"
+              style={{ minHeight: '28px', padding: '0 10px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+            >
+              <Graph size={13} weight="bold" />
+              <span>Flowcharts</span>
+            </button>
+          </div>
         </div>
+
+        {/* Comprehensive Voice Model & Provider Selector UI */}
+        <VoiceLanguageDropdown
+          id="query-voice-lang-select"
+          value={lang}
+          provider={providerEngine}
+          model={selectedModel}
+          sttModel={selectedSttModel}
+          onSttModelChange={setSelectedSttModel}
+          onProviderChange={(provId, meta = {}) => {
+            setProviderEngine(provId);
+            if (meta.model) setSelectedModel(meta.model);
+            if (meta.voice) setSelectedVoice(meta.voice);
+            if (response?.spoken_reply) {
+              resynthesizeExistingAnswer({
+                provider: provId,
+                model: meta.model || selectedModel,
+                voice: meta.voice || selectedVoice,
+              });
+            }
+          }}
+          onModelChange={(nextModel, nextDefaultVoice, meta = {}) => {
+            setSelectedModel(nextModel);
+            if (nextDefaultVoice) setSelectedVoice(nextDefaultVoice);
+            if (!meta.fromCascade && response?.spoken_reply) {
+              resynthesizeExistingAnswer({
+                provider: providerEngine,
+                model: nextModel,
+                voice: nextDefaultVoice || selectedVoice,
+              });
+            }
+          }}
+          voice={selectedVoice}
+          onVoiceChange={(voiceName, meta = {}) => {
+            setSelectedVoice(voiceName);
+            const nextModel = meta.model || selectedModel;
+            if (meta.model) setSelectedModel(meta.model);
+            if (response?.spoken_reply && !meta.fromCascade && !meta.suppressReplay) {
+              resynthesizeExistingAnswer({
+                provider: meta.provider || providerEngine,
+                model: nextModel,
+                voice: voiceName,
+              });
+            }
+          }}
+          pacing={playbackRate}
+          onPacingChange={(rate) => {
+            setPlaybackRate(rate);
+            if (audioRef.current) audioRef.current.playbackRate = rate;
+          }}
+          disabled={loading || isRecording}
+          onChange={(nextCode, option) => {
+            skipLangResetRef.current = true;
+            setLang(nextCode);
+            const nextVoice = option?.voice || selectedVoice;
+            const nextModel = option?.model || selectedModel;
+            const nextProvider = option?.provider || providerEngine;
+            setSelectedVoice(nextVoice);
+            setSelectedModel(nextModel);
+            if (response || query.trim()) {
+              runSttAndExecuteTask(query, nextCode, null, null, {
+                voice: nextVoice,
+                model: nextModel,
+                provider: nextProvider,
+              });
+            }
+          }}
+        />
 
         {/* Starter Questions for Beginners */}
         {activeStarterRepo?.starterQuestions && activeStarterRepo.starterQuestions.length > 0 && (
@@ -803,9 +962,9 @@ export default function AskTabPanel({ compact = false, onQuestionAnswered }) {
             setAudioCurrentTime(seekTime);
           }}
           title={`Voice Answer (${repoContext?.fullName || 'Repository'})`}
-          subtitle={`Voice: ${selectedVoice} (${
+          subtitle={`Engine: Gnani (${selectedModel} • ${selectedSttModel}) • Voice: ${selectedVoice} (${
             lang === 'hi' ? 'Hindi' : lang === 'te' ? 'Telugu' : 'English'
-          })`}
+          }) • ${playbackRate}x Pacing`}
         />
 
         {cacheTelemetry && (
