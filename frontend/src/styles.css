@@ -501,12 +501,18 @@ img.brand-mark {
   display: none !important;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1024px) {
   .desktop-nav {
     display: none;
   }
   .mobile-menu-btn {
     display: inline-flex !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar-controls .segmented-control {
+    display: none;
   }
 }
 
@@ -1444,6 +1450,94 @@ img.brand-mark {
 .flowchart-node[data-pressing] {
   transform: translateY(1px);
   transition: transform 90ms ease-out;
+}
+
+/* Flowchart & Mind Map SVG Node & Edge Styling */
+.flowchart-svg {
+  background: transparent;
+  user-select: none;
+}
+
+.flowchart-edge {
+  stroke: var(--border-strong, #878672);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 2;
+  opacity: 0.85;
+  transition: stroke 150ms ease, stroke-width 150ms ease;
+}
+
+.flowchart-edge-active {
+  stroke: var(--accent, #545333);
+  stroke-width: 2.2;
+  stroke-dasharray: none;
+  opacity: 1;
+}
+
+.flowchart-edge-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  fill: var(--text-secondary, #545333);
+  letter-spacing: 0.02em;
+}
+
+.flowchart-node {
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+
+.flowchart-node:hover {
+  transform: translateY(-2px);
+}
+
+.flowchart-node:hover .flowchart-node-bg {
+  stroke: var(--accent, #545333);
+  stroke-width: 1.5;
+}
+
+.flowchart-node-bg {
+  fill: var(--bg-surface, #FFFEF0);
+  stroke: var(--border-default, #D9D7B6);
+  stroke-width: 1.2;
+  transition: fill 150ms ease, stroke 150ms ease, stroke-width 150ms ease;
+}
+
+.flowchart-node-bg.flowchart-node-done {
+  fill: var(--bg-raised, #F2F0CA);
+  stroke: var(--border-strong, #878672);
+}
+
+.flowchart-node-bg.flowchart-node-active {
+  fill: var(--accent-wash, #ECEAD0);
+  stroke: var(--accent, #545333);
+  stroke-width: 2;
+}
+
+.flowchart-node-text-main {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--text-primary, #2A2919);
+  dominant-baseline: middle;
+}
+
+.flowchart-node-text-main.flowchart-node-active {
+  fill: var(--accent, #545333);
+  font-weight: 700;
+}
+
+.flowchart-node-text-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  fill: var(--text-secondary, #545333);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  dominant-baseline: middle;
+}
+
+.flowchart-node-text-sub.flowchart-node-active {
+  fill: var(--accent, #545333);
+  font-weight: 600;
 }
 
 @media (prefers-reduced-motion: reduce) {

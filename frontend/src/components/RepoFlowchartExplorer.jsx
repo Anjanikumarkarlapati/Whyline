@@ -383,7 +383,7 @@ export default function RepoFlowchartExplorer({
   const fetchWarning = flowData?.fetch_warning || flowData?.warning || '';
 
   return (
-    <article className={`card ${isFullscreen ? "repo-flowchart-fullscreen" : ""}`} aria-label="GitHub Repository Flowchart and Step-by-Step Guide">
+    <article className="card" aria-label="GitHub Repository Flowchart and Step-by-Step Guide">
       <div className="card-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -413,10 +413,12 @@ export default function RepoFlowchartExplorer({
           <button
             id="btn-toggle-flowchart-fullscreen"
             type="button"
-            className="btn btn-secondary"
-            style={{ minHeight: '30px', padding: '0 12px', fontSize: '12px' }}
-            onClick={() => setIsFullscreen((prev) => !prev)}
-            title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Expand Flowchart to Fullscreen'}
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              if (viewMode === 'dossier') setViewMode('graph');
+              setIsFullscreen((prev) => !prev);
+            }}
+            title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Expand Flowchart Canvas to Fullscreen'}
           >
             {isFullscreen ? <ArrowsIn size={15} /> : <ArrowsOut size={15} />}
             <span>{isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}</span>
@@ -1026,46 +1028,38 @@ export default function RepoFlowchartExplorer({
         {/* Visual SVG Diagram, 6-Layer Mermaid & Radial Mind Map Mode */}
         {(steps.length > 0 || flowData?.mermaid_code) && (viewMode === 'steps' || viewMode === 'graph') && (
           <div
-            style={{
-              padding: '20px',
-              borderRadius: '14px',
-              border: '1px solid var(--border-default)',
-              background: 'var(--bg-raised)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-            }}
+            className={isFullscreen ? 'repo-flowchart-fullscreen' : 'flow-diagram-stage'}
+            data-testid="flowchart-canvas-stage"
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-              <div className="segmented-control" role="group" aria-label="Diagram topology">
+            <div className="flow-toolbar-row">
+              <div className="segmented-control flow-topology-group" role="group" aria-label="Diagram topology">
                 <button
                   type="button"
                   className={`segmented-btn ${graphSubMode === 'mermaid' ? 'active' : ''}`}
                   onClick={() => setGraphSubMode('mermaid')}
                 >
-                  6-Layer Mermaid Architecture
+                  6-Layer Mermaid
                 </button>
                 <button
                   type="button"
                   className={`segmented-btn ${graphSubMode === 'pipeline' ? 'active' : ''}`}
                   onClick={() => setGraphSubMode('pipeline')}
                 >
-                  Linear Execution Flowchart
+                  Linear Pipeline
                 </button>
                 <button
                   type="button"
                   className={`segmented-btn ${graphSubMode === 'mindmap' ? 'active' : ''}`}
                   onClick={() => setGraphSubMode('mindmap')}
                 >
-                  Radial Project Mind Map
+                  Radial Mind Map
                 </button>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div className="flow-zoom-group">
                 <button
                   type="button"
-                  className="btn btn-secondary"
-                  style={{ minHeight: '28px', padding: '0 8px', fontSize: '11px' }}
+                  className="btn btn-secondary btn-sm"
                   onClick={() => setZoomScale(0.85)}
                   title="Fit flowchart to view"
                 >
@@ -1073,42 +1067,43 @@ export default function RepoFlowchartExplorer({
                 </button>
                 <button
                   type="button"
-                  className="btn btn-secondary"
-                  style={{ minHeight: '28px', padding: '0 10px', fontSize: '12px' }}
+                  className="btn btn-secondary btn-sm"
                   onClick={() => setZoomScale((z) => Math.max(0.5, +(z - 0.15).toFixed(2)))}
+                  aria-label="Zoom out flowchart"
                 >
                   Zoom -
                 </button>
-                <span className="mono-metric" style={{ fontSize: '12px', minWidth: '46px', textAlign: 'center' }}>
+                <span className="mono-metric" style={{ fontSize: '12px', minWidth: '42px', textAlign: 'center' }}>
                   {Math.round(zoomScale * 100)}%
                 </span>
                 <button
                   type="button"
-                  className="btn btn-secondary"
-                  style={{ minHeight: '28px', padding: '0 10px', fontSize: '12px' }}
+                  className="btn btn-secondary btn-sm"
                   onClick={() => setZoomScale((z) => Math.min(2.0, +(z + 0.15).toFixed(2)))}
+                  aria-label="Zoom in flowchart"
                 >
                   Zoom +
                 </button>
                 <button
                   type="button"
-                  className="btn btn-secondary"
-                  style={{ minHeight: '28px', padding: '0 10px', fontSize: '12px' }}
+                  className="btn btn-secondary btn-sm"
                   onClick={() => setZoomScale(1)}
                 >
                   100%
                 </button>
                 <button
                   type="button"
-                  className="btn btn-primary"
-                  style={{ minHeight: '28px', padding: '0 12px', fontSize: '12px' }}
+                  className="btn btn-primary btn-sm"
+                  data-testid="flow-canvas-fullscreen-btn"
                   onClick={() => setIsFullscreen((prev) => !prev)}
                 >
-                  {isFullscreen ? <ArrowsIn size={14} /> : <ArrowsOut size={14} />}
-                  <span>{isFullscreen ? 'Exit Full Screen' : 'Full Screen Canvas'}</span>
+                  {isFullscreen ? <ArrowsIn size={14} aria-hidden="true" /> : <ArrowsOut size={14} aria-hidden="true" />}
+                  <span>{isFullscreen ? 'Exit Full Screen' : 'Full Screen'}</span>
                 </button>
               </div>
             </div>
+
+            <div className="flow-diagram-viewport" style={{ minWidth: 0, overflow: 'auto' }}>
 
             {graphSubMode === 'mermaid' ? (
               <MermaidFlowchartPanel
@@ -1196,6 +1191,7 @@ export default function RepoFlowchartExplorer({
                 </div>
               </div>
             )}
+            </div>
           </div>
         )}
 
